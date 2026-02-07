@@ -1004,7 +1004,13 @@
                     <label>PASSWORD</label>
                     <input type="password" id="dmPass" placeholder="Enter password" required>
                 </div>
+                <div class="form-group">
+                    <label>SESSION ID (Optional - leave blank for new session)</label>
+                    <input type="text" id="sessionId" placeholder="Paste previous session ID to rejoin">
+                    <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">💡 Save your session ID to rejoin this campaign later!</p>
+                </div>
                 <div class="error" id="dmError">Invalid credentials</div>
+                <div class="info" id="dmInfo" style="display: none;">Rejoining previous session...</div>
                 <button type="submit" class="btn btn-primary" style="width: 100%;">LOGIN & CREATE ROOM</button>
                 <button type="button" class="btn" onclick="closeDMModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
             </form>
@@ -1195,6 +1201,18 @@
                         Active: <span class="current-asset" id="currentAsset">Brush</span>
                     </div>
 
+                    <!-- ERASER MODE TOGGLE -->
+                    <div id="eraserOptions" style="display: none; margin: 0.75rem 0; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px;">
+                        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Eraser Mode:</div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-small" onclick="setEraserMode('content')" id="eraseContentBtn" style="flex: 1;">Content Only</button>
+                            <button class="btn btn-small" onclick="setEraserMode('all')" id="eraseAllBtn" style="flex: 1;">Everything</button>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem;" id="eraserModeDesc">
+                            Erases drawn content without touching background
+                        </div>
+                    </div>
+
                     <div class="control-row">
                         <label>Color:</label>
                         <input type="color" id="colorPicker" value="#4a7c59">
@@ -1290,6 +1308,7 @@
         let myName = null;
         let roomCode = null;
         let connections = new Map();
+        let savedPeerId = null; // For DM session persistence
 
         // Game state
         let zoom = 1;
@@ -1309,6 +1328,8 @@
         let color = '#4a7c59';
         let size = 8;
         let currentAsset = 'Brush';
+        let lastToolBeforeEraser = 'brush'; // Track tool before eraser
+        let eraserMode = 'content'; // 'content' or 'all'
         
         // History tracking
         let history = [];
@@ -1329,6 +1350,7 @@
         let activeFogGroup = 'everyone';
         let fogGroups = { everyone: { name: 'Everyone', canvas: null } };
         let fogMode = false;
+        let dmFogOpacity = 0.3; // DM sees through fog
 
         // Player requests
         let pendingRequests = [];
@@ -1396,22 +1418,37 @@
 
         // === AUTHENTICATION ===
         function showDMLogin() {
+            // Pre-fill session ID from localStorage if available
+            const savedSession = localStorage.getItem('fracturedSkySessionId');
+            if (savedSession) {
+                document.getElementById('sessionId').value = savedSession;
+            }
             document.getElementById('dmModal').classList.add('active');
         }
 
         function closeDMModal() {
             document.getElementById('dmModal').classList.remove('active');
             document.getElementById('dmError').classList.remove('show');
+            document.getElementById('dmInfo').style.display = 'none';
         }
 
         function dmLogin(e) {
             e.preventDefault();
             const user = document.getElementById('dmUser').value;
             const pass = document.getElementById('dmPass').value;
+            const sessionId = document.getElementById('sessionId').value.trim();
             
             if (user === 'Wizard' && pass === 'Wizard') {
                 closeDMModal();
-                createRoom();
+                
+                if (sessionId) {
+                    // Rejoin existing session
+                    savedPeerId = sessionId;
+                    createRoom(sessionId);
+                } else {
+                    // Create new session
+                    createRoom();
+                }
             } else {
                 document.getElementById('dmError').classList.add('show');
             }
@@ -1465,14 +1502,24 @@
         }
 
         // === MULTIPLAYER ===
-        function createRoom() {
+        function createRoom(existingId = null) {
             isDM = true;
             myName = 'Dungeon Master';
             
-            peer = new Peer();
+            // Use existing peer ID if provided
+            if (existingId) {
+                peer = new Peer(existingId);
+            } else {
+                peer = new Peer();
+            }
+            
             peer.on('open', (id) => {
                 myId = id;
                 roomCode = id;
+                savedPeerId = id;
+                
+                // Save to localStorage for easy recovery
+                localStorage.setItem('fracturedSkySessionId', id);
                 
                 document.getElementById('welcomeScreen').classList.add('hidden');
                 document.getElementById('connectionTabContainer').style.display = 'block';
@@ -1484,6 +1531,11 @@
                 updateConnectionStatus('Connected as DM', true);
                 updateUserList();
                 
+                // Show success if rejoining
+                if (existingId) {
+                    alert('✅ Rejoined session: ' + id.substring(0, 12) + '...');
+                }
+                
                 toggleConnectionPanel();
                 setTimeout(() => {
                     if (document.getElementById('connectionPanel').classList.contains('open')) {
@@ -1494,6 +1546,16 @@
             
             peer.on('connection', (conn) => {
                 setupConnection(conn);
+            });
+            
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                if (err.type === 'unavailable-id') {
+                    alert('⚠️ Session ID unavailable or in use. Creating new session...');
+                    createRoom(); // Fallback to new session
+                } else {
+                    alert('Connection error: ' + err.message);
+                }
             });
         }
 
@@ -2010,12 +2072,19 @@
 
             ctx.restore();
 
-            // Fog
+            // Fog - FULLY OPAQUE for players, semi-transparent for DM
             if (fogGroups[activeFogGroup]) {
                 ctx.save();
                 ctx.translate(panX, panY);
                 ctx.scale(zoom, zoom);
-                if (isDM) ctx.globalAlpha = 0.3;
+                
+                // DM sees through fog, players see full black
+                if (isDM) {
+                    ctx.globalAlpha = dmFogOpacity;
+                } else {
+                    ctx.globalAlpha = 1.0; // Full opacity for players
+                }
+                
                 ctx.drawImage(fogGroups[activeFogGroup].canvas, 0, 0, GRID_SIZE * 3, GRID_SIZE * 3);
                 ctx.restore();
             }
@@ -2047,18 +2116,64 @@
         }
 
         function setTool(t) {
+            // Track last tool before switching to eraser
+            if (tool !== 'eraser' && t === 'eraser') {
+                lastToolBeforeEraser = tool;
+                // Show eraser options
+                document.getElementById('eraserOptions').style.display = 'block';
+                updateEraserModeUI();
+            } else if (t !== 'eraser') {
+                // Hide eraser options
+                document.getElementById('eraserOptions').style.display = 'none';
+            }
+            
             tool = t;
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(t + 'Btn').classList.add('active');
             
             const assetNames = {
                 brush: 'Brush',
-                eraser: 'Eraser',
+                eraser: eraserMode === 'content' ? 
+                       (lastToolBeforeEraser === 'brush' ? 'Brush Strokes' : 
+                        lastToolBeforeEraser === 'texture' ? 'Textures' : 
+                        lastToolBeforeEraser === 'image' ? 'Images' : 'Content') :
+                       'Everything',
                 texture: 'Texture',
                 image: 'Image'
             };
             currentAsset = assetNames[t] || t;
             document.getElementById('currentAsset').textContent = currentAsset;
+        }
+
+        function setEraserMode(mode) {
+            eraserMode = mode;
+            updateEraserModeUI();
+            
+            // Update asset indicator
+            if (tool === 'eraser') {
+                const assetNames = {
+                    content: lastToolBeforeEraser === 'brush' ? 'Brush Strokes' : 
+                             lastToolBeforeEraser === 'texture' ? 'Textures' : 
+                             lastToolBeforeEraser === 'image' ? 'Images' : 'Content',
+                    all: 'Everything'
+                };
+                currentAsset = assetNames[mode];
+                document.getElementById('currentAsset').textContent = currentAsset;
+            }
+        }
+
+        function updateEraserModeUI() {
+            // Update button states
+            document.getElementById('eraseContentBtn').classList.remove('btn-primary');
+            document.getElementById('eraseAllBtn').classList.remove('btn-primary');
+            
+            if (eraserMode === 'content') {
+                document.getElementById('eraseContentBtn').classList.add('btn-primary');
+                document.getElementById('eraserModeDesc').textContent = 'Erases drawn content without touching background';
+            } else {
+                document.getElementById('eraseAllBtn').classList.add('btn-primary');
+                document.getElementById('eraserModeDesc').textContent = 'Erases everything including background color';
+            }
         }
 
         function setSize(v) {
@@ -2151,11 +2266,25 @@
                 mapCtx.strokeStyle = color;
                 mapCtx.lineWidth = size;
                 mapCtx.lineCap = 'round';
+                mapCtx.lineJoin = 'round';
             } else if (tool === 'eraser') {
-                mapCtx.globalCompositeOperation = 'destination-out';
+                mapCtx.save();
+                
+                if (eraserMode === 'content') {
+                    // Erase only drawn content, not background
+                    mapCtx.globalCompositeOperation = 'destination-out';
+                    mapCtx.strokeStyle = 'rgba(0,0,0,1)';
+                } else {
+                    // Erase everything including background
+                    mapCtx.globalCompositeOperation = 'source-over';
+                    mapCtx.strokeStyle = '#f5f5dc'; // Match background color
+                }
+                
                 mapCtx.beginPath();
                 mapCtx.moveTo(x, y);
                 mapCtx.lineWidth = size;
+                mapCtx.lineCap = 'round';
+                mapCtx.lineJoin = 'round';
             }
         });
 
@@ -2175,7 +2304,7 @@
             if (isDrawing) {
                 isDrawing = false;
                 if (tool === 'eraser') {
-                    mapCtx.globalCompositeOperation = 'source-over';
+                    mapCtx.restore(); // Restore composite operation
                 }
                 saveHistory();
             }
@@ -2185,7 +2314,7 @@
             if (isDrawing) {
                 isDrawing = false;
                 if (tool === 'eraser') {
-                    mapCtx.globalCompositeOperation = 'source-over';
+                    mapCtx.restore(); // Restore composite operation
                 }
                 saveHistory();
             }
