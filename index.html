@@ -1,0 +1,2270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Fractured Sky - Virtual Tabletop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0e1a;
+            --bg-card: #151928;
+            --bg-hover: #1f2537;
+            --accent: #8b5cf6;
+            --accent-secondary: #ec4899;
+            --gold: #fbbf24;
+            --text: #e5e7eb;
+            --text-dim: #9ca3af;
+            --border: rgba(139, 92, 246, 0.2);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a1f3a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            transition: opacity 0.5s, transform 0.5s;
+        }
+
+        .welcome-screen.hidden {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+
+        .welcome-content {
+            text-align: center;
+            max-width: 600px;
+            padding: 3rem;
+        }
+
+        .welcome-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--gold), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-dim);
+            margin-bottom: 3rem;
+        }
+
+        .welcome-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .welcome-btn {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .welcome-btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            color: white;
+        }
+
+        .welcome-btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.5);
+        }
+
+        .welcome-btn-secondary {
+            background: var(--bg-card);
+            color: var(--text);
+            border: 2px solid var(--border);
+        }
+
+        .welcome-btn-secondary:hover {
+            border-color: var(--accent);
+            background: var(--bg-hover);
+        }
+
+        .header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--gold), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .campaign-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-hover);
+            border-radius: 8px;
+        }
+
+        .campaign-name {
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            border: none;
+            color: white;
+        }
+
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        .container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+
+        .main-area {
+            flex: 1;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tabletop {
+            flex: 1;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .tabletop-header {
+            padding: 1rem 1.5rem;
+            background: var(--bg-hover);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .session-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.3rem;
+            background: linear-gradient(135deg, var(--gold), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .slider {
+            width: 120px;
+            height: 4px;
+            background: var(--bg-dark);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #1a1f2e 0%, var(--bg-dark) 100%);
+            overflow: hidden;
+        }
+
+        #mainCanvas {
+            display: block;
+            cursor: grab;
+        }
+
+        #mainCanvas:active {
+            cursor: grabbing;
+        }
+
+        /* Stamp Sidebar - DM Only */
+        .stamp-sidebar {
+            width: 280px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            transform: translateX(-100%);
+            transition: transform 0.3s;
+            box-shadow: 5px 0 20px rgba(0,0,0,0.3);
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 150;
+        }
+
+        .stamp-sidebar.open {
+            transform: translateX(0);
+        }
+
+        .stamp-header {
+            position: sticky;
+            top: 0;
+            background: var(--bg-hover);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .stamp-content {
+            padding: 1rem;
+        }
+
+        .stamp-category {
+            margin-bottom: 1.5rem;
+        }
+
+        .stamp-category h4 {
+            color: var(--gold);
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stamp-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+        }
+
+        .stamp-item {
+            aspect-ratio: 1;
+            background: var(--bg-hover);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .stamp-item:hover {
+            transform: scale(1.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .stamp-item.selected {
+            border-color: var(--gold);
+            background: rgba(251, 191, 36, 0.1);
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+        }
+
+        /* DM Panel */
+        .dm-panel {
+            width: 400px;
+            background: var(--bg-card);
+            border-left: 1px solid var(--border);
+            overflow-y: auto;
+            transform: translateX(100%);
+            transition: transform 0.3s;
+        }
+
+        .dm-panel.open {
+            transform: translateX(0);
+        }
+
+        .dm-header {
+            position: sticky;
+            top: 0;
+            background: var(--bg-hover);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .dm-content {
+            padding: 1rem;
+        }
+
+        .section {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+
+        .section.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .section h3 {
+            margin-bottom: 0.75rem;
+            color: var(--gold);
+            font-size: 1rem;
+        }
+
+        .section.active h3 {
+            color: var(--accent);
+        }
+
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin: 0.75rem 0;
+        }
+
+        .tool-btn {
+            padding: 0.75rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .tool-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+
+        .tool-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 0.75rem 0;
+        }
+
+        .control-row label {
+            min-width: 60px;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        input[type="color"] {
+            width: 50px;
+            height: 36px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .grid-selector {
+            background: var(--bg-dark);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border: 2px solid var(--border);
+        }
+
+        .grid-selector.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .grid-info {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .grid-info .current {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .grid-nav {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .grid-nav button:nth-child(2) {
+            grid-column: 2;
+        }
+
+        .grid-nav button:nth-child(3) {
+            grid-column: 3;
+        }
+
+        .grid-nav button:nth-child(4) {
+            grid-column: 1;
+        }
+
+        .grid-nav button:nth-child(5) {
+            grid-column: 2;
+        }
+
+        .grid-nav button:nth-child(6) {
+            grid-column: 3;
+        }
+
+        #mapCanvas {
+            width: 100%;
+            height: 250px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: white;
+            cursor: crosshair;
+            margin: 0.5rem 0;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .asset-library {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin: 0.75rem 0;
+        }
+
+        .asset-item {
+            aspect-ratio: 1;
+            background: var(--bg-dark);
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            gap: 0.25rem;
+            transition: all 0.2s;
+            padding: 0.5rem;
+        }
+
+        .asset-item:hover {
+            border-color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        .asset-item.selected {
+            border-color: var(--gold);
+            background: rgba(251, 191, 36, 0.1);
+        }
+
+        .asset-preview {
+            font-size: 1.5rem;
+        }
+
+        .player-requests {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .player-request {
+            background: var(--bg-dark);
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .campaign-slot {
+            background: var(--bg-dark);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            border: 2px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .campaign-slot:hover {
+            border-color: var(--accent);
+        }
+
+        .campaign-slot.active {
+            border-color: var(--gold);
+            background: rgba(251, 191, 36, 0.05);
+        }
+
+        .campaign-slot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .campaign-slot-name {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .campaign-slot-info {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid #10b981;
+            color: #10b981;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .success.show {
+            display: block;
+        }
+
+        .player-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+            z-index: 50;
+        }
+
+        .player-bar.show {
+            transform: translateY(0);
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-hover);
+            border-radius: 8px;
+        }
+
+        .player-tokens {
+            flex: 1;
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+        }
+
+        .token {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            border: 2px solid var(--border);
+            cursor: move;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .token:hover {
+            transform: scale(1.1);
+            border-color: var(--accent);
+        }
+
+        .player-login-btn {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            border: 3px solid var(--gold);
+            border-radius: 50%;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6), 0 0 0 0 rgba(139, 92, 246, 0.7);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6), 0 0 0 0 rgba(139, 92, 246, 0.7);
+            }
+            50% {
+                box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6), 0 0 0 15px rgba(139, 92, 246, 0);
+            }
+        }
+
+        .player-login-btn:hover {
+            transform: scale(1.15);
+            box-shadow: 0 8px 30px rgba(139, 92, 246, 0.8);
+        }
+
+        .player-login-btn::before {
+            content: 'PLAYER LOGIN';
+            position: absolute;
+            top: -35px;
+            right: 0;
+            background: var(--bg-card);
+            color: var(--text);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            border: 1px solid var(--border);
+        }
+
+        .player-login-btn:hover::before {
+            opacity: 1;
+        }
+
+        /* Initial Tooltip */
+        .player-tooltip {
+            position: fixed;
+            bottom: 2rem;
+            right: 9rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            white-space: nowrap;
+            z-index: 99;
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.6);
+            animation: bounce 2s infinite;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        .player-tooltip.hidden {
+            opacity: 0;
+            transform: translateX(20px);
+            pointer-events: none;
+        }
+
+        .player-tooltip::after {
+            content: '';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid var(--accent-secondary);
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            50% {
+                transform: translateX(-10px);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Welcome Screen -->
+    <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-content">
+            <div class="welcome-title">✨ THE FRACTURED SKY</div>
+            <div class="welcome-subtitle">Virtual Tabletop for Epic Adventures</div>
+            <div class="welcome-buttons">
+                <button class="welcome-btn welcome-btn-primary" onclick="showDMLogin()">🎭 Start as DM</button>
+                <button class="welcome-btn welcome-btn-secondary" onclick="enterAsPlayer()">👤 Join as Player</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="header">
+        <div class="title">✨ THE FRACTURED SKY</div>
+        <div class="campaign-info" id="campaignInfo" style="display: none;">
+            <span style="color: var(--text-dim);">Campaign:</span>
+            <span class="campaign-name" id="currentCampaignName">Untitled Campaign</span>
+        </div>
+        <div class="header-actions">
+            <button class="btn" onclick="manageCampaigns()" id="manageCampaignsBtn" style="display: none;">📁 Campaigns</button>
+            <button class="btn" onclick="loadGame()">📂 Load</button>
+            <button class="btn btn-primary" onclick="openDM()">🎭 DM Controls</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="main-area">
+            <div class="tabletop">
+                <div class="tabletop-header">
+                    <div class="session-name">The Fractured Sky</div>
+                    <div class="zoom-controls">
+                        <span style="color: var(--text-dim); font-size: 0.9rem;">Zoom:</span>
+                        <input type="range" class="slider" id="zoomSlider" min="25" max="200" value="100" oninput="setZoom(this.value)">
+                        <span id="zoomValue" style="min-width: 50px; font-size: 0.9rem;">100%</span>
+                    </div>
+                </div>
+                <div class="canvas-container" id="canvasContainer">
+                    <!-- Stamp Sidebar (DM Only) -->
+                    <div class="stamp-sidebar" id="stampSidebar">
+                        <div class="stamp-header">
+                            <h3 style="color: var(--gold);">🏰 Stamp Library</h3>
+                            <button class="btn btn-small" onclick="closeStamps()">✕</button>
+                        </div>
+                        <div class="stamp-content">
+                            <div class="stamp-category">
+                                <h4>🌲 Vegetation</h4>
+                                <div class="stamp-grid">
+                                    <div class="stamp-item" onclick="selectStamp('🌲')">🌲</div>
+                                    <div class="stamp-item" onclick="selectStamp('🌳')">🌳</div>
+                                    <div class="stamp-item" onclick="selectStamp('🌴')">🌴</div>
+                                    <div class="stamp-item" onclick="selectStamp('🎋')">🎋</div>
+                                    <div class="stamp-item" onclick="selectStamp('🍃')">🍃</div>
+                                    <div class="stamp-item" onclick="selectStamp('🍄')">🍄</div>
+                                    <div class="stamp-item" onclick="selectStamp('🌻')">🌻</div>
+                                    <div class="stamp-item" onclick="selectStamp('🌹')">🌹</div>
+                                </div>
+                            </div>
+                            <div class="stamp-category">
+                                <h4>🏔️ Natural Features</h4>
+                                <div class="stamp-grid">
+                                    <div class="stamp-item" onclick="selectStamp('🏔️')">🏔️</div>
+                                    <div class="stamp-item" onclick="selectStamp('⛰️')">⛰️</div>
+                                    <div class="stamp-item" onclick="selectStamp('🗻')">🗻</div>
+                                    <div class="stamp-item" onclick="selectStamp('🌋')">🌋</div>
+                                    <div class="stamp-item" onclick="selectStamp('🏝️')">🏝️</div>
+                                    <div class="stamp-item" onclick="selectStamp('🏜️')">🏜️</div>
+                                </div>
+                            </div>
+                            <div class="stamp-category">
+                                <h4>🏰 Buildings</h4>
+                                <div class="stamp-grid">
+                                    <div class="stamp-item" onclick="selectStamp('🏰')">🏰</div>
+                                    <div class="stamp-item" onclick="selectStamp('🏯')">🏯</div>
+                                    <div class="stamp-item" onclick="selectStamp('🏛️')">🏛️</div>
+                                    <div class="stamp-item" onclick="selectStamp('⛪')">⛪</div>
+                                    <div class="stamp-item" onclick="selectStamp('🏘️')">🏘️</div>
+                                    <div class="stamp-item" onclick="selectStamp('🏠')">🏠</div>
+                                    <div class="stamp-item" onclick="selectStamp('⛺')">⛺</div>
+                                    <div class="stamp-item" onclick="selectStamp('🗼')">🗼</div>
+                                </div>
+                            </div>
+                            <div class="stamp-category">
+                                <h4>⚔️ Objects</h4>
+                                <div class="stamp-grid">
+                                    <div class="stamp-item" onclick="selectStamp('⚔️')">⚔️</div>
+                                    <div class="stamp-item" onclick="selectStamp('🗡️')">🗡️</div>
+                                    <div class="stamp-item" onclick="selectStamp('🛡️')">🛡️</div>
+                                    <div class="stamp-item" onclick="selectStamp('🏹')">🏹</div>
+                                    <div class="stamp-item" onclick="selectStamp('🔮')">🔮</div>
+                                    <div class="stamp-item" onclick="selectStamp('💎')">💎</div>
+                                    <div class="stamp-item" onclick="selectStamp('🔥')">🔥</div>
+                                    <div class="stamp-item" onclick="selectStamp('⚡')">⚡</div>
+                                </div>
+                            </div>
+                            <div class="stamp-category">
+                                <h4>🐉 Creatures</h4>
+                                <div class="stamp-grid">
+                                    <div class="stamp-item" onclick="selectStamp('🐉')">🐉</div>
+                                    <div class="stamp-item" onclick="selectStamp('🦅')">🦅</div>
+                                    <div class="stamp-item" onclick="selectStamp('🐺')">🐺</div>
+                                    <div class="stamp-item" onclick="selectStamp('🦁')">🦁</div>
+                                    <div class="stamp-item" onclick="selectStamp('🐻')">🐻</div>
+                                    <div class="stamp-item" onclick="selectStamp('💀')">💀</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <canvas id="mainCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- DM Panel -->
+        <div class="dm-panel" id="dmPanel">
+            <div class="dm-header">
+                <h2>🎭 Dungeon Master</h2>
+                <button class="btn btn-small" onclick="closeDM()">✕</button>
+            </div>
+            <div class="dm-content">
+                <!-- Campaign Manager -->
+                <div class="section" id="campaignSection">
+                    <h3>📁 Campaign Manager</h3>
+                    <div id="campaignSlots"></div>
+                    <button class="btn btn-primary" onclick="createNewCampaign()" id="createCampaignBtn" style="width: 100%;">+ New Campaign</button>
+                </div>
+
+                <!-- Player Requests -->
+                <div class="section">
+                    <h3>👥 Player Requests</h3>
+                    <div class="player-requests" id="playerRequests">
+                        <p style="color: var(--text-dim); font-size: 0.85rem;">No pending requests</p>
+                    </div>
+                </div>
+
+                <!-- Grid Map Builder -->
+                <div class="section" id="mapSection">
+                    <h3>🗺️ Grid Map Builder (3x3)</h3>
+                    
+                    <div class="grid-selector active">
+                        <div class="grid-info">
+                            Cell: <span class="current" id="currentCell">Center</span>
+                        </div>
+                        <div class="grid-nav">
+                            <button class="btn btn-small" onclick="selectCell(0, 0)">↖</button>
+                            <button class="btn btn-small" onclick="selectCell(1, 0)">↑</button>
+                            <button class="btn btn-small" onclick="selectCell(2, 0)">↗</button>
+                            <button class="btn btn-small" onclick="selectCell(0, 1)">←</button>
+                            <button class="btn btn-small" style="background: var(--accent); color: white; cursor: default;" disabled>●</button>
+                            <button class="btn btn-small" onclick="selectCell(2, 1)">→</button>
+                            <button class="btn btn-small" onclick="selectCell(0, 2)">↙</button>
+                            <button class="btn btn-small" onclick="selectCell(1, 2)">↓</button>
+                            <button class="btn btn-small" onclick="selectCell(2, 2)">↘</button>
+                        </div>
+                    </div>
+
+                    <div class="tool-grid">
+                        <div class="tool-btn active" onclick="setTool('brush')" id="brushBtn">🖌️<br>Brush</div>
+                        <div class="tool-btn" onclick="setTool('fill')" id="fillBtn">🪣<br>Fill</div>
+                        <div class="tool-btn" onclick="setTool('eraser')" id="eraserBtn">🧹<br>Erase</div>
+                        <div class="tool-btn" onclick="setTool('stamp'); openStamps();" id="stampBtn">🏰<br>Stamps</div>
+                    </div>
+
+                    <div class="control-row">
+                        <label>Color:</label>
+                        <input type="color" id="colorPicker" value="#4a7c59">
+                    </div>
+                    <div class="control-row">
+                        <label>Size:</label>
+                        <input type="range" class="slider" id="sizeSlider" min="1" max="30" value="8" oninput="setSize(this.value)" style="flex: 1;">
+                        <span id="sizeValue">8px</span>
+                    </div>
+
+                    <canvas id="mapCanvas" width="400" height="400"></canvas>
+
+                    <div class="btn-group">
+                        <input type="file" id="mapImport" accept="image/*" style="display: none;" onchange="importMap(event)">
+                        <button class="btn" onclick="document.getElementById('mapImport').click()">📤 Import</button>
+                        <button class="btn btn-primary" onclick="submitCell()" style="flex: 1;">✓ Submit</button>
+                        <button class="btn" onclick="clearCell()">Clear</button>
+                    </div>
+                    
+                    <button class="btn" onclick="toggleLockCell()" id="lockBtn" style="width: 100%; margin-top: 0.5rem;">🔓 Lock Cell</button>
+                </div>
+
+                <!-- Textures & Patterns -->
+                <div class="section" id="assetSection">
+                    <h3>🎨 Textures & Patterns</h3>
+                    <div class="asset-library">
+                        <div class="asset-item" onclick="applyTexture('grass')">
+                            <div class="asset-preview">🟩</div>
+                            <div>Grass</div>
+                        </div>
+                        <div class="asset-item" onclick="applyTexture('stone')">
+                            <div class="asset-preview">⬜</div>
+                            <div>Stone</div>
+                        </div>
+                        <div class="asset-item" onclick="applyTexture('dirt')">
+                            <div class="asset-preview">🟫</div>
+                            <div>Dirt</div>
+                        </div>
+                        <div class="asset-item" onclick="applyTexture('water')">
+                            <div class="asset-preview">🟦</div>
+                            <div>Water</div>
+                        </div>
+                        <div class="asset-item" onclick="applyTexture('gravel')">
+                            <div class="asset-preview">🪨</div>
+                            <div>Gravel</div>
+                        </div>
+                        <div class="asset-item" onclick="applyTexture('sand')">
+                            <div class="asset-preview">🟨</div>
+                            <div>Sand</div>
+                        </div>
+                        <div class="asset-item" onclick="applyTexture('wood')">
+                            <div class="asset-preview">🪵</div>
+                            <div>Wood</div>
+                        </div>
+                        <div class="asset-item" onclick="applyTexture('brick')">
+                            <div class="asset-preview">🧱</div>
+                            <div>Brick</div>
+                        </div>
+                        <div class="asset-item" onclick="applyTexture('bridge')">
+                            <div class="asset-preview">🌉</div>
+                            <div>Bridge</div>
+                        </div>
+                    </div>
+                    <input type="file" id="assetImport" accept="image/*" style="display: none;" onchange="importAsset(event)">
+                    <button class="btn" onclick="document.getElementById('assetImport').click()" style="width: 100%; margin-top: 0.5rem;">📤 Import Asset</button>
+                </div>
+
+                <!-- Fog -->
+                <div class="section" id="fogSection">
+                    <h3>🌫️ Fog of War</h3>
+                    <div class="control-row">
+                        <label>Size:</label>
+                        <input type="range" class="slider" id="fogSize" min="20" max="150" value="60" oninput="setFogSize(this.value)" style="flex: 1;">
+                        <span id="fogSizeValue">60px</span>
+                    </div>
+                    <div class="control-row">
+                        <label>
+                            <input type="checkbox" id="revealMode" checked> Reveal
+                        </label>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="toggleFog()" id="fogBtn">Enable Fog</button>
+                        <button class="btn" onclick="resetFog()">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Tokens -->
+                <div class="section" id="tokensSection">
+                    <h3>🎲 Tokens</h3>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="addToken('#e74c3c', '⚔️')">⚔️</button>
+                        <button class="btn btn-primary" onclick="addToken('#3498db', '🛡️')">🛡️</button>
+                        <button class="btn btn-primary" onclick="addToken('#2ecc71', '🏹')">🏹</button>
+                        <button class="btn btn-primary" onclick="addToken('#9b59b6', '🔮')">🔮</button>
+                    </div>
+                    <button class="btn" onclick="addCustomToken()" style="width: 100%; margin-top: 0.5rem;">+ Custom Token</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DM Login Modal -->
+    <div class="modal" id="dmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">🧙</div>
+                <h2>Dungeon Master</h2>
+            </div>
+            <form onsubmit="dmLogin(event)">
+                <div class="form-group">
+                    <label>USERNAME</label>
+                    <input type="text" id="dmUser" placeholder="Enter username" autocomplete="off" required>
+                </div>
+                <div class="form-group">
+                    <label>PASSWORD</label>
+                    <input type="password" id="dmPass" placeholder="Enter password" autocomplete="off" required>
+                </div>
+                <div class="error" id="dmError">Invalid credentials</div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">ENTER</button>
+                <button type="button" class="btn" onclick="closeDMModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Campaign Name Modal -->
+    <div class="modal" id="campaignNameModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">📁</div>
+                <h2>New Campaign</h2>
+            </div>
+            <form onsubmit="saveCampaignName(event)">
+                <div class="form-group">
+                    <label>CAMPAIGN NAME</label>
+                    <input type="text" id="campaignNameInput" placeholder="Enter campaign name" autocomplete="off" required maxlength="50">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">CREATE</button>
+                <button type="button" class="btn" onclick="closeCampaignNameModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Player Login Modal -->
+    <div class="modal" id="playerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">👤</div>
+                <h2>Player Login</h2>
+            </div>
+            <form onsubmit="requestPlayerLogin(event)">
+                <div class="form-group">
+                    <label>CHARACTER NAME</label>
+                    <input type="text" id="playerName" placeholder="Enter your name" autocomplete="off" required>
+                </div>
+                <div class="success" id="playerSuccess">Request sent! Waiting for DM approval...</div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">REQUEST TO JOIN</button>
+                <button type="button" class="btn" onclick="closePlayerModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Player Bar -->
+    <div class="player-bar" id="playerBar">
+        <div class="player-info">
+            <div style="width: 36px; height: 36px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">👤</div>
+            <span id="playerNameDisplay">Guest</span>
+        </div>
+        <div class="player-tokens" id="playerTokens"></div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-small" onclick="createPlayerToken()">+ Token</button>
+            <button class="btn btn-small" onclick="playerLogout()">Logout</button>
+        </div>
+    </div>
+
+    <!-- Player Tooltip -->
+    <div class="player-tooltip" id="playerTooltip">
+        👈 Create Player Token
+    </div>
+
+    <button class="player-login-btn" onclick="showPlayerLogin()" id="playerBtn">👤</button>
+
+    <input type="file" id="fileLoad" accept=".json" style="display: none;" onchange="handleLoad(event)">
+
+    <script>
+        // State
+        let isDM = false;
+        let currentPlayer = null;
+        let zoom = 1;
+        let panX = 0;
+        let panY = 0;
+        let tokens = [];
+        let tool = 'brush';
+        let color = '#4a7c59';
+        let size = 8;
+        let stamp = '🌲';
+        let fogSize = 60;
+        let currentMode = 'map';
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let dragToken = null;
+        let playerTokens = [];
+        let playerRequests = [];
+        let approvedPlayers = [];
+        let fogInitialized = false;
+        
+        // Campaign Management
+        let campaigns = [];
+        let currentCampaignIndex = null;
+        const MAX_CAMPAIGNS = 3;
+        
+        // 3x3 Grid system - Direct mapping (0,0 = top-left, 2,2 = bottom-right)
+        const GRID_SIZE = 400;
+        const CELL_SIZE = 400;
+        let currentCellX = 1;  // Start at center cell (1,1)
+        let currentCellY = 1;
+        let gridCells = {};
+        let lockedCells = {}; // Track which cells are submitted/locked
+
+        const gridNames = [
+            ['Top-Left', 'Top-Center', 'Top-Right'],
+            ['Middle-Left', 'Center', 'Middle-Right'],
+            ['Bottom-Left', 'Bottom-Center', 'Bottom-Right']
+        ];
+
+        // Canvas
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const mapCanvas = document.getElementById('mapCanvas');
+        const mapCtx = mapCanvas.getContext('2d');
+        const fogCanvas = document.createElement('canvas');
+        const fogCtx = fogCanvas.getContext('2d');
+
+        function resizeCanvas() {
+            const container = document.getElementById('canvasContainer');
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+            
+            // Only set fog canvas size once during init to prevent reset
+            if (!fogInitialized) {
+                fogCanvas.width = GRID_SIZE * 3;
+                fogCanvas.height = GRID_SIZE * 3;
+                fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+                fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+                fogInitialized = true;
+            }
+            
+            // Center the 3x3 grid in the viewport
+            panX = (canvas.width - GRID_SIZE * 3) / 2;
+            panY = (canvas.height - GRID_SIZE * 3) / 2;
+            
+            draw();
+        }
+
+        function init() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            mapCtx.fillStyle = '#f5f5dc';
+            mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+            
+            setMode('map');
+            updateGridDisplay();
+            updateMapBuilderState();
+            loadCampaigns();
+            renderCampaignSlots();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(panX, panY);
+            ctx.scale(zoom, zoom);
+
+            // Draw 3x3 grid - direct 1:1 mapping
+            // (0,0) = top-left, (1,0) = top-center, (2,0) = top-right, etc.
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    const x = col * GRID_SIZE;
+                    const y = row * GRID_SIZE;
+                    const key = `${col},${row}`;
+                    
+                    // Cell background
+                    ctx.fillStyle = '#1a1f2e';
+                    ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
+                    
+                    // Cell content
+                    if (gridCells[key]) {
+                        ctx.drawImage(gridCells[key], x, y, GRID_SIZE, GRID_SIZE);
+                    }
+                    
+                    // Grid lines
+                    ctx.strokeStyle = '#2a2f3e';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, GRID_SIZE, GRID_SIZE);
+                    
+                    // Highlight currently selected cell for building
+                    if (col === currentCellX && row === currentCellY && isDM) {
+                        ctx.strokeStyle = lockedCells[key] ? '#fbbf24' : '#8b5cf6';
+                        ctx.lineWidth = 4;
+                        ctx.strokeRect(x, y, GRID_SIZE, GRID_SIZE);
+                        
+                        // Cell label showing current selection
+                        ctx.fillStyle = lockedCells[key] ? 'rgba(251, 191, 36, 0.3)' : 'rgba(139, 92, 246, 0.3)';
+                        ctx.fillRect(x + 5, y + 5, 160, 30);
+                        ctx.fillStyle = lockedCells[key] ? '#fbbf24' : '#8b5cf6';
+                        ctx.font = 'bold 14px Inter';
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'top';
+                        const status = lockedCells[key] ? '🔒 Locked' : '✏️ Editing';
+                        ctx.fillText(`${status}: ${gridNames[row][col]}`, x + 10, y + 12);
+                    }
+                    
+                    // Show lock icon on locked cells (that aren't currently selected)
+                    if (lockedCells[key] && !(col === currentCellX && row === currentCellY)) {
+                        ctx.fillStyle = 'rgba(251, 191, 36, 0.2)';
+                        ctx.fillRect(x + GRID_SIZE - 40, y + 5, 35, 30);
+                        ctx.font = '20px Arial';
+                        ctx.fillText('🔒', x + GRID_SIZE - 35, y + 25);
+                    }
+                }
+            }
+
+            // Tokens
+            tokens.forEach(t => {
+                ctx.fillStyle = t.color;
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, 30, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.font = '32px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(t.icon, t.x, t.y);
+                if (t.owner) {
+                    ctx.fillStyle = '#8b5cf6';
+                    ctx.font = '12px Inter';
+                    ctx.fillText(t.owner, t.x, t.y + 45);
+                }
+            });
+
+            ctx.restore();
+
+            // Fog layer over the entire 3x3 grid
+            ctx.save();
+            ctx.translate(panX, panY);
+            ctx.scale(zoom, zoom);
+            ctx.drawImage(fogCanvas, 0, 0, GRID_SIZE * 3, GRID_SIZE * 3);
+            ctx.restore();
+        }
+
+        // FIXED: Direct cell selection - arrows map 1:1 to visible grid cells
+        function selectCell(cellX, cellY) {
+            // Bounds check (0-2 for both x and y)
+            if (cellX < 0 || cellX > 2 || cellY < 0 || cellY > 2) return;
+            
+            currentCellX = cellX;
+            currentCellY = cellY;
+            
+            // Load the cell content into the map builder
+            const key = `${cellX},${cellY}`;
+            if (gridCells[key]) {
+                mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+                mapCtx.drawImage(gridCells[key], 0, 0);
+            } else {
+                // Clear the canvas if no cell exists at this position
+                mapCtx.fillStyle = '#f5f5dc';
+                mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+            }
+            
+            updateGridDisplay();
+            updateMapBuilderState();
+            draw();
+        }
+
+        function updateMapBuilderState() {
+            const key = `${currentCellX},${currentCellY}`;
+            const isLocked = lockedCells[key];
+            const hasContent = gridCells[key] !== undefined;
+            
+            // Disable/enable map building tools based on lock status
+            const tools = ['brushBtn', 'fillBtn', 'eraserBtn', 'stampBtn'];
+            const colorPicker = document.getElementById('colorPicker');
+            const sizeSlider = document.getElementById('sizeSlider');
+            const submitBtn = document.querySelector('#mapSection .btn-primary');
+            const clearBtn = document.querySelector('#mapSection .btn-group .btn:last-child');
+            const lockBtn = document.getElementById('lockBtn');
+            
+            tools.forEach(toolId => {
+                const btn = document.getElementById(toolId);
+                if (btn) {
+                    btn.style.opacity = isLocked ? '0.5' : '1';
+                    btn.style.pointerEvents = isLocked ? 'none' : 'auto';
+                }
+            });
+            
+            if (colorPicker) {
+                colorPicker.disabled = isLocked;
+                colorPicker.style.opacity = isLocked ? '0.5' : '1';
+            }
+            if (sizeSlider) {
+                sizeSlider.disabled = isLocked;
+                sizeSlider.style.opacity = isLocked ? '0.5' : '1';
+            }
+            if (submitBtn) {
+                submitBtn.disabled = isLocked;
+                submitBtn.style.opacity = isLocked ? '0.5' : '1';
+            }
+            if (clearBtn) {
+                clearBtn.disabled = isLocked;
+                clearBtn.style.opacity = isLocked ? '0.5' : '1';
+            }
+            
+            // Update lock button
+            if (lockBtn) {
+                if (!hasContent) {
+                    lockBtn.textContent = '🔓 Lock Cell';
+                    lockBtn.disabled = true;
+                    lockBtn.style.opacity = '0.5';
+                    lockBtn.title = 'Submit the cell first before locking';
+                } else if (isLocked) {
+                    lockBtn.textContent = '🔓 Unlock Cell';
+                    lockBtn.disabled = false;
+                    lockBtn.style.opacity = '1';
+                    lockBtn.classList.remove('btn-primary');
+                    lockBtn.title = 'Click to unlock and enable editing';
+                } else {
+                    lockBtn.textContent = '🔒 Lock Cell';
+                    lockBtn.disabled = false;
+                    lockBtn.style.opacity = '1';
+                    lockBtn.classList.remove('btn-primary');
+                    lockBtn.title = 'Click to lock and prevent further editing';
+                }
+            }
+            
+            // Disable map canvas interaction if locked
+            mapCanvas.style.pointerEvents = isLocked ? 'none' : 'auto';
+            mapCanvas.style.opacity = isLocked ? '0.7' : '1';
+        }
+
+        function updateGridDisplay() {
+            document.getElementById('currentCell').textContent = gridNames[currentCellY][currentCellX];
+        }
+
+        function submitCell() {
+            const key = `${currentCellX},${currentCellY}`;
+            
+            // Create a permanent copy of the canvas
+            const cellCanvas = document.createElement('canvas');
+            cellCanvas.width = CELL_SIZE;
+            cellCanvas.height = CELL_SIZE;
+            const cellCtx = cellCanvas.getContext('2d');
+            cellCtx.drawImage(mapCanvas, 0, 0);
+            gridCells[key] = cellCanvas;
+            
+            // Don't auto-lock - let user manually lock if desired
+            
+            draw();
+            updateMapBuilderState();
+            alert(`${gridNames[currentCellY][currentCellX]} submitted! You can still edit it by selecting this cell again.`);
+        }
+        
+        function toggleLockCell() {
+            const key = `${currentCellX},${currentCellY}`;
+            
+            // Only allow locking if there's content in the cell
+            if (!gridCells[key]) {
+                alert('Submit the cell first before locking it!');
+                return;
+            }
+            
+            // Toggle lock state
+            lockedCells[key] = !lockedCells[key];
+            
+            updateMapBuilderState();
+            draw();
+            
+            const status = lockedCells[key] ? 'locked 🔒' : 'unlocked ✏️';
+            alert(`${gridNames[currentCellY][currentCellX]} is now ${status}`);
+        }
+
+        function clearCell() {
+            mapCtx.fillStyle = '#f5f5dc';
+            mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+        }
+
+        // Modes
+        function setMode(mode) {
+            currentMode = mode;
+            
+            // Remove active class from ALL sections
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            
+            // Add active class to the appropriate section
+            if (mode === 'map') {
+                const mapSection = document.getElementById('mapSection');
+                if (mapSection) mapSection.classList.add('active');
+                canvas.style.cursor = 'grab';
+            } else if (mode === 'fog') {
+                const fogSection = document.getElementById('fogSection');
+                if (fogSection) fogSection.classList.add('active');
+                canvas.style.cursor = 'crosshair';
+            } else if (mode === 'token') {
+                const tokenSection = document.getElementById('tokensSection');
+                if (tokenSection) tokenSection.classList.add('active');
+                canvas.style.cursor = 'default';
+            } else if (mode === 'assets') {
+                const assetSection = document.getElementById('assetSection');
+                if (assetSection) assetSection.classList.add('active');
+                canvas.style.cursor = 'grab';
+            }
+            
+            updateFogButton();
+        }
+
+        function updateFogButton() {
+            const btn = document.getElementById('fogBtn');
+            if (currentMode === 'fog') {
+                btn.textContent = '🌫️ Fog Active';
+                btn.classList.add('btn-primary');
+            } else {
+                btn.textContent = 'Enable Fog';
+                btn.classList.remove('btn-primary');
+            }
+        }
+
+        // Tools
+        function setTool(t) {
+            tool = t;
+            setMode('map');
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.getElementById(t + 'Btn');
+            if (btn) btn.classList.add('active');
+        }
+
+        function setSize(v) {
+            size = v;
+            document.getElementById('sizeValue').textContent = v + 'px';
+        }
+
+        // Stamps (DM Only)
+        function openStamps() {
+            if (!isDM) return;
+            document.getElementById('stampSidebar').classList.add('open');
+            tool = 'stamp';
+            setMode('map');
+        }
+
+        function closeStamps() {
+            document.getElementById('stampSidebar').classList.remove('open');
+        }
+
+        function selectStamp(s) {
+            stamp = s;
+            document.querySelectorAll('.stamp-item').forEach(item => item.classList.remove('selected'));
+            event.target.classList.add('selected');
+            closeStamps();
+            setTool('stamp');
+        }
+
+        document.getElementById('colorPicker').addEventListener('change', e => {
+            color = e.target.value;
+        });
+
+        // Textures
+        const textures = {
+            grass: '#4a7c59',
+            stone: '#8a8a8a',
+            dirt: '#8b4513',
+            water: '#1e90ff',
+            gravel: '#696969',
+            sand: '#f4a460',
+            wood: '#daa520',
+            brick: '#b22222'
+        };
+
+        function applyTexture(type) {
+            setMode('assets');  // Activate the assets section when clicked
+            
+            if (type === 'bridge') {
+                mapCtx.font = '96px Arial';
+                mapCtx.fillText('🌉', 150, 250);
+            } else if (textures[type]) {
+                mapCtx.fillStyle = textures[type];
+                mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+            }
+            document.querySelectorAll('.asset-item').forEach(item => item.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+
+        // Import
+        function importMap(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    mapCtx.drawImage(img, 0, 0, mapCanvas.width, mapCanvas.height);
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function importAsset(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    mapCtx.drawImage(img, 50, 50, 300, 300);
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Map Canvas
+        mapCanvas.addEventListener('mousedown', e => {
+            isDrawing = true;
+            const rect = mapCanvas.getBoundingClientRect();
+            const scaleX = mapCanvas.width / rect.width;
+            const scaleY = mapCanvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            lastX = x;
+            lastY = y;
+
+            if (tool === 'brush') {
+                mapCtx.beginPath();
+                mapCtx.moveTo(x, y);
+                mapCtx.strokeStyle = color;
+                mapCtx.lineWidth = size;
+                mapCtx.lineCap = 'round';
+            } else if (tool === 'fill') {
+                mapCtx.fillStyle = color;
+                mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+            } else if (tool === 'stamp') {
+                mapCtx.font = '48px Arial';
+                mapCtx.fillText(stamp, x - 24, y + 12);
+            } else if (tool === 'eraser') {
+                mapCtx.globalCompositeOperation = 'destination-out';
+                mapCtx.beginPath();
+                mapCtx.moveTo(x, y);
+                mapCtx.lineWidth = size;
+            }
+        });
+
+        mapCanvas.addEventListener('mousemove', e => {
+            if (!isDrawing) return;
+            const rect = mapCanvas.getBoundingClientRect();
+            const scaleX = mapCanvas.width / rect.width;
+            const scaleY = mapCanvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            if (tool === 'brush') {
+                mapCtx.lineTo(x, y);
+                mapCtx.stroke();
+            } else if (tool === 'eraser') {
+                mapCtx.lineTo(x, y);
+                mapCtx.stroke();
+            }
+        });
+
+        mapCanvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+            if (tool === 'eraser') {
+                mapCtx.globalCompositeOperation = 'source-over';
+            }
+        });
+
+        // FIXED: Fog of War
+        function setFogSize(v) {
+            fogSize = v;
+            document.getElementById('fogSizeValue').textContent = v + 'px';
+        }
+
+        function toggleFog() {
+            if (currentMode === 'fog') {
+                setMode('map');
+            } else {
+                setMode('fog');
+            }
+        }
+
+        function resetFog() {
+            fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+            fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+            draw();
+        }
+
+        function applyFog(x, y) {
+            const reveal = document.getElementById('revealMode').checked;
+            
+            // Save current state
+            fogCtx.save();
+            
+            if (reveal) {
+                // Reveal mode - erase the fog
+                fogCtx.globalCompositeOperation = 'destination-out';
+                fogCtx.fillStyle = 'rgba(0,0,0,1)'; // Fully opaque for erasing
+            } else {
+                // Add fog mode
+                fogCtx.globalCompositeOperation = 'source-over';
+                fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+            }
+            
+            fogCtx.beginPath();
+            fogCtx.arc(x, y, fogSize, 0, Math.PI * 2);
+            fogCtx.fill();
+            
+            // Restore state to reset composite operation
+            fogCtx.restore();
+            
+            draw();
+        }
+
+        // Tokens
+        function addToken(c, i) {
+            setMode('token');
+            tokens.push({ x: 200, y: 200, color: c, icon: i, owner: null });
+            draw();
+        }
+
+        function addCustomToken() {
+            setMode('token');
+            const i = prompt('Emoji:', '⚔️') || '⚔️';
+            const c = prompt('Color:', '#e74c3c') || '#e74c3c';
+            addToken(c, i);
+        }
+
+        // Zoom
+        function setZoom(v) {
+            zoom = v / 100;
+            document.getElementById('zoomValue').textContent = Math.round(v) + '%';
+            draw();
+        }
+
+        // Canvas Interaction
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left - panX) / zoom;
+            const my = (e.clientY - rect.top - panY) / zoom;
+
+            if (currentMode === 'fog') {
+                isDrawing = true;
+                applyFog(mx, my);
+                return;
+            }
+
+            if (currentMode === 'token' && (currentPlayer || isDM)) {
+                dragToken = tokens.find(t => {
+                    const dx = mx - t.x;
+                    const dy = my - t.y;
+                    return Math.sqrt(dx*dx + dy*dy) < 30;
+                });
+
+                if (dragToken) {
+                    isDrawing = true;
+                }
+                return;
+            }
+
+            if (currentMode === 'map' || currentMode === 'assets') {
+                lastX = e.clientX;
+                lastY = e.clientY;
+                isDrawing = true;
+            }
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left - panX) / zoom;
+            const my = (e.clientY - rect.top - panY) / zoom;
+
+            if (currentMode === 'fog') {
+                applyFog(mx, my);
+                return;
+            }
+
+            if (currentMode === 'token' && dragToken) {
+                dragToken.x = mx;
+                dragToken.y = my;
+                draw();
+                return;
+            }
+
+            if (currentMode === 'map' || currentMode === 'assets') {
+                panX += e.clientX - lastX;
+                panY += e.clientY - lastY;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                draw();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+            dragToken = null;
+        });
+
+        canvas.addEventListener('dragover', e => e.preventDefault());
+        canvas.addEventListener('drop', e => {
+            e.preventDefault();
+            try {
+                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                if (data.type === 'player') {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left - panX) / zoom;
+                    const y = (e.clientY - rect.top - panY) / zoom;
+                    tokens.push({ x, y, color: data.token.color, icon: data.token.icon, owner: currentPlayer });
+                    draw();
+                }
+            } catch {}
+        });
+
+        // Welcome Screen & DM Login
+        function showDMLogin() {
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            setTimeout(() => {
+                document.getElementById('dmModal').classList.add('active');
+            }, 500);
+        }
+
+        function enterAsPlayer() {
+            document.getElementById('welcomeScreen').classList.add('hidden');
+        }
+
+        // DM
+        function openDM() {
+            document.getElementById('dmModal').classList.add('active');
+        }
+
+        function closeDMModal() {
+            document.getElementById('dmModal').classList.remove('active');
+            document.getElementById('dmError').classList.remove('show');
+        }
+
+        function dmLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('dmUser').value;
+            const pass = document.getElementById('dmPass').value;
+            if (user === 'Wizard' && pass === 'Wizard') {
+                isDM = true;
+                closeDMModal();
+                document.getElementById('dmPanel').classList.add('open');
+                document.getElementById('manageCampaignsBtn').style.display = 'block';
+                document.getElementById('campaignInfo').style.display = 'flex';
+                renderPlayerRequests();
+                renderCampaignSlots();
+            } else {
+                document.getElementById('dmError').classList.add('show');
+            }
+        }
+
+        function closeDM() {
+            document.getElementById('dmPanel').classList.remove('open');
+        }
+
+        // Campaign Management
+        function loadCampaigns() {
+            const saved = localStorage.getItem('fracturedSkyCampaigns');
+            if (saved) {
+                campaigns = JSON.parse(saved);
+            }
+        }
+
+        function saveCampaigns() {
+            localStorage.setItem('fracturedSkyCampaigns', JSON.stringify(campaigns));
+        }
+
+        function renderCampaignSlots() {
+            if (!isDM) return;
+            
+            const container = document.getElementById('campaignSlots');
+            const createBtn = document.getElementById('createCampaignBtn');
+            
+            container.innerHTML = campaigns.map((campaign, idx) => `
+                <div class="campaign-slot ${currentCampaignIndex === idx ? 'active' : ''}">
+                    <div class="campaign-slot-header">
+                        <span class="campaign-slot-name">${campaign.name}</span>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-small btn-primary" onclick="loadCampaign(${idx})">Load</button>
+                            <button class="btn btn-small" onclick="saveToCampaign(${idx})">Save</button>
+                            <button class="btn btn-small" onclick="deleteCampaign(${idx})">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="campaign-slot-info">
+                        Last saved: ${new Date(campaign.lastModified).toLocaleString()}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Disable create button if max campaigns reached
+            if (campaigns.length >= MAX_CAMPAIGNS) {
+                createBtn.disabled = true;
+                createBtn.style.opacity = '0.5';
+                createBtn.textContent = `Max ${MAX_CAMPAIGNS} Campaigns`;
+            } else {
+                createBtn.disabled = false;
+                createBtn.style.opacity = '1';
+                createBtn.textContent = '+ New Campaign';
+            }
+        }
+
+        function manageCampaigns() {
+            if (!isDM) return;
+            document.getElementById('dmPanel').classList.add('open');
+            const campaignSection = document.getElementById('campaignSection');
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            if (campaignSection) campaignSection.classList.add('active');
+        }
+
+        function createNewCampaign() {
+            if (campaigns.length >= MAX_CAMPAIGNS) {
+                alert(`Maximum ${MAX_CAMPAIGNS} campaigns reached. Delete a campaign to create a new one.`);
+                return;
+            }
+            document.getElementById('campaignNameModal').classList.add('active');
+        }
+
+        function closeCampaignNameModal() {
+            document.getElementById('campaignNameModal').classList.remove('active');
+            document.getElementById('campaignNameInput').value = '';
+        }
+
+        function saveCampaignName(e) {
+            e.preventDefault();
+            const name = document.getElementById('campaignNameInput').value.trim();
+            
+            const newCampaign = {
+                name: name,
+                lastModified: Date.now(),
+                data: {
+                    tokens: [],
+                    gridCells: {},
+                    lockedCells: {},
+                    fog: fogCanvas.toDataURL(),
+                    zoom: 1,
+                    panX: 0,
+                    panY: 0,
+                    currentCellX: 1,
+                    currentCellY: 1
+                }
+            };
+            
+            campaigns.push(newCampaign);
+            currentCampaignIndex = campaigns.length - 1;
+            saveCampaigns();
+            
+            document.getElementById('currentCampaignName').textContent = name;
+            closeCampaignNameModal();
+            renderCampaignSlots();
+            
+            alert(`Campaign "${name}" created!`);
+        }
+
+        function saveToCampaign(idx) {
+            if (idx >= campaigns.length) return;
+            
+            campaigns[idx].data = {
+                tokens: tokens,
+                gridCells: {},
+                lockedCells: lockedCells,
+                fog: fogCanvas.toDataURL(),
+                zoom: zoom,
+                panX: panX,
+                panY: panY,
+                currentCellX: currentCellX,
+                currentCellY: currentCellY
+            };
+            
+            // Save grid cells as data URLs
+            for (let key in gridCells) {
+                campaigns[idx].data.gridCells[key] = gridCells[key].toDataURL();
+            }
+            
+            campaigns[idx].lastModified = Date.now();
+            currentCampaignIndex = idx;
+            saveCampaigns();
+            
+            document.getElementById('currentCampaignName').textContent = campaigns[idx].name;
+            renderCampaignSlots();
+            
+            alert(`Saved to campaign "${campaigns[idx].name}"!`);
+        }
+
+        function loadCampaign(idx) {
+            if (idx >= campaigns.length) return;
+            
+            const campaign = campaigns[idx];
+            const data = campaign.data;
+            
+            tokens = data.tokens || [];
+            zoom = data.zoom || 1;
+            panX = data.panX || 0;
+            panY = data.panY || 0;
+            currentCellX = data.currentCellX || 1;
+            currentCellY = data.currentCellY || 1;
+            lockedCells = data.lockedCells || {};
+            
+            gridCells = {};
+            for (let key in data.gridCells) {
+                const img = new Image();
+                img.onload = () => {
+                    const cellCanvas = document.createElement('canvas');
+                    cellCanvas.width = CELL_SIZE;
+                    cellCanvas.height = CELL_SIZE;
+                    const cellCtx = cellCanvas.getContext('2d');
+                    cellCtx.drawImage(img, 0, 0);
+                    gridCells[key] = cellCanvas;
+                    draw();
+                };
+                img.src = data.gridCells[key];
+            }
+            
+            if (data.fog) {
+                const img = new Image();
+                img.onload = () => {
+                    fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
+                    fogCtx.drawImage(img, 0, 0, fogCanvas.width, fogCanvas.height);
+                    draw();
+                };
+                img.src = data.fog;
+            }
+            
+            // Load the current cell into the map canvas
+            const key = `${currentCellX},${currentCellY}`;
+            if (gridCells[key]) {
+                mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+                mapCtx.drawImage(gridCells[key], 0, 0);
+            } else {
+                mapCtx.fillStyle = '#f5f5dc';
+                mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+            }
+            
+            document.getElementById('zoomSlider').value = zoom * 100;
+            document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
+            document.getElementById('currentCampaignName').textContent = campaign.name;
+            currentCampaignIndex = idx;
+            
+            updateGridDisplay();
+            updateMapBuilderState();
+            draw();
+            renderCampaignSlots();
+            
+            alert(`Loaded campaign "${campaign.name}"!`);
+        }
+
+        function deleteCampaign(idx) {
+            if (idx >= campaigns.length) return;
+            
+            if (!confirm(`Delete campaign "${campaigns[idx].name}"? This cannot be undone.`)) {
+                return;
+            }
+            
+            campaigns.splice(idx, 1);
+            
+            if (currentCampaignIndex === idx) {
+                currentCampaignIndex = null;
+                document.getElementById('currentCampaignName').textContent = 'Untitled Campaign';
+            } else if (currentCampaignIndex > idx) {
+                currentCampaignIndex--;
+            }
+            
+            saveCampaigns();
+            renderCampaignSlots();
+        }
+
+        // Player Verification System
+        function showPlayerLogin() {
+            document.getElementById('playerModal').classList.add('active');
+        }
+
+        function closePlayerModal() {
+            document.getElementById('playerModal').classList.remove('active');
+            document.getElementById('playerSuccess').classList.remove('show');
+        }
+
+        function requestPlayerLogin(e) {
+            e.preventDefault();
+            const name = document.getElementById('playerName').value;
+            
+            playerRequests.push({ name: name, timestamp: Date.now() });
+            document.getElementById('playerSuccess').classList.add('show');
+            
+            // Hide the tooltip since player has submitted request
+            const tooltip = document.getElementById('playerTooltip');
+            if (tooltip) {
+                tooltip.classList.add('hidden');
+            }
+            
+            if (isDM) {
+                renderPlayerRequests();
+            }
+            
+            setTimeout(() => {
+                closePlayerModal();
+            }, 2000);
+        }
+
+        function renderPlayerRequests() {
+            const container = document.getElementById('playerRequests');
+            if (playerRequests.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-dim); font-size: 0.85rem;">No pending requests</p>';
+                return;
+            }
+            
+            container.innerHTML = playerRequests.map((req, idx) => `
+                <div class="player-request">
+                    <span>${req.name}</span>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-small btn-primary" onclick="approvePlayer(${idx})">✓</button>
+                        <button class="btn btn-small" onclick="denyPlayer(${idx})">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function approvePlayer(idx) {
+            const player = playerRequests[idx];
+            approvedPlayers.push(player.name);
+            playerRequests.splice(idx, 1);
+            renderPlayerRequests();
+            
+            // Notify player (in real app, this would be network call)
+            if (document.getElementById('playerName').value === player.name) {
+                activatePlayer(player.name);
+            }
+        }
+
+        function denyPlayer(idx) {
+            playerRequests.splice(idx, 1);
+            renderPlayerRequests();
+        }
+
+        function activatePlayer(name) {
+            currentPlayer = name;
+            document.getElementById('playerNameDisplay').textContent = name;
+            document.getElementById('playerBar').classList.add('show');
+            document.getElementById('playerBtn').textContent = '✓';
+        }
+
+        function playerLogout() {
+            currentPlayer = null;
+            playerTokens = [];
+            document.getElementById('playerBar').classList.remove('show');
+            document.getElementById('playerBtn').textContent = '👤';
+        }
+
+        function createPlayerToken() {
+            if (!currentPlayer) { showPlayerLogin(); return; }
+            const i = prompt('Emoji:', '⚔️') || '⚔️';
+            const c = prompt('Color:', '#e74c3c') || '#e74c3c';
+            const t = { id: Date.now(), color: c, icon: i };
+            playerTokens.push(t);
+            renderPlayerTokens();
+        }
+
+        function renderPlayerTokens() {
+            document.getElementById('playerTokens').innerHTML = playerTokens.map(t => `
+                <div class="token" draggable="true" style="background: ${t.color};" 
+                     ondragstart="dragPlayerToken(event, ${t.id})">${t.icon}</div>
+            `).join('');
+        }
+
+        function dragPlayerToken(e, id) {
+            const t = playerTokens.find(x => x.id === id);
+            e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'player', token: t }));
+        }
+
+        // Legacy Save/Load for backwards compatibility
+        function loadGame() {
+            document.getElementById('fileLoad').click();
+        }
+
+        function handleLoad(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const data = JSON.parse(ev.target.result);
+                tokens = data.tokens || [];
+                zoom = data.zoom || 1;
+                panX = data.panX || 0;
+                panY = data.panY || 0;
+                currentCellX = data.currentCellX || 1;
+                currentCellY = data.currentCellY || 1;
+                lockedCells = data.lockedCells || {};
+                
+                gridCells = {};
+                for (let key in data.gridCells) {
+                    const img = new Image();
+                    img.onload = () => {
+                        const cellCanvas = document.createElement('canvas');
+                        cellCanvas.width = CELL_SIZE;
+                        cellCanvas.height = CELL_SIZE;
+                        const cellCtx = cellCanvas.getContext('2d');
+                        cellCtx.drawImage(img, 0, 0);
+                        gridCells[key] = cellCanvas;
+                        draw();
+                    };
+                    img.src = data.gridCells[key];
+                }
+                
+                if (data.fog) {
+                    const img = new Image();
+                    img.onload = () => {
+                        fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
+                        fogCtx.drawImage(img, 0, 0, fogCanvas.width, fogCanvas.height);
+                        draw();
+                    };
+                    img.src = data.fog;
+                }
+                
+                // Load the current cell into the map canvas
+                const key = `${currentCellX},${currentCellY}`;
+                if (gridCells[key]) {
+                    mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+                    mapCtx.drawImage(gridCells[key], 0, 0);
+                } else {
+                    mapCtx.fillStyle = '#f5f5dc';
+                    mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+                }
+                
+                document.getElementById('zoomSlider').value = zoom * 100;
+                document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
+                updateGridDisplay();
+                updateMapBuilderState();
+                draw();
+            };
+            reader.readAsText(file);
+        }
+
+        init();
+    </script>
+</body>
+</html>
