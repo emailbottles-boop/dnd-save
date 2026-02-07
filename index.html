@@ -1049,9 +1049,9 @@
             <!-- Room Code Section -->
             <div class="connection-section" id="roomCodeSection" style="display: none;">
                 <h3>🎭 Room Code</h3>
-                <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.5rem;">Share this code with players:</p>
-                <div class="room-code" id="roomCode" onclick="copyRoomCode()">----</div>
-                <p style="color: var(--text-dim); font-size: 0.75rem; margin-top: 0.5rem; text-align: center;">Click to copy</p>
+                <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.5rem;">Share this FULL code with players:</p>
+                <div class="room-code" id="roomCode" onclick="copyRoomCode()" style="font-size: 0.85rem; word-break: break-all;">----</div>
+                <p style="color: var(--text-dim); font-size: 0.75rem; margin-top: 0.5rem; text-align: center;">⚠️ Copy the entire code • Click to copy</p>
             </div>
 
             <!-- Connection Status Section -->
@@ -1531,14 +1531,18 @@
             
             peer.on('open', (id) => {
                 myId = id;
-                roomCode = id.substring(0, 8).toUpperCase();
+                roomCode = id; // Store FULL peer ID, not truncated
+                const displayCode = id.substring(0, 8).toUpperCase(); // Just for display
+                
+                console.log('Room created! Full peer ID:', id);
+                console.log('Display code (first 8 chars):', displayCode);
                 
                 document.getElementById('welcomeScreen').classList.add('hidden');
                 
                 // Show connection tab and update UI
                 document.getElementById('connectionTabContainer').style.display = 'block';
                 document.getElementById('roomCodeSection').style.display = 'block';
-                document.getElementById('roomCode').textContent = roomCode;
+                document.getElementById('roomCode').textContent = roomCode; // Show FULL ID for copying
                 document.getElementById('dmPanelBtn').style.display = 'block';
                 document.getElementById('campaignInfo').style.display = 'flex';
                 document.getElementById('manageCampaignsBtn').style.display = 'block';
@@ -1592,20 +1596,23 @@
             myName = document.getElementById('playerNameInput').value;
             const code = document.getElementById('roomCodeInput').value.trim();
             
+            console.log('Attempting to join room with code:', code);
+            
             // Initialize PeerJS
             peer = new Peer();
             
             peer.on('open', (id) => {
                 myId = id;
+                console.log('My peer ID:', id);
+                console.log('Connecting to DM peer ID:', code);
                 
-                // Connect to DM - reconstruct the full peer ID from the room code
-                // Room codes are the first 8 chars of peer ID, so we need to try connecting
-                const dmPeerId = code.toLowerCase();
-                const conn = peer.connect(dmPeerId);
+                // Connect using the full peer ID (no modifications)
+                const conn = peer.connect(code);
                 
                 setupConnection(conn, true);
                 
                 conn.on('open', () => {
+                    console.log('✅ Connection established!');
                     closeJoinModal();
                     document.getElementById('welcomeScreen').classList.add('hidden');
                     
