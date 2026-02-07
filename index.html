@@ -204,15 +204,17 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 9999;
+            z-index: 99999;
             opacity: 0;
             visibility: hidden;
+            pointer-events: none;
             transition: all 0.3s;
         }
 
         .modal.active {
             opacity: 1;
             visibility: visible;
+            pointer-events: all;
         }
 
         .modal-content {
@@ -1437,6 +1439,16 @@
             console.log('DM Modal element:', modal);
             modal.classList.add('active');
             console.log('DM Modal classes:', modal.className);
+            
+            // Debug computed styles
+            setTimeout(() => {
+                const computed = window.getComputedStyle(modal);
+                console.log('Modal computed opacity:', computed.opacity);
+                console.log('Modal computed visibility:', computed.visibility);
+                console.log('Modal computed z-index:', computed.zIndex);
+                console.log('Modal computed display:', computed.display);
+                console.log('Modal computed pointer-events:', computed.pointerEvents);
+            }, 100);
         }
 
         function closeDMModal() {
