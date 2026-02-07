@@ -1299,7 +1299,8 @@
     </div>
 
     <script>
-        console.log('🎮 Fractured Sky Ultimate VTT Loading...');
+        console.log('🎮 THE FRACTURED SKY - Ultimate VTT Loading...');
+        console.log('Script started at:', new Date().toLocaleTimeString());
 
         // === CORE STATE ===
         let peer = null;
@@ -1418,15 +1419,20 @@
 
         // === AUTHENTICATION ===
         function showDMLogin() {
+            console.log('🎭 showDMLogin called');
             // Pre-fill session ID from localStorage if available
             const savedSession = localStorage.getItem('fracturedSkySessionId');
             if (savedSession) {
                 document.getElementById('sessionId').value = savedSession;
             }
-            document.getElementById('dmModal').classList.add('active');
+            const modal = document.getElementById('dmModal');
+            console.log('DM Modal element:', modal);
+            modal.classList.add('active');
+            console.log('DM Modal classes:', modal.className);
         }
 
         function closeDMModal() {
+            console.log('closeDMModal called');
             document.getElementById('dmModal').classList.remove('active');
             document.getElementById('dmError').classList.remove('show');
             document.getElementById('dmInfo').style.display = 'none';
@@ -1434,6 +1440,7 @@
 
         function dmLogin(e) {
             e.preventDefault();
+            console.log('dmLogin called');
             const user = document.getElementById('dmUser').value;
             const pass = document.getElementById('dmPass').value;
             const sessionId = document.getElementById('sessionId').value.trim();
@@ -1455,7 +1462,11 @@
         }
 
         function showPlayerLogin() {
-            document.getElementById('playerModal').classList.add('active');
+            console.log('👤 showPlayerLogin called');
+            const modal = document.getElementById('playerModal');
+            console.log('Player Modal element:', modal);
+            modal.classList.add('active');
+            console.log('Player Modal classes:', modal.className);
         }
 
         function closePlayerModal() {
@@ -2529,7 +2540,25 @@
             document.getElementById('dmPanel').classList.toggle('open');
         }
 
-        init();
+        // Global error handler
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error('🚨 JavaScript Error:', msg);
+            console.error('Line:', lineNo, 'Column:', columnNo);
+            console.error('Error object:', error);
+            return false;
+        };
+
+        // Wrap init in try-catch
+        try {
+            console.log('Calling init()...');
+            init();
+            console.log('✅ Init complete, functions should be available');
+            console.log('showDMLogin type:', typeof showDMLogin);
+            console.log('showPlayerLogin type:', typeof showPlayerLogin);
+        } catch (err) {
+            console.error('❌ Init failed:', err);
+            alert('Error loading VTT: ' + err.message);
+        }
     </script>
 </body>
 </html>
