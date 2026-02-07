@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Fractured Sky - Virtual Tabletop</title>
+    <title>The Fractured Sky - Multiplayer VTT</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -30,6 +31,96 @@
             color: var(--text);
             overflow: hidden;
             height: 100vh;
+        }
+
+        /* Connection Panel */
+        .connection-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            max-width: 300px;
+            z-index: 500;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .connection-panel h3 {
+            color: var(--gold);
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .room-code {
+            background: var(--bg-dark);
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            font-family: monospace;
+            font-size: 1.1rem;
+            text-align: center;
+            color: var(--accent);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .room-code:hover {
+            border-color: var(--accent);
+            transform: scale(1.02);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: var(--bg-hover);
+            border-radius: 6px;
+            margin-top: 0.5rem;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .status-indicator.connected {
+            background: #10b981;
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .connected-users {
+            margin-top: 0.75rem;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            padding: 0.5rem;
+            background: var(--bg-dark);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            background: var(--accent);
+            color: white;
         }
 
         /* Welcome Screen */
@@ -76,6 +167,7 @@
             display: flex;
             gap: 1rem;
             justify-content: center;
+            flex-wrap: wrap;
         }
 
         .welcome-btn {
@@ -546,56 +638,6 @@
             font-size: 1.5rem;
         }
 
-        .player-requests {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .player-request {
-            background: var(--bg-dark);
-            padding: 0.75rem;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .campaign-slot {
-            background: var(--bg-dark);
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.75rem;
-            border: 2px solid var(--border);
-            transition: all 0.2s;
-        }
-
-        .campaign-slot:hover {
-            border-color: var(--accent);
-        }
-
-        .campaign-slot.active {
-            border-color: var(--gold);
-            background: rgba(251, 191, 36, 0.05);
-        }
-
-        .campaign-slot-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-
-        .campaign-slot-name {
-            font-weight: 600;
-            color: var(--text);
-        }
-
-        .campaign-slot-info {
-            font-size: 0.85rem;
-            color: var(--text-dim);
-        }
-
         .modal {
             position: fixed;
             inset: 0;
@@ -688,163 +730,6 @@
             display: block;
         }
 
-        .player-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--bg-card);
-            border-top: 1px solid var(--border);
-            padding: 0.75rem 1rem;
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            transform: translateY(100%);
-            transition: transform 0.3s;
-            z-index: 50;
-        }
-
-        .player-bar.show {
-            transform: translateY(0);
-        }
-
-        .player-info {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: var(--bg-hover);
-            border-radius: 8px;
-        }
-
-        .player-tokens {
-            flex: 1;
-            display: flex;
-            gap: 0.5rem;
-            overflow-x: auto;
-        }
-
-        .token {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            border: 2px solid var(--border);
-            cursor: move;
-            flex-shrink: 0;
-            transition: all 0.2s;
-        }
-
-        .token:hover {
-            transform: scale(1.1);
-            border-color: var(--accent);
-        }
-
-        .player-login-btn {
-            position: fixed;
-            bottom: 1.5rem;
-            right: 1.5rem;
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-            border: 3px solid var(--gold);
-            border-radius: 50%;
-            color: white;
-            font-size: 2rem;
-            cursor: pointer;
-            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6), 0 0 0 0 rgba(139, 92, 246, 0.7);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6), 0 0 0 0 rgba(139, 92, 246, 0.7);
-            }
-            50% {
-                box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6), 0 0 0 15px rgba(139, 92, 246, 0);
-            }
-        }
-
-        .player-login-btn:hover {
-            transform: scale(1.15);
-            box-shadow: 0 8px 30px rgba(139, 92, 246, 0.8);
-        }
-
-        .player-login-btn::before {
-            content: 'PLAYER LOGIN';
-            position: absolute;
-            top: -35px;
-            right: 0;
-            background: var(--bg-card);
-            color: var(--text);
-            padding: 0.4rem 0.8rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-            border: 1px solid var(--border);
-        }
-
-        .player-login-btn:hover::before {
-            opacity: 1;
-        }
-
-        /* Initial Tooltip */
-        .player-tooltip {
-            position: fixed;
-            bottom: 2rem;
-            right: 9rem;
-            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: 12px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            white-space: nowrap;
-            z-index: 99;
-            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.6);
-            animation: bounce 2s infinite;
-            transition: opacity 0.3s, transform 0.3s;
-        }
-
-        .player-tooltip.hidden {
-            opacity: 0;
-            transform: translateX(20px);
-            pointer-events: none;
-        }
-
-        .player-tooltip::after {
-            content: '';
-            position: absolute;
-            right: -15px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 0;
-            height: 0;
-            border-left: 15px solid var(--accent-secondary);
-            border-top: 10px solid transparent;
-            border-bottom: 10px solid transparent;
-        }
-
-        @keyframes bounce {
-            0%, 100% {
-                transform: translateX(0);
-            }
-            50% {
-                transform: translateX(-10px);
-            }
-        }
-
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -858,6 +743,161 @@
             background: var(--accent);
             border-radius: 4px;
         }
+
+        /* Minimap Navigator */
+        .minimap {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 180px;
+            height: 180px;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem;
+            z-index: 500;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .minimap-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .minimap-title {
+            font-size: 0.75rem;
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        .minimap-close {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .minimap-close:hover {
+            background: var(--bg-hover);
+            color: var(--text);
+        }
+
+        .minimap-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2px;
+        }
+
+        .minimap-cell {
+            aspect-ratio: 1;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .minimap-cell:hover {
+            border-color: var(--accent);
+            transform: scale(1.05);
+            z-index: 1;
+        }
+
+        .minimap-cell.has-content {
+            background: var(--accent);
+            opacity: 0.6;
+        }
+
+        .minimap-cell.locked {
+            background: var(--gold);
+            opacity: 0.8;
+        }
+
+        .minimap-cell.locked::after {
+            content: '🔒';
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+        }
+
+        .minimap-cell.current {
+            border: 2px solid var(--gold);
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+            background: rgba(251, 191, 36, 0.3);
+        }
+
+        .minimap-actions {
+            display: flex;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .minimap-btn {
+            flex: 1;
+            padding: 0.4rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .minimap-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .minimap-toggle {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+            z-index: 499;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .minimap-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6);
+        }
+
+        .minimap-toggle.visible {
+            display: flex;
+        }
     </style>
 </head>
 <body>
@@ -865,24 +905,33 @@
     <div class="welcome-screen" id="welcomeScreen">
         <div class="welcome-content">
             <div class="welcome-title">✨ THE FRACTURED SKY</div>
-            <div class="welcome-subtitle">Virtual Tabletop for Epic Adventures</div>
+            <div class="welcome-subtitle">Multiplayer Virtual Tabletop</div>
             <div class="welcome-buttons">
-                <button class="welcome-btn welcome-btn-primary" onclick="showDMLogin()">🎭 Start as DM</button>
-                <button class="welcome-btn welcome-btn-secondary" onclick="enterAsPlayer()">👤 Join as Player</button>
+                <button class="welcome-btn welcome-btn-primary" onclick="createRoom()">🎭 Create Room (DM)</button>
+                <button class="welcome-btn welcome-btn-secondary" onclick="showJoinModal()">👥 Join Room (Player)</button>
             </div>
         </div>
     </div>
 
+    <!-- Connection Panel -->
+    <div class="connection-panel" id="connectionPanel" style="display: none;">
+        <h3>🌐 Room Connection</h3>
+        <div id="roomCodeDisplay" style="display: none;">
+            <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.5rem;">Share this code:</p>
+            <div class="room-code" id="roomCode" onclick="copyRoomCode()">----</div>
+        </div>
+        <div class="connection-status">
+            <div class="status-indicator" id="statusIndicator"></div>
+            <span id="statusText">Disconnected</span>
+        </div>
+        <div class="connected-users" id="connectedUsers"></div>
+    </div>
+
     <div class="header">
         <div class="title">✨ THE FRACTURED SKY</div>
-        <div class="campaign-info" id="campaignInfo" style="display: none;">
-            <span style="color: var(--text-dim);">Campaign:</span>
-            <span class="campaign-name" id="currentCampaignName">Untitled Campaign</span>
-        </div>
         <div class="header-actions">
-            <button class="btn" onclick="manageCampaigns()" id="manageCampaignsBtn" style="display: none;">📁 Campaigns</button>
-            <button class="btn" onclick="loadGame()">📂 Load</button>
-            <button class="btn btn-primary" onclick="openDM()">🎭 DM Controls</button>
+            <button class="btn" onclick="toggleConnectionPanel()">🌐 Connection</button>
+            <button class="btn btn-primary" onclick="toggleDMPanel()" id="dmPanelBtn" style="display: none;">🎭 DM Controls</button>
         </div>
     </div>
 
@@ -977,26 +1026,11 @@
         <div class="dm-panel" id="dmPanel">
             <div class="dm-header">
                 <h2>🎭 Dungeon Master</h2>
-                <button class="btn btn-small" onclick="closeDM()">✕</button>
+                <button class="btn btn-small" onclick="toggleDMPanel()">✕</button>
             </div>
             <div class="dm-content">
-                <!-- Campaign Manager -->
-                <div class="section" id="campaignSection">
-                    <h3>📁 Campaign Manager</h3>
-                    <div id="campaignSlots"></div>
-                    <button class="btn btn-primary" onclick="createNewCampaign()" id="createCampaignBtn" style="width: 100%;">+ New Campaign</button>
-                </div>
-
-                <!-- Player Requests -->
-                <div class="section">
-                    <h3>👥 Player Requests</h3>
-                    <div class="player-requests" id="playerRequests">
-                        <p style="color: var(--text-dim); font-size: 0.85rem;">No pending requests</p>
-                    </div>
-                </div>
-
                 <!-- Grid Map Builder -->
-                <div class="section" id="mapSection">
+                <div class="section active" id="mapSection">
                     <h3>🗺️ Grid Map Builder (3x3)</h3>
                     
                     <div class="grid-selector active">
@@ -1093,14 +1127,30 @@
                 <!-- Fog -->
                 <div class="section" id="fogSection">
                     <h3>🌫️ Fog of War</h3>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Paint Mode:</div>
+                        <div class="tool-grid" style="grid-template-columns: 1fr 1fr;">
+                            <div class="tool-btn active" onclick="setFogMode('brush')" id="fogBrushBtn">🖌️<br>Brush</div>
+                            <div class="tool-btn" onclick="setFogMode('rect')" id="fogRectBtn">▭<br>Rectangle</div>
+                        </div>
+                    </div>
+
                     <div class="control-row">
-                        <label>Size:</label>
+                        <label>Brush Size:</label>
                         <input type="range" class="slider" id="fogSize" min="20" max="150" value="60" oninput="setFogSize(this.value)" style="flex: 1;">
                         <span id="fogSizeValue">60px</span>
                     </div>
+                    
+                    <div class="control-row">
+                        <label>DM Opacity:</label>
+                        <input type="range" class="slider" id="dmFogOpacity" min="0" max="100" value="30" oninput="setDMFogOpacity(this.value)" style="flex: 1;">
+                        <span id="dmFogOpacityValue">30%</span>
+                    </div>
+                    
                     <div class="control-row">
                         <label>
-                            <input type="checkbox" id="revealMode" checked> Reveal
+                            <input type="checkbox" id="revealMode" checked> Reveal Mode
                         </label>
                     </div>
                     <div class="btn-group">
@@ -1124,92 +1174,55 @@
         </div>
     </div>
 
-    <!-- DM Login Modal -->
-    <div class="modal" id="dmModal">
+    <!-- Join Room Modal -->
+    <div class="modal" id="joinModal">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-icon">🧙</div>
-                <h2>Dungeon Master</h2>
+                <div class="modal-icon">🌐</div>
+                <h2>Join Room</h2>
             </div>
-            <form onsubmit="dmLogin(event)">
+            <form onsubmit="joinRoom(event)">
                 <div class="form-group">
-                    <label>USERNAME</label>
-                    <input type="text" id="dmUser" placeholder="Enter username" autocomplete="off" required>
+                    <label>YOUR NAME</label>
+                    <input type="text" id="playerNameInput" placeholder="Enter your name" autocomplete="off" required>
                 </div>
                 <div class="form-group">
-                    <label>PASSWORD</label>
-                    <input type="password" id="dmPass" placeholder="Enter password" autocomplete="off" required>
+                    <label>ROOM CODE</label>
+                    <input type="text" id="roomCodeInput" placeholder="Enter room code" autocomplete="off" required>
                 </div>
-                <div class="error" id="dmError">Invalid credentials</div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">ENTER</button>
-                <button type="button" class="btn" onclick="closeDMModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
+                <div class="error" id="joinError">Connection failed</div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">JOIN ROOM</button>
+                <button type="button" class="btn" onclick="closeJoinModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
             </form>
         </div>
     </div>
 
-    <!-- Campaign Name Modal -->
-    <div class="modal" id="campaignNameModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-icon">📁</div>
-                <h2>New Campaign</h2>
-            </div>
-            <form onsubmit="saveCampaignName(event)">
-                <div class="form-group">
-                    <label>CAMPAIGN NAME</label>
-                    <input type="text" id="campaignNameInput" placeholder="Enter campaign name" autocomplete="off" required maxlength="50">
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">CREATE</button>
-                <button type="button" class="btn" onclick="closeCampaignNameModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
-            </form>
+    <!-- Minimap Navigator -->
+    <div class="minimap" id="minimap">
+        <div class="minimap-header">
+            <div class="minimap-title">🗺️ Navigator</div>
+            <button class="minimap-close" onclick="toggleMinimap()">✕</button>
+        </div>
+        <div class="minimap-grid" id="minimapGrid"></div>
+        <div class="minimap-actions">
+            <button class="minimap-btn" onclick="recenterView()">⊙ Center</button>
+            <button class="minimap-btn" onclick="resetZoom()">🔍 Reset</button>
         </div>
     </div>
 
-    <!-- Player Login Modal -->
-    <div class="modal" id="playerModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-icon">👤</div>
-                <h2>Player Login</h2>
-            </div>
-            <form onsubmit="requestPlayerLogin(event)">
-                <div class="form-group">
-                    <label>CHARACTER NAME</label>
-                    <input type="text" id="playerName" placeholder="Enter your name" autocomplete="off" required>
-                </div>
-                <div class="success" id="playerSuccess">Request sent! Waiting for DM approval...</div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">REQUEST TO JOIN</button>
-                <button type="button" class="btn" onclick="closePlayerModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Player Bar -->
-    <div class="player-bar" id="playerBar">
-        <div class="player-info">
-            <div style="width: 36px; height: 36px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">👤</div>
-            <span id="playerNameDisplay">Guest</span>
-        </div>
-        <div class="player-tokens" id="playerTokens"></div>
-        <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-small" onclick="createPlayerToken()">+ Token</button>
-            <button class="btn btn-small" onclick="playerLogout()">Logout</button>
-        </div>
-    </div>
-
-    <!-- Player Tooltip -->
-    <div class="player-tooltip" id="playerTooltip">
-        👈 Create Player Token
-    </div>
-
-    <button class="player-login-btn" onclick="showPlayerLogin()" id="playerBtn">👤</button>
-
-    <input type="file" id="fileLoad" accept=".json" style="display: none;" onchange="handleLoad(event)">
+    <!-- Minimap Toggle Button -->
+    <button class="minimap-toggle" id="minimapToggle" onclick="toggleMinimap()">🗺️</button>
 
     <script>
-        // State
+        // Multiplayer State
+        let peer = null;
         let isDM = false;
-        let currentPlayer = null;
+        let myId = null;
+        let myName = null;
+        let connections = new Map(); // peerId -> {conn, name, role}
+        let roomCode = null;
+
+        // Game State
         let zoom = 1;
         let panX = 0;
         let panY = 0;
@@ -1219,28 +1232,22 @@
         let size = 8;
         let stamp = '🌲';
         let fogSize = 60;
+        let fogMode = 'brush'; // 'brush' or 'rect'
+        let dmFogOpacity = 0.3; // DM can see through fog
         let currentMode = 'map';
         let isDrawing = false;
         let lastX = 0;
         let lastY = 0;
         let dragToken = null;
-        let playerTokens = [];
-        let playerRequests = [];
-        let approvedPlayers = [];
         let fogInitialized = false;
+        let fogRectStart = null; // For rectangular fog painting
         
-        // Campaign Management
-        let campaigns = [];
-        let currentCampaignIndex = null;
-        const MAX_CAMPAIGNS = 3;
-        
-        // 3x3 Grid system - Direct mapping (0,0 = top-left, 2,2 = bottom-right)
         const GRID_SIZE = 400;
         const CELL_SIZE = 400;
-        let currentCellX = 1;  // Start at center cell (1,1)
+        let currentCellX = 1;
         let currentCellY = 1;
         let gridCells = {};
-        let lockedCells = {}; // Track which cells are submitted/locked
+        let lockedCells = {};
 
         const gridNames = [
             ['Top-Left', 'Top-Center', 'Top-Right'],
@@ -1256,12 +1263,324 @@
         const fogCanvas = document.createElement('canvas');
         const fogCtx = fogCanvas.getContext('2d');
 
+        // ========== MULTIPLAYER FUNCTIONS ==========
+
+        function createRoom() {
+            isDM = true;
+            myName = 'Dungeon Master';
+            
+            // Initialize PeerJS with free cloud server
+            peer = new Peer();
+            
+            peer.on('open', (id) => {
+                myId = id;
+                roomCode = id.substring(0, 8).toUpperCase();
+                
+                document.getElementById('welcomeScreen').classList.add('hidden');
+                document.getElementById('connectionPanel').style.display = 'block';
+                document.getElementById('roomCodeDisplay').style.display = 'block';
+                document.getElementById('roomCode').textContent = roomCode;
+                document.getElementById('dmPanelBtn').style.display = 'block';
+                
+                updateConnectionStatus('Connected as DM', true);
+                updateUserList();
+            });
+            
+            peer.on('connection', (conn) => {
+                setupConnection(conn);
+            });
+            
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                alert('Connection error: ' + err.message);
+            });
+        }
+
+        function showJoinModal() {
+            document.getElementById('joinModal').classList.add('active');
+        }
+
+        function closeJoinModal() {
+            document.getElementById('joinModal').classList.remove('active');
+            document.getElementById('joinError').classList.remove('show');
+        }
+
+        function joinRoom(e) {
+            e.preventDefault();
+            
+            myName = document.getElementById('playerNameInput').value;
+            const code = document.getElementById('roomCodeInput').value.trim();
+            
+            // Initialize PeerJS
+            peer = new Peer();
+            
+            peer.on('open', (id) => {
+                myId = id;
+                
+                // Try to connect to DM using the room code
+                // We need to find the actual peer ID from the code
+                // For simplicity, we'll use the code directly as peer ID
+                const conn = peer.connect(code.toLowerCase());
+                
+                setupConnection(conn, true);
+                
+                conn.on('open', () => {
+                    closeJoinModal();
+                    document.getElementById('welcomeScreen').classList.add('hidden');
+                    document.getElementById('connectionPanel').style.display = 'block';
+                    
+                    updateConnectionStatus('Connected to room', true);
+                    
+                    // Send join message
+                    sendToPeer(conn, {
+                        type: 'join',
+                        name: myName,
+                        role: 'player'
+                    });
+                    
+                    // Request current game state
+                    sendToPeer(conn, { type: 'requestState' });
+                });
+                
+                conn.on('error', (err) => {
+                    console.error('Connection error:', err);
+                    document.getElementById('joinError').classList.add('show');
+                });
+            });
+        }
+
+        function setupConnection(conn, isInitiator = false) {
+            conn.on('data', (data) => {
+                handleMessage(conn, data);
+            });
+            
+            conn.on('open', () => {
+                if (!isInitiator && isDM) {
+                    // DM receiving new connection
+                    connections.set(conn.peer, { conn, name: 'Unknown', role: 'player' });
+                    updateUserList();
+                } else if (isInitiator) {
+                    // Player successfully connected
+                    connections.set(conn.peer, { conn, name: 'Dungeon Master', role: 'dm' });
+                    updateUserList();
+                }
+            });
+            
+            conn.on('close', () => {
+                connections.delete(conn.peer);
+                updateUserList();
+            });
+        }
+
+        function handleMessage(conn, data) {
+            switch (data.type) {
+                case 'join':
+                    // Update connection info
+                    connections.set(conn.peer, { conn, name: data.name, role: data.role });
+                    updateUserList();
+                    
+                    // If we're DM, send current state to new player
+                    if (isDM) {
+                        sendGameState(conn);
+                    }
+                    break;
+                    
+                case 'requestState':
+                    if (isDM) {
+                        sendGameState(conn);
+                    }
+                    break;
+                    
+                case 'gameState':
+                    // Receive full game state
+                    loadGameState(data.state);
+                    break;
+                    
+                case 'cellUpdate':
+                    // Receive cell update
+                    updateCellFromData(data.cellX, data.cellY, data.imageData);
+                    break;
+                    
+                case 'tokenUpdate':
+                    // Update tokens
+                    tokens = data.tokens;
+                    draw();
+                    break;
+                    
+                case 'fogUpdate':
+                    // Update fog
+                    loadFogFromData(data.fogData);
+                    break;
+                    
+                case 'lockUpdate':
+                    lockedCells = data.lockedCells;
+                    draw();
+                    break;
+            }
+        }
+
+        function sendToPeer(conn, data) {
+            try {
+                conn.send(data);
+            } catch (err) {
+                console.error('Send error:', err);
+            }
+        }
+
+        function broadcast(data) {
+            connections.forEach(({conn}) => {
+                sendToPeer(conn, data);
+            });
+        }
+
+        function sendGameState(conn) {
+            const gridCellsData = {};
+            for (let key in gridCells) {
+                gridCellsData[key] = gridCells[key].toDataURL();
+            }
+            
+            sendToPeer(conn, {
+                type: 'gameState',
+                state: {
+                    tokens,
+                    gridCells: gridCellsData,
+                    lockedCells,
+                    fog: fogCanvas.toDataURL(),
+                    zoom,
+                    panX,
+                    panY,
+                    currentCellX,
+                    currentCellY
+                }
+            });
+        }
+
+        function loadGameState(state) {
+            tokens = state.tokens || [];
+            zoom = state.zoom || 1;
+            panX = state.panX || 0;
+            panY = state.panY || 0;
+            currentCellX = state.currentCellX || 1;
+            currentCellY = state.currentCellY || 1;
+            lockedCells = state.lockedCells || {};
+            
+            // Load grid cells
+            gridCells = {};
+            for (let key in state.gridCells) {
+                const img = new Image();
+                img.onload = () => {
+                    const cellCanvas = document.createElement('canvas');
+                    cellCanvas.width = CELL_SIZE;
+                    cellCanvas.height = CELL_SIZE;
+                    const cellCtx = cellCanvas.getContext('2d');
+                    cellCtx.drawImage(img, 0, 0);
+                    gridCells[key] = cellCanvas;
+                    draw();
+                };
+                img.src = state.gridCells[key];
+            }
+            
+            // Load fog
+            if (state.fog) {
+                loadFogFromData(state.fog);
+            }
+            
+            // Update UI
+            document.getElementById('zoomSlider').value = zoom * 100;
+            document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
+            updateGridDisplay();
+            draw();
+        }
+
+        function loadFogFromData(fogData) {
+            const img = new Image();
+            img.onload = () => {
+                fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
+                fogCtx.drawImage(img, 0, 0, fogCanvas.width, fogCanvas.height);
+                draw();
+            };
+            img.src = fogData;
+        }
+
+        function updateCellFromData(cellX, cellY, imageData) {
+            const key = `${cellX},${cellY}`;
+            const img = new Image();
+            img.onload = () => {
+                const cellCanvas = document.createElement('canvas');
+                cellCanvas.width = CELL_SIZE;
+                cellCanvas.height = CELL_SIZE;
+                const cellCtx = cellCanvas.getContext('2d');
+                cellCtx.drawImage(img, 0, 0);
+                gridCells[key] = cellCanvas;
+                draw();
+                
+                // If this is the current cell, update map canvas
+                if (cellX === currentCellX && cellY === currentCellY) {
+                    mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+                    mapCtx.drawImage(img, 0, 0);
+                }
+            };
+            img.src = imageData;
+        }
+
+        function updateConnectionStatus(text, connected) {
+            document.getElementById('statusText').textContent = text;
+            const indicator = document.getElementById('statusIndicator');
+            if (connected) {
+                indicator.classList.add('connected');
+            } else {
+                indicator.classList.remove('connected');
+            }
+        }
+
+        function updateUserList() {
+            const container = document.getElementById('connectedUsers');
+            const users = [];
+            
+            if (isDM) {
+                users.push({ name: myName, role: 'DM' });
+            }
+            
+            connections.forEach(({name, role}) => {
+                users.push({ name, role: role === 'dm' ? 'DM' : 'Player' });
+            });
+            
+            if (!isDM && connections.size > 0) {
+                users.unshift({ name: myName, role: 'Player' });
+            }
+            
+            container.innerHTML = users.map(user => `
+                <div class="user-item">
+                    <span style="flex: 1;">${user.name}</span>
+                    <span class="user-role">${user.role}</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleConnectionPanel() {
+            const panel = document.getElementById('connectionPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function copyRoomCode() {
+            const code = document.getElementById('roomCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const elem = document.getElementById('roomCode');
+                const oldText = elem.textContent;
+                elem.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    elem.textContent = oldText;
+                }, 2000);
+            });
+        }
+
+        // ========== GAME FUNCTIONS ==========
+
         function resizeCanvas() {
             const container = document.getElementById('canvasContainer');
             canvas.width = container.offsetWidth;
             canvas.height = container.offsetHeight;
             
-            // Only set fog canvas size once during init to prevent reset
             if (!fogInitialized) {
                 fogCanvas.width = GRID_SIZE * 3;
                 fogCanvas.height = GRID_SIZE * 3;
@@ -1270,7 +1589,6 @@
                 fogInitialized = true;
             }
             
-            // Center the 3x3 grid in the viewport
             panX = (canvas.width - GRID_SIZE * 3) / 2;
             panY = (canvas.height - GRID_SIZE * 3) / 2;
             
@@ -1284,11 +1602,71 @@
             mapCtx.fillStyle = '#f5f5dc';
             mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
             
-            setMode('map');
             updateGridDisplay();
-            updateMapBuilderState();
-            loadCampaigns();
-            renderCampaignSlots();
+            updateMinimap();
+        }
+
+        // ========== MINIMAP FUNCTIONS ==========
+
+        function updateMinimap() {
+            const container = document.getElementById('minimapGrid');
+            let html = '';
+            
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    const key = `${col},${row}`;
+                    const hasContent = gridCells[key] !== undefined;
+                    const isLocked = lockedCells[key];
+                    const isCurrent = col === currentCellX && row === currentCellY;
+                    
+                    let classes = ['minimap-cell'];
+                    if (hasContent) classes.push('has-content');
+                    if (isLocked) classes.push('locked');
+                    if (isCurrent) classes.push('current');
+                    
+                    html += `<div class="${classes.join(' ')}" onclick="minimapNavigate(${col}, ${row})" title="${gridNames[row][col]}"></div>`;
+                }
+            }
+            
+            container.innerHTML = html;
+        }
+
+        function minimapNavigate(col, row) {
+            // Center the view on the selected cell
+            const cellCenterX = (col + 0.5) * GRID_SIZE;
+            const cellCenterY = (row + 0.5) * GRID_SIZE;
+            
+            panX = canvas.width / 2 - cellCenterX * zoom;
+            panY = canvas.height / 2 - cellCenterY * zoom;
+            
+            draw();
+        }
+
+        function recenterView() {
+            // Center the entire 3x3 grid in the viewport
+            panX = (canvas.width - GRID_SIZE * 3 * zoom) / 2;
+            panY = (canvas.height - GRID_SIZE * 3 * zoom) / 2;
+            draw();
+        }
+
+        function resetZoom() {
+            zoom = 1;
+            document.getElementById('zoomSlider').value = 100;
+            document.getElementById('zoomValue').textContent = '100%';
+            recenterView();
+        }
+
+        function toggleMinimap() {
+            const minimap = document.getElementById('minimap');
+            const toggle = document.getElementById('minimapToggle');
+            
+            if (minimap.style.display === 'none') {
+                minimap.style.display = 'block';
+                toggle.classList.remove('visible');
+            } else {
+                minimap.style.display = 'none';
+                toggle.classList.add('visible');
+            }
         }
 
         function draw() {
@@ -1297,35 +1675,28 @@
             ctx.translate(panX, panY);
             ctx.scale(zoom, zoom);
 
-            // Draw 3x3 grid - direct 1:1 mapping
-            // (0,0) = top-left, (1,0) = top-center, (2,0) = top-right, etc.
             for (let row = 0; row < 3; row++) {
                 for (let col = 0; col < 3; col++) {
                     const x = col * GRID_SIZE;
                     const y = row * GRID_SIZE;
                     const key = `${col},${row}`;
                     
-                    // Cell background
                     ctx.fillStyle = '#1a1f2e';
                     ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
                     
-                    // Cell content
                     if (gridCells[key]) {
                         ctx.drawImage(gridCells[key], x, y, GRID_SIZE, GRID_SIZE);
                     }
                     
-                    // Grid lines
                     ctx.strokeStyle = '#2a2f3e';
                     ctx.lineWidth = 2;
                     ctx.strokeRect(x, y, GRID_SIZE, GRID_SIZE);
                     
-                    // Highlight currently selected cell for building
                     if (col === currentCellX && row === currentCellY && isDM) {
                         ctx.strokeStyle = lockedCells[key] ? '#fbbf24' : '#8b5cf6';
                         ctx.lineWidth = 4;
                         ctx.strokeRect(x, y, GRID_SIZE, GRID_SIZE);
                         
-                        // Cell label showing current selection
                         ctx.fillStyle = lockedCells[key] ? 'rgba(251, 191, 36, 0.3)' : 'rgba(139, 92, 246, 0.3)';
                         ctx.fillRect(x + 5, y + 5, 160, 30);
                         ctx.fillStyle = lockedCells[key] ? '#fbbf24' : '#8b5cf6';
@@ -1336,7 +1707,6 @@
                         ctx.fillText(`${status}: ${gridNames[row][col]}`, x + 10, y + 12);
                     }
                     
-                    // Show lock icon on locked cells (that aren't currently selected)
                     if (lockedCells[key] && !(col === currentCellX && row === currentCellY)) {
                         ctx.fillStyle = 'rgba(251, 191, 36, 0.2)';
                         ctx.fillRect(x + GRID_SIZE - 40, y + 5, 35, 30);
@@ -1346,7 +1716,6 @@
                 }
             }
 
-            // Tokens
             tokens.forEach(t => {
                 ctx.fillStyle = t.color;
                 ctx.beginPath();
@@ -1360,110 +1729,58 @@
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(t.icon, t.x, t.y);
-                if (t.owner) {
-                    ctx.fillStyle = '#8b5cf6';
-                    ctx.font = '12px Inter';
-                    ctx.fillText(t.owner, t.x, t.y + 45);
-                }
             });
 
             ctx.restore();
 
-            // Fog layer over the entire 3x3 grid
+            // Fog layer - with DM opacity control
             ctx.save();
             ctx.translate(panX, panY);
             ctx.scale(zoom, zoom);
+            
+            // Apply DM-specific opacity
+            if (isDM) {
+                ctx.globalAlpha = dmFogOpacity;
+            }
+            
             ctx.drawImage(fogCanvas, 0, 0, GRID_SIZE * 3, GRID_SIZE * 3);
             ctx.restore();
+            
+            // Draw fog rectangle preview if in rect mode
+            if (currentMode === 'fog' && fogMode === 'rect' && fogRectStart && isDrawing) {
+                ctx.save();
+                ctx.strokeStyle = document.getElementById('revealMode').checked ? '#10b981' : '#ef4444';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                
+                const width = lastX - fogRectStart.x;
+                const height = lastY - fogRectStart.y;
+                ctx.strokeRect(fogRectStart.x, fogRectStart.y, width, height);
+                ctx.restore();
+            }
+            
+            updateMinimap();
         }
 
-        // FIXED: Direct cell selection - arrows map 1:1 to visible grid cells
         function selectCell(cellX, cellY) {
-            // Bounds check (0-2 for both x and y)
+            if (!isDM) return;
             if (cellX < 0 || cellX > 2 || cellY < 0 || cellY > 2) return;
             
             currentCellX = cellX;
             currentCellY = cellY;
             
-            // Load the cell content into the map builder
             const key = `${cellX},${cellY}`;
             if (gridCells[key]) {
                 mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
                 mapCtx.drawImage(gridCells[key], 0, 0);
             } else {
-                // Clear the canvas if no cell exists at this position
                 mapCtx.fillStyle = '#f5f5dc';
                 mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
             }
             
             updateGridDisplay();
-            updateMapBuilderState();
+            updateMinimap();
             draw();
-        }
-
-        function updateMapBuilderState() {
-            const key = `${currentCellX},${currentCellY}`;
-            const isLocked = lockedCells[key];
-            const hasContent = gridCells[key] !== undefined;
-            
-            // Disable/enable map building tools based on lock status
-            const tools = ['brushBtn', 'fillBtn', 'eraserBtn', 'stampBtn'];
-            const colorPicker = document.getElementById('colorPicker');
-            const sizeSlider = document.getElementById('sizeSlider');
-            const submitBtn = document.querySelector('#mapSection .btn-primary');
-            const clearBtn = document.querySelector('#mapSection .btn-group .btn:last-child');
-            const lockBtn = document.getElementById('lockBtn');
-            
-            tools.forEach(toolId => {
-                const btn = document.getElementById(toolId);
-                if (btn) {
-                    btn.style.opacity = isLocked ? '0.5' : '1';
-                    btn.style.pointerEvents = isLocked ? 'none' : 'auto';
-                }
-            });
-            
-            if (colorPicker) {
-                colorPicker.disabled = isLocked;
-                colorPicker.style.opacity = isLocked ? '0.5' : '1';
-            }
-            if (sizeSlider) {
-                sizeSlider.disabled = isLocked;
-                sizeSlider.style.opacity = isLocked ? '0.5' : '1';
-            }
-            if (submitBtn) {
-                submitBtn.disabled = isLocked;
-                submitBtn.style.opacity = isLocked ? '0.5' : '1';
-            }
-            if (clearBtn) {
-                clearBtn.disabled = isLocked;
-                clearBtn.style.opacity = isLocked ? '0.5' : '1';
-            }
-            
-            // Update lock button
-            if (lockBtn) {
-                if (!hasContent) {
-                    lockBtn.textContent = '🔓 Lock Cell';
-                    lockBtn.disabled = true;
-                    lockBtn.style.opacity = '0.5';
-                    lockBtn.title = 'Submit the cell first before locking';
-                } else if (isLocked) {
-                    lockBtn.textContent = '🔓 Unlock Cell';
-                    lockBtn.disabled = false;
-                    lockBtn.style.opacity = '1';
-                    lockBtn.classList.remove('btn-primary');
-                    lockBtn.title = 'Click to unlock and enable editing';
-                } else {
-                    lockBtn.textContent = '🔒 Lock Cell';
-                    lockBtn.disabled = false;
-                    lockBtn.style.opacity = '1';
-                    lockBtn.classList.remove('btn-primary');
-                    lockBtn.title = 'Click to lock and prevent further editing';
-                }
-            }
-            
-            // Disable map canvas interaction if locked
-            mapCanvas.style.pointerEvents = isLocked ? 'none' : 'auto';
-            mapCanvas.style.opacity = isLocked ? '0.7' : '1';
         }
 
         function updateGridDisplay() {
@@ -1471,9 +1788,9 @@
         }
 
         function submitCell() {
-            const key = `${currentCellX},${currentCellY}`;
+            if (!isDM) return;
             
-            // Create a permanent copy of the canvas
+            const key = `${currentCellX},${currentCellY}`;
             const cellCanvas = document.createElement('canvas');
             cellCanvas.width = CELL_SIZE;
             cellCanvas.height = CELL_SIZE;
@@ -1481,81 +1798,48 @@
             cellCtx.drawImage(mapCanvas, 0, 0);
             gridCells[key] = cellCanvas;
             
-            // Don't auto-lock - let user manually lock if desired
-            
+            updateMinimap();
             draw();
-            updateMapBuilderState();
-            alert(`${gridNames[currentCellY][currentCellX]} submitted! You can still edit it by selecting this cell again.`);
-        }
-        
-        function toggleLockCell() {
-            const key = `${currentCellX},${currentCellY}`;
             
-            // Only allow locking if there's content in the cell
+            // Broadcast to all players
+            broadcast({
+                type: 'cellUpdate',
+                cellX: currentCellX,
+                cellY: currentCellY,
+                imageData: cellCanvas.toDataURL()
+            });
+            
+            alert(`${gridNames[currentCellY][currentCellX]} submitted!`);
+        }
+
+        function toggleLockCell() {
+            if (!isDM) return;
+            
+            const key = `${currentCellX},${currentCellY}`;
             if (!gridCells[key]) {
-                alert('Submit the cell first before locking it!');
+                alert('Submit the cell first!');
                 return;
             }
             
-            // Toggle lock state
             lockedCells[key] = !lockedCells[key];
-            
-            updateMapBuilderState();
+            updateMinimap();
             draw();
             
-            const status = lockedCells[key] ? 'locked 🔒' : 'unlocked ✏️';
-            alert(`${gridNames[currentCellY][currentCellX]} is now ${status}`);
+            broadcast({
+                type: 'lockUpdate',
+                lockedCells: lockedCells
+            });
         }
 
         function clearCell() {
+            if (!isDM) return;
             mapCtx.fillStyle = '#f5f5dc';
             mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
         }
 
-        // Modes
-        function setMode(mode) {
-            currentMode = mode;
-            
-            // Remove active class from ALL sections
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            
-            // Add active class to the appropriate section
-            if (mode === 'map') {
-                const mapSection = document.getElementById('mapSection');
-                if (mapSection) mapSection.classList.add('active');
-                canvas.style.cursor = 'grab';
-            } else if (mode === 'fog') {
-                const fogSection = document.getElementById('fogSection');
-                if (fogSection) fogSection.classList.add('active');
-                canvas.style.cursor = 'crosshair';
-            } else if (mode === 'token') {
-                const tokenSection = document.getElementById('tokensSection');
-                if (tokenSection) tokenSection.classList.add('active');
-                canvas.style.cursor = 'default';
-            } else if (mode === 'assets') {
-                const assetSection = document.getElementById('assetSection');
-                if (assetSection) assetSection.classList.add('active');
-                canvas.style.cursor = 'grab';
-            }
-            
-            updateFogButton();
-        }
-
-        function updateFogButton() {
-            const btn = document.getElementById('fogBtn');
-            if (currentMode === 'fog') {
-                btn.textContent = '🌫️ Fog Active';
-                btn.classList.add('btn-primary');
-            } else {
-                btn.textContent = 'Enable Fog';
-                btn.classList.remove('btn-primary');
-            }
-        }
-
-        // Tools
         function setTool(t) {
+            if (!isDM) return;
             tool = t;
-            setMode('map');
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             const btn = document.getElementById(t + 'Btn');
             if (btn) btn.classList.add('active');
@@ -1566,12 +1850,9 @@
             document.getElementById('sizeValue').textContent = v + 'px';
         }
 
-        // Stamps (DM Only)
         function openStamps() {
             if (!isDM) return;
             document.getElementById('stampSidebar').classList.add('open');
-            tool = 'stamp';
-            setMode('map');
         }
 
         function closeStamps() {
@@ -1590,7 +1871,6 @@
             color = e.target.value;
         });
 
-        // Textures
         const textures = {
             grass: '#4a7c59',
             stone: '#8a8a8a',
@@ -1603,7 +1883,7 @@
         };
 
         function applyTexture(type) {
-            setMode('assets');  // Activate the assets section when clicked
+            if (!isDM) return;
             
             if (type === 'bridge') {
                 mapCtx.font = '96px Arial';
@@ -1612,12 +1892,10 @@
                 mapCtx.fillStyle = textures[type];
                 mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
             }
-            document.querySelectorAll('.asset-item').forEach(item => item.classList.remove('selected'));
-            event.target.classList.add('selected');
         }
 
-        // Import
         function importMap(e) {
+            if (!isDM) return;
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -1632,6 +1910,7 @@
         }
 
         function importAsset(e) {
+            if (!isDM) return;
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -1645,16 +1924,14 @@
             reader.readAsDataURL(file);
         }
 
-        // Map Canvas
         mapCanvas.addEventListener('mousedown', e => {
+            if (!isDM) return;
             isDrawing = true;
             const rect = mapCanvas.getBoundingClientRect();
             const scaleX = mapCanvas.width / rect.width;
             const scaleY = mapCanvas.height / rect.height;
             const x = (e.clientX - rect.left) * scaleX;
             const y = (e.clientY - rect.top) * scaleY;
-            lastX = x;
-            lastY = y;
 
             if (tool === 'brush') {
                 mapCtx.beginPath();
@@ -1677,7 +1954,7 @@
         });
 
         mapCanvas.addEventListener('mousemove', e => {
-            if (!isDrawing) return;
+            if (!isDrawing || !isDM) return;
             const rect = mapCanvas.getBoundingClientRect();
             const scaleX = mapCanvas.width / rect.width;
             const scaleY = mapCanvas.height / rect.height;
@@ -1700,38 +1977,54 @@
             }
         });
 
-        // FIXED: Fog of War
         function setFogSize(v) {
             fogSize = v;
             document.getElementById('fogSizeValue').textContent = v + 'px';
         }
 
-        function toggleFog() {
-            if (currentMode === 'fog') {
-                setMode('map');
-            } else {
-                setMode('fog');
-            }
+        function setFogMode(mode) {
+            if (!isDM) return;
+            fogMode = mode;
+            document.querySelectorAll('#fogSection .tool-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.getElementById(`fog${mode.charAt(0).toUpperCase() + mode.slice(1)}Btn`);
+            if (btn) btn.classList.add('active');
         }
 
-        function resetFog() {
-            fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
-            fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+        function setDMFogOpacity(v) {
+            if (!isDM) return;
+            dmFogOpacity = v / 100;
+            document.getElementById('dmFogOpacityValue').textContent = v + '%';
             draw();
         }
 
+        function toggleFog() {
+            if (!isDM) return;
+            currentMode = currentMode === 'fog' ? 'map' : 'fog';
+        }
+
+        function resetFog() {
+            if (!isDM) return;
+            fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+            fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+            draw();
+            
+            broadcast({
+                type: 'fogUpdate',
+                fogData: fogCanvas.toDataURL()
+            });
+        }
+
         function applyFog(x, y) {
+            if (!isDM) return;
+            
             const reveal = document.getElementById('revealMode').checked;
             
-            // Save current state
             fogCtx.save();
             
             if (reveal) {
-                // Reveal mode - erase the fog
                 fogCtx.globalCompositeOperation = 'destination-out';
-                fogCtx.fillStyle = 'rgba(0,0,0,1)'; // Fully opaque for erasing
+                fogCtx.fillStyle = 'rgba(0,0,0,1)';
             } else {
-                // Add fog mode
                 fogCtx.globalCompositeOperation = 'source-over';
                 fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
             }
@@ -1740,46 +2033,95 @@
             fogCtx.arc(x, y, fogSize, 0, Math.PI * 2);
             fogCtx.fill();
             
-            // Restore state to reset composite operation
             fogCtx.restore();
             
             draw();
+            
+            // Broadcast fog updates (throttled)
+            if (!this.fogUpdateTimeout) {
+                this.fogUpdateTimeout = setTimeout(() => {
+                    broadcast({
+                        type: 'fogUpdate',
+                        fogData: fogCanvas.toDataURL()
+                    });
+                    this.fogUpdateTimeout = null;
+                }, 100);
+            }
         }
 
-        // Tokens
-        function addToken(c, i) {
-            setMode('token');
-            tokens.push({ x: 200, y: 200, color: c, icon: i, owner: null });
+        function applyFogRect(x1, y1, x2, y2) {
+            if (!isDM) return;
+            
+            const reveal = document.getElementById('revealMode').checked;
+            
+            fogCtx.save();
+            
+            if (reveal) {
+                fogCtx.globalCompositeOperation = 'destination-out';
+                fogCtx.fillStyle = 'rgba(0,0,0,1)';
+            } else {
+                fogCtx.globalCompositeOperation = 'source-over';
+                fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+            }
+            
+            const width = x2 - x1;
+            const height = y2 - y1;
+            fogCtx.fillRect(x1, y1, width, height);
+            
+            fogCtx.restore();
+            
             draw();
+            
+            // Broadcast fog update
+            broadcast({
+                type: 'fogUpdate',
+                fogData: fogCanvas.toDataURL()
+            });
+        }
+
+        function addToken(c, i) {
+            if (!isDM) return;
+            tokens.push({ x: 200, y: 200, color: c, icon: i });
+            draw();
+            
+            broadcast({
+                type: 'tokenUpdate',
+                tokens: tokens
+            });
         }
 
         function addCustomToken() {
-            setMode('token');
+            if (!isDM) return;
             const i = prompt('Emoji:', '⚔️') || '⚔️';
             const c = prompt('Color:', '#e74c3c') || '#e74c3c';
             addToken(c, i);
         }
 
-        // Zoom
         function setZoom(v) {
             zoom = v / 100;
             document.getElementById('zoomValue').textContent = Math.round(v) + '%';
             draw();
         }
 
-        // Canvas Interaction
         canvas.addEventListener('mousedown', e => {
             const rect = canvas.getBoundingClientRect();
             const mx = (e.clientX - rect.left - panX) / zoom;
             const my = (e.clientY - rect.top - panY) / zoom;
 
-            if (currentMode === 'fog') {
+            if (currentMode === 'fog' && isDM) {
                 isDrawing = true;
-                applyFog(mx, my);
+                
+                if (fogMode === 'brush') {
+                    applyFog(mx, my);
+                } else if (fogMode === 'rect') {
+                    fogRectStart = { x: e.clientX, y: e.clientY };
+                    lastX = e.clientX;
+                    lastY = e.clientY;
+                }
                 return;
             }
 
-            if (currentMode === 'token' && (currentPlayer || isDM)) {
+            if (isDM) {
                 dragToken = tokens.find(t => {
                     const dx = mx - t.x;
                     const dy = my - t.y;
@@ -1788,480 +2130,73 @@
 
                 if (dragToken) {
                     isDrawing = true;
+                    return;
                 }
-                return;
             }
 
-            if (currentMode === 'map' || currentMode === 'assets') {
-                lastX = e.clientX;
-                lastY = e.clientY;
-                isDrawing = true;
-            }
+            lastX = e.clientX;
+            lastY = e.clientY;
+            isDrawing = true;
         });
 
         canvas.addEventListener('mousemove', e => {
             if (!isDrawing) return;
+            
             const rect = canvas.getBoundingClientRect();
             const mx = (e.clientX - rect.left - panX) / zoom;
             const my = (e.clientY - rect.top - panY) / zoom;
 
-            if (currentMode === 'fog') {
-                applyFog(mx, my);
+            if (currentMode === 'fog' && isDM) {
+                if (fogMode === 'brush') {
+                    applyFog(mx, my);
+                } else if (fogMode === 'rect') {
+                    lastX = e.clientX;
+                    lastY = e.clientY;
+                    draw(); // Redraw to show preview rectangle
+                }
                 return;
             }
 
-            if (currentMode === 'token' && dragToken) {
+            if (dragToken && isDM) {
                 dragToken.x = mx;
                 dragToken.y = my;
                 draw();
+                
+                broadcast({
+                    type: 'tokenUpdate',
+                    tokens: tokens
+                });
                 return;
             }
 
-            if (currentMode === 'map' || currentMode === 'assets') {
-                panX += e.clientX - lastX;
-                panY += e.clientY - lastY;
-                lastX = e.clientX;
-                lastY = e.clientY;
-                draw();
-            }
+            panX += e.clientX - lastX;
+            panY += e.clientY - lastY;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            draw();
         });
 
-        canvas.addEventListener('mouseup', () => {
+        canvas.addEventListener('mouseup', e => {
+            if (currentMode === 'fog' && fogMode === 'rect' && fogRectStart && isDrawing) {
+                // Convert screen coordinates to fog canvas coordinates
+                const rect = canvas.getBoundingClientRect();
+                const startX = (fogRectStart.x - rect.left - panX) / zoom;
+                const startY = (fogRectStart.y - rect.top - panY) / zoom;
+                const endX = (e.clientX - rect.left - panX) / zoom;
+                const endY = (e.clientY - rect.top - panY) / zoom;
+                
+                applyFogRect(startX, startY, endX, endY);
+                fogRectStart = null;
+            }
+            
             isDrawing = false;
             dragToken = null;
         });
 
-        canvas.addEventListener('dragover', e => e.preventDefault());
-        canvas.addEventListener('drop', e => {
-            e.preventDefault();
-            try {
-                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-                if (data.type === 'player') {
-                    const rect = canvas.getBoundingClientRect();
-                    const x = (e.clientX - rect.left - panX) / zoom;
-                    const y = (e.clientY - rect.top - panY) / zoom;
-                    tokens.push({ x, y, color: data.token.color, icon: data.token.icon, owner: currentPlayer });
-                    draw();
-                }
-            } catch {}
-        });
-
-        // Welcome Screen & DM Login
-        function showDMLogin() {
-            document.getElementById('welcomeScreen').classList.add('hidden');
-            setTimeout(() => {
-                document.getElementById('dmModal').classList.add('active');
-            }, 500);
-        }
-
-        function enterAsPlayer() {
-            document.getElementById('welcomeScreen').classList.add('hidden');
-        }
-
-        // DM
-        function openDM() {
-            document.getElementById('dmModal').classList.add('active');
-        }
-
-        function closeDMModal() {
-            document.getElementById('dmModal').classList.remove('active');
-            document.getElementById('dmError').classList.remove('show');
-        }
-
-        function dmLogin(e) {
-            e.preventDefault();
-            const user = document.getElementById('dmUser').value;
-            const pass = document.getElementById('dmPass').value;
-            if (user === 'Wizard' && pass === 'Wizard') {
-                isDM = true;
-                closeDMModal();
-                document.getElementById('dmPanel').classList.add('open');
-                document.getElementById('manageCampaignsBtn').style.display = 'block';
-                document.getElementById('campaignInfo').style.display = 'flex';
-                renderPlayerRequests();
-                renderCampaignSlots();
-            } else {
-                document.getElementById('dmError').classList.add('show');
-            }
-        }
-
-        function closeDM() {
-            document.getElementById('dmPanel').classList.remove('open');
-        }
-
-        // Campaign Management
-        function loadCampaigns() {
-            const saved = localStorage.getItem('fracturedSkyCampaigns');
-            if (saved) {
-                campaigns = JSON.parse(saved);
-            }
-        }
-
-        function saveCampaigns() {
-            localStorage.setItem('fracturedSkyCampaigns', JSON.stringify(campaigns));
-        }
-
-        function renderCampaignSlots() {
+        function toggleDMPanel() {
             if (!isDM) return;
-            
-            const container = document.getElementById('campaignSlots');
-            const createBtn = document.getElementById('createCampaignBtn');
-            
-            container.innerHTML = campaigns.map((campaign, idx) => `
-                <div class="campaign-slot ${currentCampaignIndex === idx ? 'active' : ''}">
-                    <div class="campaign-slot-header">
-                        <span class="campaign-slot-name">${campaign.name}</span>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <button class="btn btn-small btn-primary" onclick="loadCampaign(${idx})">Load</button>
-                            <button class="btn btn-small" onclick="saveToCampaign(${idx})">Save</button>
-                            <button class="btn btn-small" onclick="deleteCampaign(${idx})">🗑️</button>
-                        </div>
-                    </div>
-                    <div class="campaign-slot-info">
-                        Last saved: ${new Date(campaign.lastModified).toLocaleString()}
-                    </div>
-                </div>
-            `).join('');
-            
-            // Disable create button if max campaigns reached
-            if (campaigns.length >= MAX_CAMPAIGNS) {
-                createBtn.disabled = true;
-                createBtn.style.opacity = '0.5';
-                createBtn.textContent = `Max ${MAX_CAMPAIGNS} Campaigns`;
-            } else {
-                createBtn.disabled = false;
-                createBtn.style.opacity = '1';
-                createBtn.textContent = '+ New Campaign';
-            }
-        }
-
-        function manageCampaigns() {
-            if (!isDM) return;
-            document.getElementById('dmPanel').classList.add('open');
-            const campaignSection = document.getElementById('campaignSection');
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            if (campaignSection) campaignSection.classList.add('active');
-        }
-
-        function createNewCampaign() {
-            if (campaigns.length >= MAX_CAMPAIGNS) {
-                alert(`Maximum ${MAX_CAMPAIGNS} campaigns reached. Delete a campaign to create a new one.`);
-                return;
-            }
-            document.getElementById('campaignNameModal').classList.add('active');
-        }
-
-        function closeCampaignNameModal() {
-            document.getElementById('campaignNameModal').classList.remove('active');
-            document.getElementById('campaignNameInput').value = '';
-        }
-
-        function saveCampaignName(e) {
-            e.preventDefault();
-            const name = document.getElementById('campaignNameInput').value.trim();
-            
-            const newCampaign = {
-                name: name,
-                lastModified: Date.now(),
-                data: {
-                    tokens: [],
-                    gridCells: {},
-                    lockedCells: {},
-                    fog: fogCanvas.toDataURL(),
-                    zoom: 1,
-                    panX: 0,
-                    panY: 0,
-                    currentCellX: 1,
-                    currentCellY: 1
-                }
-            };
-            
-            campaigns.push(newCampaign);
-            currentCampaignIndex = campaigns.length - 1;
-            saveCampaigns();
-            
-            document.getElementById('currentCampaignName').textContent = name;
-            closeCampaignNameModal();
-            renderCampaignSlots();
-            
-            alert(`Campaign "${name}" created!`);
-        }
-
-        function saveToCampaign(idx) {
-            if (idx >= campaigns.length) return;
-            
-            campaigns[idx].data = {
-                tokens: tokens,
-                gridCells: {},
-                lockedCells: lockedCells,
-                fog: fogCanvas.toDataURL(),
-                zoom: zoom,
-                panX: panX,
-                panY: panY,
-                currentCellX: currentCellX,
-                currentCellY: currentCellY
-            };
-            
-            // Save grid cells as data URLs
-            for (let key in gridCells) {
-                campaigns[idx].data.gridCells[key] = gridCells[key].toDataURL();
-            }
-            
-            campaigns[idx].lastModified = Date.now();
-            currentCampaignIndex = idx;
-            saveCampaigns();
-            
-            document.getElementById('currentCampaignName').textContent = campaigns[idx].name;
-            renderCampaignSlots();
-            
-            alert(`Saved to campaign "${campaigns[idx].name}"!`);
-        }
-
-        function loadCampaign(idx) {
-            if (idx >= campaigns.length) return;
-            
-            const campaign = campaigns[idx];
-            const data = campaign.data;
-            
-            tokens = data.tokens || [];
-            zoom = data.zoom || 1;
-            panX = data.panX || 0;
-            panY = data.panY || 0;
-            currentCellX = data.currentCellX || 1;
-            currentCellY = data.currentCellY || 1;
-            lockedCells = data.lockedCells || {};
-            
-            gridCells = {};
-            for (let key in data.gridCells) {
-                const img = new Image();
-                img.onload = () => {
-                    const cellCanvas = document.createElement('canvas');
-                    cellCanvas.width = CELL_SIZE;
-                    cellCanvas.height = CELL_SIZE;
-                    const cellCtx = cellCanvas.getContext('2d');
-                    cellCtx.drawImage(img, 0, 0);
-                    gridCells[key] = cellCanvas;
-                    draw();
-                };
-                img.src = data.gridCells[key];
-            }
-            
-            if (data.fog) {
-                const img = new Image();
-                img.onload = () => {
-                    fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
-                    fogCtx.drawImage(img, 0, 0, fogCanvas.width, fogCanvas.height);
-                    draw();
-                };
-                img.src = data.fog;
-            }
-            
-            // Load the current cell into the map canvas
-            const key = `${currentCellX},${currentCellY}`;
-            if (gridCells[key]) {
-                mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-                mapCtx.drawImage(gridCells[key], 0, 0);
-            } else {
-                mapCtx.fillStyle = '#f5f5dc';
-                mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-            }
-            
-            document.getElementById('zoomSlider').value = zoom * 100;
-            document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
-            document.getElementById('currentCampaignName').textContent = campaign.name;
-            currentCampaignIndex = idx;
-            
-            updateGridDisplay();
-            updateMapBuilderState();
-            draw();
-            renderCampaignSlots();
-            
-            alert(`Loaded campaign "${campaign.name}"!`);
-        }
-
-        function deleteCampaign(idx) {
-            if (idx >= campaigns.length) return;
-            
-            if (!confirm(`Delete campaign "${campaigns[idx].name}"? This cannot be undone.`)) {
-                return;
-            }
-            
-            campaigns.splice(idx, 1);
-            
-            if (currentCampaignIndex === idx) {
-                currentCampaignIndex = null;
-                document.getElementById('currentCampaignName').textContent = 'Untitled Campaign';
-            } else if (currentCampaignIndex > idx) {
-                currentCampaignIndex--;
-            }
-            
-            saveCampaigns();
-            renderCampaignSlots();
-        }
-
-        // Player Verification System
-        function showPlayerLogin() {
-            document.getElementById('playerModal').classList.add('active');
-        }
-
-        function closePlayerModal() {
-            document.getElementById('playerModal').classList.remove('active');
-            document.getElementById('playerSuccess').classList.remove('show');
-        }
-
-        function requestPlayerLogin(e) {
-            e.preventDefault();
-            const name = document.getElementById('playerName').value;
-            
-            playerRequests.push({ name: name, timestamp: Date.now() });
-            document.getElementById('playerSuccess').classList.add('show');
-            
-            // Hide the tooltip since player has submitted request
-            const tooltip = document.getElementById('playerTooltip');
-            if (tooltip) {
-                tooltip.classList.add('hidden');
-            }
-            
-            if (isDM) {
-                renderPlayerRequests();
-            }
-            
-            setTimeout(() => {
-                closePlayerModal();
-            }, 2000);
-        }
-
-        function renderPlayerRequests() {
-            const container = document.getElementById('playerRequests');
-            if (playerRequests.length === 0) {
-                container.innerHTML = '<p style="color: var(--text-dim); font-size: 0.85rem;">No pending requests</p>';
-                return;
-            }
-            
-            container.innerHTML = playerRequests.map((req, idx) => `
-                <div class="player-request">
-                    <span>${req.name}</span>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button class="btn btn-small btn-primary" onclick="approvePlayer(${idx})">✓</button>
-                        <button class="btn btn-small" onclick="denyPlayer(${idx})">✕</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function approvePlayer(idx) {
-            const player = playerRequests[idx];
-            approvedPlayers.push(player.name);
-            playerRequests.splice(idx, 1);
-            renderPlayerRequests();
-            
-            // Notify player (in real app, this would be network call)
-            if (document.getElementById('playerName').value === player.name) {
-                activatePlayer(player.name);
-            }
-        }
-
-        function denyPlayer(idx) {
-            playerRequests.splice(idx, 1);
-            renderPlayerRequests();
-        }
-
-        function activatePlayer(name) {
-            currentPlayer = name;
-            document.getElementById('playerNameDisplay').textContent = name;
-            document.getElementById('playerBar').classList.add('show');
-            document.getElementById('playerBtn').textContent = '✓';
-        }
-
-        function playerLogout() {
-            currentPlayer = null;
-            playerTokens = [];
-            document.getElementById('playerBar').classList.remove('show');
-            document.getElementById('playerBtn').textContent = '👤';
-        }
-
-        function createPlayerToken() {
-            if (!currentPlayer) { showPlayerLogin(); return; }
-            const i = prompt('Emoji:', '⚔️') || '⚔️';
-            const c = prompt('Color:', '#e74c3c') || '#e74c3c';
-            const t = { id: Date.now(), color: c, icon: i };
-            playerTokens.push(t);
-            renderPlayerTokens();
-        }
-
-        function renderPlayerTokens() {
-            document.getElementById('playerTokens').innerHTML = playerTokens.map(t => `
-                <div class="token" draggable="true" style="background: ${t.color};" 
-                     ondragstart="dragPlayerToken(event, ${t.id})">${t.icon}</div>
-            `).join('');
-        }
-
-        function dragPlayerToken(e, id) {
-            const t = playerTokens.find(x => x.id === id);
-            e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'player', token: t }));
-        }
-
-        // Legacy Save/Load for backwards compatibility
-        function loadGame() {
-            document.getElementById('fileLoad').click();
-        }
-
-        function handleLoad(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ev => {
-                const data = JSON.parse(ev.target.result);
-                tokens = data.tokens || [];
-                zoom = data.zoom || 1;
-                panX = data.panX || 0;
-                panY = data.panY || 0;
-                currentCellX = data.currentCellX || 1;
-                currentCellY = data.currentCellY || 1;
-                lockedCells = data.lockedCells || {};
-                
-                gridCells = {};
-                for (let key in data.gridCells) {
-                    const img = new Image();
-                    img.onload = () => {
-                        const cellCanvas = document.createElement('canvas');
-                        cellCanvas.width = CELL_SIZE;
-                        cellCanvas.height = CELL_SIZE;
-                        const cellCtx = cellCanvas.getContext('2d');
-                        cellCtx.drawImage(img, 0, 0);
-                        gridCells[key] = cellCanvas;
-                        draw();
-                    };
-                    img.src = data.gridCells[key];
-                }
-                
-                if (data.fog) {
-                    const img = new Image();
-                    img.onload = () => {
-                        fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
-                        fogCtx.drawImage(img, 0, 0, fogCanvas.width, fogCanvas.height);
-                        draw();
-                    };
-                    img.src = data.fog;
-                }
-                
-                // Load the current cell into the map canvas
-                const key = `${currentCellX},${currentCellY}`;
-                if (gridCells[key]) {
-                    mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-                    mapCtx.drawImage(gridCells[key], 0, 0);
-                } else {
-                    mapCtx.fillStyle = '#f5f5dc';
-                    mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-                }
-                
-                document.getElementById('zoomSlider').value = zoom * 100;
-                document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
-                updateGridDisplay();
-                updateMapBuilderState();
-                draw();
-            };
-            reader.readAsText(file);
+            const panel = document.getElementById('dmPanel');
+            panel.classList.toggle('open');
         }
 
         init();
