@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Fractured Sky - Multiplayer VTT</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>The Fractured Sky - Multiplayer VTT v2.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
@@ -1006,11 +1009,12 @@
     <div class="welcome-screen" id="welcomeScreen">
         <div class="welcome-content">
             <div class="welcome-title">✨ THE FRACTURED SKY</div>
-            <div class="welcome-subtitle">Multiplayer Virtual Tabletop</div>
+            <div class="welcome-subtitle">Multiplayer Virtual Tabletop v2.0</div>
             <div class="welcome-buttons">
                 <button class="welcome-btn welcome-btn-primary" onclick="showDMLogin()">🎭 Create Room (DM)</button>
                 <button class="welcome-btn welcome-btn-secondary" onclick="showJoinModal()">👥 Join Room (Player)</button>
             </div>
+            <p style="position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: var(--text-dim); font-size: 0.75rem;">Version 2.0 - Fresh Build</p>
         </div>
     </div>
 
@@ -1417,6 +1421,8 @@
     </div>
 
     <script>
+        console.log('🎮 Fractured Sky VTT v2.0 - Script Loading...');
+        
         // Multiplayer State
         let peer = null;
         let isDM = false;
@@ -1480,24 +1486,29 @@
         // ========== MULTIPLAYER FUNCTIONS ==========
 
         function showDMLogin() {
+            console.log('showDMLogin called - opening DM modal');
             document.getElementById('dmModal').classList.add('active');
         }
 
         function closeDMModal() {
+            console.log('closeDMModal called');
             document.getElementById('dmModal').classList.remove('active');
             document.getElementById('dmError').classList.remove('show');
         }
 
         function dmLogin(e) {
             e.preventDefault();
+            console.log('dmLogin called');
             const user = document.getElementById('dmUser').value;
             const pass = document.getElementById('dmPass').value;
             
             // Check credentials
             if (user === 'Wizard' && pass === 'Wizard') {
+                console.log('Login successful, creating room...');
                 closeDMModal();
                 createRoom();
             } else {
+                console.log('Login failed - invalid credentials');
                 document.getElementById('dmError').classList.add('show');
             }
         }
@@ -1551,10 +1562,12 @@
         }
 
         function showJoinModal() {
+            console.log('showJoinModal called - opening join modal');
             document.getElementById('joinModal').classList.add('active');
         }
 
         function closeJoinModal() {
+            console.log('closeJoinModal called');
             document.getElementById('joinModal').classList.remove('active');
             document.getElementById('joinError').classList.remove('show');
         }
@@ -1906,6 +1919,7 @@
         }
 
         function init() {
+            console.log('🎮 Initializing game...');
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
             
@@ -1914,6 +1928,8 @@
             
             updateGridDisplay();
             updateMinimap();
+            
+            console.log('✅ Game initialized and ready!');
         }
 
         // ========== MINIMAP FUNCTIONS ==========
