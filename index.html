@@ -1163,6 +1163,38 @@
                 <button class="btn btn-small" onclick="toggleDMPanel()">✕</button>
             </div>
             <div class="dm-content">
+                <!-- CAMPAIGN MANAGER -->
+                <div class="section" id="campaignSection">
+                    <h3>💾 Campaign Manager</h3>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Export/Import Campaign:</div>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="exportCampaign()" style="flex: 1;">📥 Export .JSON</button>
+                            <button class="btn" onclick="document.getElementById('importFile').click()" style="flex: 1;">📤 Import .JSON</button>
+                        </div>
+                        <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importCampaign(event)">
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Cloud Campaign Link (Google Drive, Dropbox, etc.):</div>
+                        <input type="text" id="cloudLink" placeholder="Paste shareable link here" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.85rem; margin-bottom: 0.5rem;">
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="saveCloudLink()" style="flex: 1;">💾 Save Link</button>
+                            <button class="btn" onclick="openCloudLink()" style="flex: 1;">🔗 Open Link</button>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; padding: 0.5rem; background: var(--bg-dark); border-radius: 6px;">
+                            💡 Upload exported .json to Google Drive → Get shareable link → Paste here → Save<br>
+                            Other DMs can use this link to access the campaign!
+                        </div>
+                    </div>
+
+                    <div class="success" id="exportSuccess">Campaign exported!</div>
+                    <div class="success" id="importSuccess">Campaign imported!</div>
+                    <div class="success" id="linkSuccess">Cloud link saved!</div>
+                    <div class="error" id="importError">Import failed. Check file format.</div>
+                </div>
+
                 <!-- PLAYER REQUESTS -->
                 <div class="section" id="requestsSection">
                     <h3>📬 Player Requests</h3>
@@ -1576,6 +1608,7 @@
                 
                 updateConnectionStatus('Connected as DM', true);
                 updateUserList();
+                loadSavedCloudLink();
                 
                 // Show success if rejoining
                 if (existingId) {
@@ -2618,6 +2651,221 @@
 
         // Initialize fog mode buttons
         setFogPaintMode('brush');
+
+        // === CAMPAIGN EXPORT/IMPORT ===
+        function exportCampaign() {
+            if (!isDM) return;
+            
+            // Serialize grid cells
+            const gridData = {};
+            for (let key in gridCells) {
+                gridData[key] = gridCells[key].toDataURL();
+            }
+            
+            // Serialize fog groups
+            const fogData = {};
+            for (let group in fogGroups) {
+                fogData[group] = {
+                    name: fogGroups[group].name,
+                    canvas: fogGroups[group].canvas.toDataURL()
+                };
+            }
+            
+            const campaignData = {
+                version: '3.0',
+                name: prompt('Campaign name:', 'My Campaign') || 'Untitled Campaign',
+                sessionId: roomCode,
+                exported: new Date().toISOString(),
+                gridCells: gridData,
+                lockedCells: lockedCells,
+                fogGroups: fogData,
+                activeFogGroup: activeFogGroup,
+                stagingTokens: stagingTokens,
+                placedTokens: placedTokens,
+                zoom: zoom,
+                panX: panX,
+                panY: panY,
+                currentCellX: currentCellX,
+                currentCellY: currentCellY
+            };
+            
+            // Create downloadable file
+            const dataStr = JSON.stringify(campaignData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${campaignData.name.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            document.getElementById('exportSuccess').classList.add('show');
+            setTimeout(() => {
+                document.getElementById('exportSuccess').classList.remove('show');
+            }, 3000);
+            
+            console.log('✅ Campaign exported:', campaignData.name);
+        }
+        
+        function importCampaign(event) {
+            if (!isDM) return;
+            
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if (!data.version || !data.gridCells) {
+                        throw new Error('Invalid campaign file format');
+                    }
+                    
+                    // Load grid cells
+                    gridCells = {};
+                    let cellsLoaded = 0;
+                    const totalCells = Object.keys(data.gridCells).length;
+                    
+                    for (let key in data.gridCells) {
+                        const img = new Image();
+                        img.onload = () => {
+                            const cellCanvas = document.createElement('canvas');
+                            cellCanvas.width = CELL_SIZE;
+                            cellCanvas.height = CELL_SIZE;
+                            const cellCtx = cellCanvas.getContext('2d');
+                            cellCtx.drawImage(img, 0, 0);
+                            gridCells[key] = cellCanvas;
+                            
+                            cellsLoaded++;
+                            if (cellsLoaded === totalCells) {
+                                draw();
+                                updateMinimap();
+                            }
+                        };
+                        img.src = data.gridCells[key];
+                    }
+                    
+                    // Load fog groups
+                    fogGroups = {};
+                    for (let group in data.fogGroups) {
+                        const fogCanvas = document.createElement('canvas');
+                        fogCanvas.width = GRID_SIZE * 3;
+                        fogCanvas.height = GRID_SIZE * 3;
+                        const fogCtx = fogCanvas.getContext('2d');
+                        
+                        const img = new Image();
+                        img.onload = () => {
+                            fogCtx.drawImage(img, 0, 0);
+                            draw();
+                        };
+                        img.src = data.fogGroups[group].canvas;
+                        
+                        fogGroups[group] = {
+                            name: data.fogGroups[group].name,
+                            canvas: fogCanvas
+                        };
+                    }
+                    
+                    // Load other data
+                    lockedCells = data.lockedCells || {};
+                    activeFogGroup = data.activeFogGroup || 'everyone';
+                    stagingTokens = data.stagingTokens || [];
+                    placedTokens = data.placedTokens || [];
+                    zoom = data.zoom || 1;
+                    panX = data.panX || 0;
+                    panY = data.panY || 0;
+                    currentCellX = data.currentCellX || 1;
+                    currentCellY = data.currentCellY || 1;
+                    
+                    // Update UI
+                    document.getElementById('zoomSlider').value = zoom * 100;
+                    document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
+                    
+                    updateGridDisplay();
+                    renderFogGroups();
+                    renderStagingTokens();
+                    draw();
+                    updateMinimap();
+                    
+                    // Broadcast to all connected players
+                    connections.forEach(({conn, approved}) => {
+                        if (approved) sendGameState(conn);
+                    });
+                    
+                    document.getElementById('importSuccess').classList.add('show');
+                    setTimeout(() => {
+                        document.getElementById('importSuccess').classList.remove('show');
+                    }, 3000);
+                    
+                    alert('✅ Campaign imported: ' + (data.name || 'Untitled'));
+                    console.log('✅ Campaign imported:', data.name);
+                    
+                } catch (err) {
+                    console.error('Import error:', err);
+                    document.getElementById('importError').textContent = 'Import failed: ' + err.message;
+                    document.getElementById('importError').classList.add('show');
+                    setTimeout(() => {
+                        document.getElementById('importError').classList.remove('show');
+                    }, 5000);
+                }
+            };
+            reader.readAsText(file);
+            
+            // Reset file input
+            event.target.value = '';
+        }
+        
+        function saveCloudLink() {
+            if (!isDM) return;
+            
+            const link = document.getElementById('cloudLink').value.trim();
+            if (!link) {
+                alert('Please enter a cloud link first');
+                return;
+            }
+            
+            // Save to session storage
+            const key = 'fracturedSky_cloudLink_' + roomCode;
+            localStorage.setItem(key, link);
+            
+            document.getElementById('linkSuccess').classList.add('show');
+            setTimeout(() => {
+                document.getElementById('linkSuccess').classList.remove('show');
+            }, 3000);
+            
+            console.log('✅ Cloud link saved for session:', roomCode);
+        }
+        
+        function openCloudLink() {
+            const link = document.getElementById('cloudLink').value.trim();
+            if (!link) {
+                // Try to load saved link
+                const key = 'fracturedSky_cloudLink_' + roomCode;
+                const saved = localStorage.getItem(key);
+                if (saved) {
+                    window.open(saved, '_blank');
+                } else {
+                    alert('No cloud link saved. Paste a link first.');
+                }
+            } else {
+                window.open(link, '_blank');
+            }
+        }
+        
+        // Load saved cloud link on DM connect
+        function loadSavedCloudLink() {
+            if (isDM && roomCode) {
+                const key = 'fracturedSky_cloudLink_' + roomCode;
+                const saved = localStorage.getItem(key);
+                if (saved) {
+                    document.getElementById('cloudLink').value = saved;
+                }
+            }
+        }
 
         // === MINIMAP ===
         function updateMinimap() {
