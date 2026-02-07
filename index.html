@@ -36,21 +36,87 @@
         /* Connection Panel */
         .connection-panel {
             position: fixed;
-            top: 80px;
-            right: 20px;
+            top: 70px;
+            right: 0;
+            left: 0;
             background: var(--bg-card);
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 1rem;
-            max-width: 300px;
+            border-bottom: 2px solid var(--border);
+            padding: 1.5rem;
             z-index: 500;
             box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out, padding 0.3s ease-in-out;
         }
 
-        .connection-panel h3 {
+        .connection-panel.open {
+            max-height: 400px;
+            padding: 1.5rem;
+        }
+
+        .connection-panel.closed {
+            padding: 0 1.5rem;
+        }
+
+        .connection-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .connection-section {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .connection-section h3 {
             color: var(--gold);
             margin-bottom: 0.75rem;
             font-size: 1rem;
+        }
+
+        .connection-tab {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-top: none;
+            color: var(--text);
+            padding: 0.5rem 1.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            border-radius: 0 0 8px 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .connection-tab:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+
+        .connection-tab.open {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: white;
+        }
+
+        .connection-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .connection-indicator.connected {
+            background: #10b981;
+            animation: pulse-green 2s infinite;
         }
 
         .room-code {
@@ -666,6 +732,41 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
 
+        .campaign-slot {
+            background: var(--bg-dark);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            border: 2px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .campaign-slot:hover {
+            border-color: var(--accent);
+        }
+
+        .campaign-slot.active {
+            border-color: var(--gold);
+            background: rgba(251, 191, 36, 0.05);
+        }
+
+        .campaign-slot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .campaign-slot-name {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .campaign-slot-info {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
         .modal-header {
             text-align: center;
             margin-bottom: 1.5rem;
@@ -907,32 +1008,84 @@
             <div class="welcome-title">✨ THE FRACTURED SKY</div>
             <div class="welcome-subtitle">Multiplayer Virtual Tabletop</div>
             <div class="welcome-buttons">
-                <button class="welcome-btn welcome-btn-primary" onclick="createRoom()">🎭 Create Room (DM)</button>
+                <button class="welcome-btn welcome-btn-primary" onclick="showDMLogin()">🎭 Create Room (DM)</button>
                 <button class="welcome-btn welcome-btn-secondary" onclick="showJoinModal()">👥 Join Room (Player)</button>
             </div>
         </div>
     </div>
 
-    <!-- Connection Panel -->
-    <div class="connection-panel" id="connectionPanel" style="display: none;">
-        <h3>🌐 Room Connection</h3>
-        <div id="roomCodeDisplay" style="display: none;">
-            <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.5rem;">Share this code:</p>
-            <div class="room-code" id="roomCode" onclick="copyRoomCode()">----</div>
+    <!-- DM Login Modal -->
+    <div class="modal" id="dmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">🧙</div>
+                <h2>Dungeon Master Login</h2>
+            </div>
+            <form onsubmit="dmLogin(event)">
+                <div class="form-group">
+                    <label>USERNAME</label>
+                    <input type="text" id="dmUser" placeholder="Enter username" autocomplete="off" required>
+                </div>
+                <div class="form-group">
+                    <label>PASSWORD</label>
+                    <input type="password" id="dmPass" placeholder="Enter password" autocomplete="off" required>
+                </div>
+                <div class="error" id="dmError">Invalid credentials</div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">LOGIN & CREATE ROOM</button>
+                <button type="button" class="btn" onclick="closeDMModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
+            </form>
         </div>
-        <div class="connection-status">
-            <div class="status-indicator" id="statusIndicator"></div>
-            <span id="statusText">Disconnected</span>
+    </div>
+
+    <!-- Connection Panel Dropdown -->
+    <div class="connection-panel" id="connectionPanel">
+        <div class="connection-content">
+            <!-- Room Code Section -->
+            <div class="connection-section" id="roomCodeSection" style="display: none;">
+                <h3>🎭 Room Code</h3>
+                <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.5rem;">Share this code with players:</p>
+                <div class="room-code" id="roomCode" onclick="copyRoomCode()">----</div>
+                <p style="color: var(--text-dim); font-size: 0.75rem; margin-top: 0.5rem; text-align: center;">Click to copy</p>
+            </div>
+
+            <!-- Connection Status Section -->
+            <div class="connection-section">
+                <h3>📡 Connection Status</h3>
+                <div class="connection-status">
+                    <div class="status-indicator" id="statusIndicator"></div>
+                    <span id="statusText">Disconnected</span>
+                </div>
+            </div>
+
+            <!-- Connected Users Section -->
+            <div class="connection-section">
+                <h3>👥 Connected Users</h3>
+                <div class="connected-users" id="connectedUsers">
+                    <p style="color: var(--text-dim); font-size: 0.85rem;">No users connected</p>
+                </div>
+            </div>
         </div>
-        <div class="connected-users" id="connectedUsers"></div>
     </div>
 
     <div class="header">
         <div class="title">✨ THE FRACTURED SKY</div>
+        <div class="campaign-info" id="campaignInfo" style="display: none;">
+            <span style="color: var(--text-dim);">Campaign:</span>
+            <span class="campaign-name" id="currentCampaignName">Untitled Campaign</span>
+        </div>
         <div class="header-actions">
-            <button class="btn" onclick="toggleConnectionPanel()">🌐 Connection</button>
+            <button class="btn" onclick="manageCampaigns()" id="manageCampaignsBtn" style="display: none;">📁 Campaigns</button>
             <button class="btn btn-primary" onclick="toggleDMPanel()" id="dmPanelBtn" style="display: none;">🎭 DM Controls</button>
         </div>
+    </div>
+
+    <!-- Connection Tab -->
+    <div style="position: fixed; top: 70px; left: 20px; z-index: 501;">
+        <button class="connection-tab" id="connectionTab" onclick="toggleConnectionPanel()" style="display: none;">
+            <div class="connection-indicator" id="tabIndicator"></div>
+            <span id="tabText">Connection</span>
+            <span id="tabArrow">▼</span>
+        </button>
     </div>
 
     <div class="container">
@@ -1029,6 +1182,13 @@
                 <button class="btn btn-small" onclick="toggleDMPanel()">✕</button>
             </div>
             <div class="dm-content">
+                <!-- Campaign Manager -->
+                <div class="section" id="campaignSection">
+                    <h3>📁 Campaign Manager</h3>
+                    <div id="campaignSlots"></div>
+                    <button class="btn btn-primary" onclick="createNewCampaign()" id="createCampaignBtn" style="width: 100%;">+ New Campaign</button>
+                </div>
+
                 <!-- Grid Map Builder -->
                 <div class="section active" id="mapSection">
                     <h3>🗺️ Grid Map Builder (3x3)</h3>
@@ -1162,6 +1322,17 @@
                 <!-- Tokens -->
                 <div class="section" id="tokensSection">
                     <h3>🎲 Tokens</h3>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="gridSnapToggle" onchange="toggleGridSnap()" style="cursor: pointer;">
+                            <span>Enable Grid Snap (25x25)</span>
+                        </label>
+                        <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+                            Tokens snap to 25px grid when enabled
+                        </p>
+                    </div>
+                    
                     <div class="btn-group">
                         <button class="btn btn-primary" onclick="addToken('#e74c3c', '⚔️')">⚔️</button>
                         <button class="btn btn-primary" onclick="addToken('#3498db', '🛡️')">🛡️</button>
@@ -1197,6 +1368,24 @@
         </div>
     </div>
 
+    <!-- Campaign Name Modal -->
+    <div class="modal" id="campaignNameModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">📁</div>
+                <h2>New Campaign</h2>
+            </div>
+            <form onsubmit="saveCampaignName(event)">
+                <div class="form-group">
+                    <label>CAMPAIGN NAME</label>
+                    <input type="text" id="campaignNameInput" placeholder="Enter campaign name" autocomplete="off" required maxlength="50">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">CREATE</button>
+                <button type="button" class="btn" onclick="closeCampaignNameModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
     <!-- Minimap Navigator -->
     <div class="minimap" id="minimap">
         <div class="minimap-header">
@@ -1212,6 +1401,20 @@
 
     <!-- Minimap Toggle Button -->
     <button class="minimap-toggle" id="minimapToggle" onclick="toggleMinimap()">🗺️</button>
+
+    <!-- Player Bar -->
+    <div style="position: fixed; bottom: 20px; right: 20px; z-index: 600; display: none;" id="playerBar">
+        <div style="background: var(--bg-card); border: 2px solid var(--border); border-radius: 12px; padding: 1rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                <div style="width: 40px; height: 40px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">👤</div>
+                <div>
+                    <div style="font-weight: 600; color: var(--text);" id="playerNameDisplay">Player</div>
+                    <div style="font-size: 0.75rem; color: var(--text-dim);">Connected</div>
+                </div>
+            </div>
+            <button class="btn btn-small btn-primary" onclick="createPlayerToken()" style="width: 100%;">+ Create My Token</button>
+        </div>
+    </div>
 
     <script>
         // Multiplayer State
@@ -1241,6 +1444,17 @@
         let dragToken = null;
         let fogInitialized = false;
         let fogRectStart = null; // For rectangular fog painting
+        let gridSnapEnabled = false;
+        const GRID_SNAP_SIZE = 25;
+        
+        // Campaign Management
+        let campaigns = [];
+        let currentCampaignIndex = null;
+        const MAX_CAMPAIGNS = 3;
+        
+        // Player system
+        let playerTokens = [];
+        let currentPlayer = null;
         
         const GRID_SIZE = 400;
         const CELL_SIZE = 400;
@@ -1265,6 +1479,29 @@
 
         // ========== MULTIPLAYER FUNCTIONS ==========
 
+        function showDMLogin() {
+            document.getElementById('dmModal').classList.add('active');
+        }
+
+        function closeDMModal() {
+            document.getElementById('dmModal').classList.remove('active');
+            document.getElementById('dmError').classList.remove('show');
+        }
+
+        function dmLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('dmUser').value;
+            const pass = document.getElementById('dmPass').value;
+            
+            // Check credentials
+            if (user === 'Wizard' && pass === 'Wizard') {
+                closeDMModal();
+                createRoom();
+            } else {
+                document.getElementById('dmError').classList.add('show');
+            }
+        }
+
         function createRoom() {
             isDM = true;
             myName = 'Dungeon Master';
@@ -1277,13 +1514,30 @@
                 roomCode = id.substring(0, 8).toUpperCase();
                 
                 document.getElementById('welcomeScreen').classList.add('hidden');
-                document.getElementById('connectionPanel').style.display = 'block';
-                document.getElementById('roomCodeDisplay').style.display = 'block';
+                
+                // Show connection tab and update UI
+                document.getElementById('connectionTab').style.display = 'flex';
+                document.getElementById('roomCodeSection').style.display = 'block';
                 document.getElementById('roomCode').textContent = roomCode;
                 document.getElementById('dmPanelBtn').style.display = 'block';
+                document.getElementById('campaignInfo').style.display = 'flex';
+                document.getElementById('manageCampaignsBtn').style.display = 'block';
                 
                 updateConnectionStatus('Connected as DM', true);
                 updateUserList();
+                
+                // Load campaigns and show manager
+                loadCampaigns();
+                renderCampaignSlots();
+                
+                // Auto-open connection panel briefly to show room code
+                toggleConnectionPanel();
+                setTimeout(() => {
+                    // Auto-close after 5 seconds
+                    if (document.getElementById('connectionPanel').classList.contains('open')) {
+                        toggleConnectionPanel();
+                    }
+                }, 5000);
             });
             
             peer.on('connection', (conn) => {
@@ -1317,17 +1571,24 @@
             peer.on('open', (id) => {
                 myId = id;
                 
-                // Try to connect to DM using the room code
-                // We need to find the actual peer ID from the code
-                // For simplicity, we'll use the code directly as peer ID
-                const conn = peer.connect(code.toLowerCase());
+                // Connect to DM - reconstruct the full peer ID from the room code
+                // Room codes are the first 8 chars of peer ID, so we need to try connecting
+                const dmPeerId = code.toLowerCase();
+                const conn = peer.connect(dmPeerId);
                 
                 setupConnection(conn, true);
                 
                 conn.on('open', () => {
                     closeJoinModal();
                     document.getElementById('welcomeScreen').classList.add('hidden');
-                    document.getElementById('connectionPanel').style.display = 'block';
+                    
+                    // Show connection tab
+                    document.getElementById('connectionTab').style.display = 'flex';
+                    
+                    // Show player bar
+                    currentPlayer = myName;
+                    document.getElementById('playerNameDisplay').textContent = myName;
+                    document.getElementById('playerBar').style.display = 'block';
                     
                     updateConnectionStatus('Connected to room', true);
                     
@@ -1344,8 +1605,15 @@
                 
                 conn.on('error', (err) => {
                     console.error('Connection error:', err);
+                    document.getElementById('joinError').textContent = 'Could not connect to room. Check the code and try again.';
                     document.getElementById('joinError').classList.add('show');
                 });
+            });
+            
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                document.getElementById('joinError').textContent = 'Connection failed: ' + err.type;
+                document.getElementById('joinError').classList.add('show');
             });
         }
 
@@ -1416,6 +1684,27 @@
                     lockedCells = data.lockedCells;
                     draw();
                     break;
+                    
+                case 'gridSnapUpdate':
+                    // Update grid snap setting
+                    gridSnapEnabled = data.enabled;
+                    if (document.getElementById('gridSnapToggle')) {
+                        document.getElementById('gridSnapToggle').checked = data.enabled;
+                    }
+                    break;
+                    
+                case 'playerTokenCreate':
+                    // Player created a token
+                    if (isDM) {
+                        // Add the token and broadcast to everyone
+                        tokens.push(data.token);
+                        draw();
+                        broadcast({
+                            type: 'tokenUpdate',
+                            tokens: tokens
+                        });
+                    }
+                    break;
             }
         }
 
@@ -1450,7 +1739,8 @@
                     panX,
                     panY,
                     currentCellX,
-                    currentCellY
+                    currentCellY,
+                    gridSnapEnabled
                 }
             });
         }
@@ -1526,10 +1816,31 @@
         function updateConnectionStatus(text, connected) {
             document.getElementById('statusText').textContent = text;
             const indicator = document.getElementById('statusIndicator');
+            const tabIndicator = document.getElementById('tabIndicator');
             if (connected) {
                 indicator.classList.add('connected');
+                tabIndicator.classList.add('connected');
             } else {
                 indicator.classList.remove('connected');
+                tabIndicator.classList.remove('connected');
+            }
+        }
+
+        function toggleConnectionPanel() {
+            const panel = document.getElementById('connectionPanel');
+            const tab = document.getElementById('connectionTab');
+            const arrow = document.getElementById('tabArrow');
+            
+            if (panel.classList.contains('open')) {
+                panel.classList.remove('open');
+                panel.classList.add('closed');
+                tab.classList.remove('open');
+                arrow.textContent = '▼';
+            } else {
+                panel.classList.remove('closed');
+                panel.classList.add('open');
+                tab.classList.add('open');
+                arrow.textContent = '▲';
             }
         }
 
@@ -1557,20 +1868,19 @@
             `).join('');
         }
 
-        function toggleConnectionPanel() {
-            const panel = document.getElementById('connectionPanel');
-            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-        }
-
         function copyRoomCode() {
             const code = document.getElementById('roomCode').textContent;
             navigator.clipboard.writeText(code).then(() => {
                 const elem = document.getElementById('roomCode');
                 const oldText = elem.textContent;
                 elem.textContent = '✓ Copied!';
+                elem.style.background = 'var(--accent)';
                 setTimeout(() => {
                     elem.textContent = oldText;
+                    elem.style.background = 'var(--bg-dark)';
                 }, 2000);
+            }).catch(() => {
+                alert('Room code: ' + code);
             });
         }
 
@@ -1732,6 +2042,33 @@
             });
 
             ctx.restore();
+
+            // Draw grid lines if snap is enabled
+            if (gridSnapEnabled) {
+                ctx.save();
+                ctx.translate(panX, panY);
+                ctx.scale(zoom, zoom);
+                ctx.strokeStyle = 'rgba(139, 92, 246, 0.15)';
+                ctx.lineWidth = 1;
+                
+                // Draw vertical lines
+                for (let x = 0; x <= GRID_SIZE * 3; x += GRID_SNAP_SIZE) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, GRID_SIZE * 3);
+                    ctx.stroke();
+                }
+                
+                // Draw horizontal lines
+                for (let y = 0; y <= GRID_SIZE * 3; y += GRID_SNAP_SIZE) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(GRID_SIZE * 3, y);
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+            }
 
             // Fog layer - with DM opacity control
             ctx.save();
@@ -2097,6 +2434,50 @@
             addToken(c, i);
         }
 
+        function toggleGridSnap() {
+            if (!isDM) return;
+            gridSnapEnabled = document.getElementById('gridSnapToggle').checked;
+            
+            // Broadcast grid snap setting to all players
+            broadcast({
+                type: 'gridSnapUpdate',
+                enabled: gridSnapEnabled
+            });
+        }
+
+        function snapToGrid(value) {
+            if (!gridSnapEnabled) return value;
+            return Math.round(value / GRID_SNAP_SIZE) * GRID_SNAP_SIZE;
+        }
+
+        function createPlayerToken() {
+            if (!currentPlayer) {
+                alert('You need to join a room first!');
+                return;
+            }
+            
+            const i = prompt('Token Emoji:', '⚔️') || '⚔️';
+            const c = prompt('Token Color:', '#e74c3c') || '#e74c3c';
+            
+            const newToken = {
+                x: snapToGrid(600),
+                y: snapToGrid(600),
+                color: c,
+                icon: i,
+                owner: currentPlayer
+            };
+            
+            // Send to DM to add to game
+            connections.forEach(({conn, role}) => {
+                if (role === 'dm') {
+                    sendToPeer(conn, {
+                        type: 'playerTokenCreate',
+                        token: newToken
+                    });
+                }
+            });
+        }
+
         function setZoom(v) {
             zoom = v / 100;
             document.getElementById('zoomValue').textContent = Math.round(v) + '%';
@@ -2121,17 +2502,17 @@
                 return;
             }
 
-            if (isDM) {
-                dragToken = tokens.find(t => {
-                    const dx = mx - t.x;
-                    const dy = my - t.y;
-                    return Math.sqrt(dx*dx + dy*dy) < 30;
-                });
+            // Check for token dragging - DM can move any, players can move their own
+            dragToken = tokens.find(t => {
+                const dx = mx - t.x;
+                const dy = my - t.y;
+                const canMove = isDM || t.owner === currentPlayer;
+                return canMove && Math.sqrt(dx*dx + dy*dy) < 30;
+            });
 
-                if (dragToken) {
-                    isDrawing = true;
-                    return;
-                }
+            if (dragToken) {
+                isDrawing = true;
+                return;
             }
 
             lastX = e.clientX;
@@ -2157,15 +2538,31 @@
                 return;
             }
 
-            if (dragToken && isDM) {
-                dragToken.x = mx;
-                dragToken.y = my;
-                draw();
-                
-                broadcast({
-                    type: 'tokenUpdate',
-                    tokens: tokens
-                });
+            if (dragToken) {
+                // Allow DM to move any token, players can only move their own
+                if (isDM || dragToken.owner === currentPlayer) {
+                    dragToken.x = snapToGrid(mx);
+                    dragToken.y = snapToGrid(my);
+                    draw();
+                    
+                    // Broadcast token update
+                    if (isDM) {
+                        broadcast({
+                            type: 'tokenUpdate',
+                            tokens: tokens
+                        });
+                    } else {
+                        // Players send update to DM who will broadcast
+                        connections.forEach(({conn, role}) => {
+                            if (role === 'dm') {
+                                sendToPeer(conn, {
+                                    type: 'tokenUpdate',
+                                    tokens: tokens
+                                });
+                            }
+                        });
+                    }
+                }
                 return;
             }
 
@@ -2197,6 +2594,222 @@
             if (!isDM) return;
             const panel = document.getElementById('dmPanel');
             panel.classList.toggle('open');
+        }
+
+        // ========== CAMPAIGN MANAGEMENT ==========
+
+        function loadCampaigns() {
+            const saved = localStorage.getItem('fracturedSkyCampaigns');
+            if (saved) {
+                campaigns = JSON.parse(saved);
+            }
+        }
+
+        function saveCampaigns() {
+            localStorage.setItem('fracturedSkyCampaigns', JSON.stringify(campaigns));
+        }
+
+        function renderCampaignSlots() {
+            if (!isDM) return;
+            
+            const container = document.getElementById('campaignSlots');
+            const createBtn = document.getElementById('createCampaignBtn');
+            
+            container.innerHTML = campaigns.map((campaign, idx) => `
+                <div class="campaign-slot ${currentCampaignIndex === idx ? 'active' : ''}">
+                    <div class="campaign-slot-header">
+                        <span class="campaign-slot-name">${campaign.name}</span>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-small btn-primary" onclick="loadCampaign(${idx})">Load</button>
+                            <button class="btn btn-small" onclick="saveToCampaign(${idx})">Save</button>
+                            <button class="btn btn-small" onclick="deleteCampaign(${idx})">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="campaign-slot-info">
+                        Last saved: ${new Date(campaign.lastModified).toLocaleString()}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Disable create button if max campaigns reached
+            if (campaigns.length >= MAX_CAMPAIGNS) {
+                createBtn.disabled = true;
+                createBtn.style.opacity = '0.5';
+                createBtn.textContent = `Max ${MAX_CAMPAIGNS} Campaigns`;
+            } else {
+                createBtn.disabled = false;
+                createBtn.style.opacity = '1';
+                createBtn.textContent = '+ New Campaign';
+            }
+        }
+
+        function manageCampaigns() {
+            if (!isDM) return;
+            document.getElementById('dmPanel').classList.add('open');
+            const campaignSection = document.getElementById('campaignSection');
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            if (campaignSection) campaignSection.classList.add('active');
+        }
+
+        function createNewCampaign() {
+            if (campaigns.length >= MAX_CAMPAIGNS) {
+                alert(`Maximum ${MAX_CAMPAIGNS} campaigns reached. Delete a campaign to create a new one.`);
+                return;
+            }
+            document.getElementById('campaignNameModal').classList.add('active');
+        }
+
+        function closeCampaignNameModal() {
+            document.getElementById('campaignNameModal').classList.remove('active');
+            document.getElementById('campaignNameInput').value = '';
+        }
+
+        function saveCampaignName(e) {
+            e.preventDefault();
+            const name = document.getElementById('campaignNameInput').value.trim();
+            
+            const newCampaign = {
+                name: name,
+                lastModified: Date.now(),
+                data: {
+                    tokens: [],
+                    gridCells: {},
+                    lockedCells: {},
+                    fog: fogCanvas.toDataURL(),
+                    zoom: 1,
+                    panX: 0,
+                    panY: 0,
+                    currentCellX: 1,
+                    currentCellY: 1
+                }
+            };
+            
+            campaigns.push(newCampaign);
+            currentCampaignIndex = campaigns.length - 1;
+            saveCampaigns();
+            
+            document.getElementById('currentCampaignName').textContent = name;
+            closeCampaignNameModal();
+            renderCampaignSlots();
+            
+            alert(`Campaign "${name}" created!`);
+        }
+
+        function saveToCampaign(idx) {
+            if (idx >= campaigns.length) return;
+            
+            campaigns[idx].data = {
+                tokens: tokens,
+                gridCells: {},
+                lockedCells: lockedCells,
+                fog: fogCanvas.toDataURL(),
+                zoom: zoom,
+                panX: panX,
+                panY: panY,
+                currentCellX: currentCellX,
+                currentCellY: currentCellY
+            };
+            
+            // Save grid cells as data URLs
+            for (let key in gridCells) {
+                campaigns[idx].data.gridCells[key] = gridCells[key].toDataURL();
+            }
+            
+            campaigns[idx].lastModified = Date.now();
+            currentCampaignIndex = idx;
+            saveCampaigns();
+            
+            document.getElementById('currentCampaignName').textContent = campaigns[idx].name;
+            renderCampaignSlots();
+            
+            alert(`Saved to campaign "${campaigns[idx].name}"!`);
+        }
+
+        function loadCampaign(idx) {
+            if (idx >= campaigns.length) return;
+            
+            const campaign = campaigns[idx];
+            const data = campaign.data;
+            
+            tokens = data.tokens || [];
+            zoom = data.zoom || 1;
+            panX = data.panX || 0;
+            panY = data.panY || 0;
+            currentCellX = data.currentCellX || 1;
+            currentCellY = data.currentCellY || 1;
+            lockedCells = data.lockedCells || {};
+            
+            gridCells = {};
+            for (let key in data.gridCells) {
+                const img = new Image();
+                img.onload = () => {
+                    const cellCanvas = document.createElement('canvas');
+                    cellCanvas.width = CELL_SIZE;
+                    cellCanvas.height = CELL_SIZE;
+                    const cellCtx = cellCanvas.getContext('2d');
+                    cellCtx.drawImage(img, 0, 0);
+                    gridCells[key] = cellCanvas;
+                    draw();
+                };
+                img.src = data.gridCells[key];
+            }
+            
+            if (data.fog) {
+                const img = new Image();
+                img.onload = () => {
+                    fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
+                    fogCtx.drawImage(img, 0, 0, fogCanvas.width, fogCanvas.height);
+                    draw();
+                };
+                img.src = data.fog;
+            }
+            
+            // Load the current cell into the map canvas
+            const key = `${currentCellX},${currentCellY}`;
+            if (gridCells[key]) {
+                mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+                mapCtx.drawImage(gridCells[key], 0, 0);
+            } else {
+                mapCtx.fillStyle = '#f5f5dc';
+                mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+            }
+            
+            document.getElementById('zoomSlider').value = zoom * 100;
+            document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
+            document.getElementById('currentCampaignName').textContent = campaign.name;
+            currentCampaignIndex = idx;
+            
+            updateGridDisplay();
+            updateMinimap();
+            draw();
+            renderCampaignSlots();
+            
+            // Broadcast to all connected players
+            connections.forEach(({conn}) => {
+                sendGameState(conn);
+            });
+            
+            alert(`Loaded campaign "${campaign.name}"!`);
+        }
+
+        function deleteCampaign(idx) {
+            if (idx >= campaigns.length) return;
+            
+            if (!confirm(`Delete campaign "${campaigns[idx].name}"? This cannot be undone.`)) {
+                return;
+            }
+            
+            campaigns.splice(idx, 1);
+            
+            if (currentCampaignIndex === idx) {
+                currentCampaignIndex = null;
+                document.getElementById('currentCampaignName').textContent = 'Untitled Campaign';
+            } else if (currentCampaignIndex > idx) {
+                currentCampaignIndex--;
+            }
+            
+            saveCampaigns();
+            renderCampaignSlots();
         }
 
         init();
