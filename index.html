@@ -1251,21 +1251,32 @@
 
                     <button class="btn" onclick="showFogGroupModal()" style="width: 100%; margin-bottom: 0.75rem;">+ New Group</button>
 
+                    <div style="margin-bottom: 0.75rem;">
+                        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Fog Paint Mode:</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <button class="btn btn-small" onclick="setFogPaintMode('brush')" id="fogBrushBtn">🖌️ Brush</button>
+                            <button class="btn btn-small" onclick="setFogPaintMode('rect')" id="fogRectBtn">▭ Rectangle</button>
+                        </div>
+                    </div>
+
                     <div class="control-row">
-                        <label>Size:</label>
-                        <input type="range" class="slider" id="fogSize" min="20" max="150" value="60" style="flex: 1;">
+                        <label>Brush Size:</label>
+                        <input type="range" class="slider" id="fogSize" min="20" max="150" value="60" oninput="updateFogSize(this.value)" style="flex: 1;">
                         <span id="fogSizeValue">60px</span>
                     </div>
 
                     <div class="control-row">
                         <label>
-                            <input type="checkbox" id="revealMode" checked> Reveal
+                            <input type="checkbox" id="revealMode" checked> Reveal Fog
                         </label>
                     </div>
 
                     <div class="btn-group">
-                        <button class="btn btn-primary" onclick="toggleFogMode()">🌫️ Fog Mode</button>
-                        <button class="btn" onclick="resetFog()">Reset</button>
+                        <button class="btn" onclick="resetFog()">Reset All Fog</button>
+                    </div>
+                    
+                    <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; font-size: 0.75rem; color: var(--text-dim);">
+                        💡 Click on the main map to paint fog. Check "Reveal Fog" to erase fog, uncheck to add fog.
                     </div>
                 </div>
 
@@ -1361,6 +1372,10 @@
         let activeFogGroup = 'everyone';
         let fogGroups = { everyone: { name: 'Everyone', canvas: null } };
         let fogMode = false;
+        let fogPaintMode = 'brush'; // 'brush' or 'rect'
+        let fogBrushSize = 60;
+        let fogRectStart = null;
+        let isFogDrawing = false;
         let dmFogOpacity = 0.3; // DM sees through fog
 
         // Player requests
@@ -2358,21 +2373,77 @@
         // Main canvas interaction
         canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
-            lastX = e.clientX;
-            lastY = e.clientY;
+            const screenX = e.clientX;
+            const screenY = e.clientY;
+            const mx = (screenX - rect.left - panX) / zoom;
+            const my = (screenY - rect.top - panY) / zoom;
+            
+            // Check if Ctrl key is held for fog painting
+            if (isDM && e.ctrlKey) {
+                isFogDrawing = true;
+                
+                if (fogPaintMode === 'brush') {
+                    paintFog(mx, my);
+                } else if (fogPaintMode === 'rect') {
+                    fogRectStart = { x: mx, y: my };
+                }
+                return;
+            }
+            
+            lastX = screenX;
+            lastY = screenY;
             isDrawing = true;
         });
 
         canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const screenX = e.clientX;
+            const screenY = e.clientY;
+            const mx = (screenX - rect.left - panX) / zoom;
+            const my = (screenY - rect.top - panY) / zoom;
+            
+            // Fog painting
+            if (isDM && isFogDrawing) {
+                if (fogPaintMode === 'brush') {
+                    paintFog(mx, my);
+                } else if (fogPaintMode === 'rect' && fogRectStart) {
+                    // Just update for preview, actual painting on mouseup
+                    draw();
+                    
+                    // Draw preview rectangle
+                    ctx.save();
+                    const reveal = document.getElementById('revealMode').checked;
+                    ctx.strokeStyle = reveal ? '#10b981' : '#ef4444';
+                    ctx.lineWidth = 2 / zoom;
+                    ctx.setLineDash([5 / zoom, 5 / zoom]);
+                    ctx.translate(panX, panY);
+                    ctx.scale(zoom, zoom);
+                    ctx.strokeRect(fogRectStart.x, fogRectStart.y, mx - fogRectStart.x, my - fogRectStart.y);
+                    ctx.restore();
+                }
+                return;
+            }
+            
+            // Normal panning
             if (!isDrawing) return;
-            panX += e.clientX - lastX;
-            panY += e.clientY - lastY;
-            lastX = e.clientX;
-            lastY = e.clientY;
+            panX += screenX - lastX;
+            panY += screenY - lastY;
+            lastX = screenX;
+            lastY = screenY;
             draw();
         });
 
-        canvas.addEventListener('mouseup', () => {
+        canvas.addEventListener('mouseup', (e) => {
+            if (isFogDrawing && fogPaintMode === 'rect' && fogRectStart) {
+                const rect = canvas.getBoundingClientRect();
+                const mx = (e.clientX - rect.left - panX) / zoom;
+                const my = (e.clientY - rect.top - panY) / zoom;
+                
+                paintFogRect(fogRectStart.x, fogRectStart.y, mx, my);
+                fogRectStart = null;
+            }
+            
+            isFogDrawing = false;
             isDrawing = false;
         });
 
@@ -2432,6 +2503,8 @@
             fogGroups[id] = { name, canvas: fogCanvas };
             renderFogGroups();
             closeFogGroupModal();
+            
+            document.getElementById('fogGroupName').value = '';
         }
 
         function renderFogGroups() {
@@ -2452,19 +2525,99 @@
             draw();
         }
 
-        function toggleFogMode() {
-            fogMode = !fogMode;
-            // Implement fog painting mode
+        function setFogPaintMode(mode) {
+            fogPaintMode = mode;
+            document.getElementById('fogBrushBtn').classList.remove('btn-primary');
+            document.getElementById('fogRectBtn').classList.remove('btn-primary');
+            
+            if (mode === 'brush') {
+                document.getElementById('fogBrushBtn').classList.add('btn-primary');
+            } else {
+                document.getElementById('fogRectBtn').classList.add('btn-primary');
+            }
+        }
+
+        function updateFogSize(value) {
+            fogBrushSize = parseInt(value);
+            document.getElementById('fogSizeValue').textContent = value + 'px';
         }
 
         function resetFog() {
+            if (!isDM) return;
+            if (!confirm('Reset all fog for the active group?')) return;
+            
             if (fogGroups[activeFogGroup]) {
                 const ctx = fogGroups[activeFogGroup].canvas.getContext('2d');
                 ctx.fillStyle = 'rgba(0,0,0,0.9)';
                 ctx.fillRect(0, 0, fogGroups[activeFogGroup].canvas.width, fogGroups[activeFogGroup].canvas.height);
                 draw();
+                
+                broadcast({
+                    type: 'fogUpdate',
+                    group: activeFogGroup,
+                    fogData: fogGroups[activeFogGroup].canvas.toDataURL()
+                });
             }
         }
+
+        function paintFog(x, y) {
+            if (!isDM || !fogGroups[activeFogGroup]) return;
+            
+            const fogCtx = fogGroups[activeFogGroup].canvas.getContext('2d');
+            const reveal = document.getElementById('revealMode').checked;
+            
+            fogCtx.save();
+            
+            if (reveal) {
+                // Erase fog (reveal map)
+                fogCtx.globalCompositeOperation = 'destination-out';
+                fogCtx.fillStyle = 'rgba(0,0,0,1)';
+            } else {
+                // Add fog (hide map)
+                fogCtx.globalCompositeOperation = 'source-over';
+                fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+            }
+            
+            fogCtx.beginPath();
+            fogCtx.arc(x, y, fogBrushSize, 0, Math.PI * 2);
+            fogCtx.fill();
+            fogCtx.restore();
+            
+            draw();
+        }
+
+        function paintFogRect(x1, y1, x2, y2) {
+            if (!isDM || !fogGroups[activeFogGroup]) return;
+            
+            const fogCtx = fogGroups[activeFogGroup].canvas.getContext('2d');
+            const reveal = document.getElementById('revealMode').checked;
+            
+            fogCtx.save();
+            
+            if (reveal) {
+                fogCtx.globalCompositeOperation = 'destination-out';
+                fogCtx.fillStyle = 'rgba(0,0,0,1)';
+            } else {
+                fogCtx.globalCompositeOperation = 'source-over';
+                fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+            }
+            
+            const width = x2 - x1;
+            const height = y2 - y1;
+            fogCtx.fillRect(x1, y1, width, height);
+            fogCtx.restore();
+            
+            draw();
+            
+            broadcast({
+                type: 'fogUpdate',
+                group: activeFogGroup,
+                fogData: fogGroups[activeFogGroup].canvas.toDataURL()
+            });
+        }
+
+        // Initialize fog mode buttons
+        setFogPaintMode('brush');
 
         // === MINIMAP ===
         function updateMinimap() {
