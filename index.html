@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>The Fractured Sky - Multiplayer VTT v2.0</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>The Fractured Sky - Ultimate VTT</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * {
@@ -26,6 +24,8 @@
             --text: #e5e7eb;
             --text-dim: #9ca3af;
             --border: rgba(139, 92, 246, 0.2);
+            --success: #10b981;
+            --danger: #ef4444;
         }
 
         body {
@@ -34,165 +34,91 @@
             color: var(--text);
             overflow: hidden;
             height: 100vh;
+            user-select: none;
         }
 
-        /* Connection Panel */
-        .connection-panel {
-            position: fixed;
-            top: 70px;
-            right: 0;
-            left: 0;
+        /* HEADER */
+        .header {
             background: var(--bg-card);
-            border-bottom: 2px solid var(--border);
-            padding: 1.5rem;
-            z-index: 500;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-in-out, padding 0.3s ease-in-out;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 100;
         }
 
-        .connection-panel.open {
-            max-height: 400px;
-            padding: 1.5rem;
+        .title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--gold), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .connection-panel.closed {
-            padding: 0 1.5rem;
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
         }
 
-        .connection-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            max-width: 1200px;
-            margin: 0 auto;
+        .campaign-badge {
+            padding: 0.5rem 1rem;
+            background: var(--bg-hover);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            color: var(--gold);
+            font-weight: 600;
+            font-size: 0.9rem;
         }
 
-        .connection-section {
+        /* BUTTONS */
+        .btn {
+            padding: 0.6rem 1.2rem;
             background: var(--bg-hover);
             border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 1rem;
-        }
-
-        .connection-section h3 {
-            color: var(--gold);
-            margin-bottom: 0.75rem;
-            font-size: 1rem;
-        }
-
-        .connection-tab {
-            background: var(--bg-card);
-            border: 2px solid var(--border);
-            border-top: none;
             color: var(--text);
-            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 0.9rem;
-            font-weight: 600;
+            font-weight: 500;
             transition: all 0.2s;
-            border-radius: 0 0 8px 8px;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            font-family: 'Inter', sans-serif;
         }
 
-        .connection-tab:hover {
-            background: var(--bg-hover);
-            border-color: var(--accent);
-        }
-
-        .connection-tab.open {
-            border-color: var(--accent);
+        .btn:hover {
             background: var(--accent);
+            border-color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            border: none;
             color: white;
         }
 
-        .connection-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #ef4444;
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
         }
 
-        .connection-indicator.connected {
-            background: #10b981;
-            animation: pulse-green 2s infinite;
-        }
-
-        .room-code {
-            background: var(--bg-dark);
-            padding: 0.75rem;
-            border-radius: 8px;
-            margin: 0.5rem 0;
-            font-family: monospace;
-            font-size: 1.1rem;
-            text-align: center;
-            color: var(--accent);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .room-code:hover {
-            border-color: var(--accent);
-            transform: scale(1.02);
-        }
-
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem;
-            background: var(--bg-hover);
-            border-radius: 6px;
-            margin-top: 0.5rem;
-        }
-
-        .status-indicator {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #ef4444;
-        }
-
-        .status-indicator.connected {
-            background: #10b981;
-            animation: pulse-green 2s infinite;
-        }
-
-        @keyframes pulse-green {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .connected-users {
-            margin-top: 0.75rem;
-            max-height: 150px;
-            overflow-y: auto;
-        }
-
-        .user-item {
-            padding: 0.5rem;
-            background: var(--bg-dark);
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .user-role {
-            font-size: 0.75rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            background: var(--accent);
+        .btn-success {
+            background: var(--success);
+            border-color: var(--success);
             color: white;
         }
 
-        /* Welcome Screen */
+        .btn-danger {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: white;
+        }
+
+        /* WELCOME SCREEN */
         .welcome-screen {
             position: fixed;
             inset: 0;
@@ -200,24 +126,22 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 2000;
-            transition: opacity 0.5s, transform 0.5s;
+            z-index: 10000;
+            transition: opacity 0.5s;
         }
 
         .welcome-screen.hidden {
             opacity: 0;
-            transform: scale(0.95);
             pointer-events: none;
         }
 
         .welcome-content {
             text-align: center;
-            max-width: 600px;
             padding: 3rem;
         }
 
         .welcome-title {
-            font-family: 'Playfair Display', serif;
+            font-family: 'Cinzel', serif;
             font-size: 4rem;
             font-weight: 700;
             background: linear-gradient(135deg, var(--gold), var(--accent));
@@ -236,7 +160,6 @@
             display: flex;
             gap: 1rem;
             justify-content: center;
-            flex-wrap: wrap;
         }
 
         .welcome-btn {
@@ -247,6 +170,7 @@
             border: none;
             font-weight: 600;
             transition: all 0.3s;
+            font-family: 'Inter', sans-serif;
         }
 
         .welcome-btn-primary {
@@ -270,73 +194,232 @@
             background: var(--bg-hover);
         }
 
-        .header {
+        /* MODALS */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
             background: var(--bg-card);
-            border-bottom: 1px solid var(--border);
-            padding: 1rem 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            color: var(--gold);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .error, .success, .info {
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .error { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); }
+        .success { background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--success); }
+        .info { background: rgba(139, 92, 246, 0.1); border: 1px solid var(--accent); color: var(--accent); }
+
+        .error.show, .success.show, .info.show { display: block; }
+
+        /* CONNECTION TAB */
+        .connection-tab-container {
+            position: fixed;
+            top: 70px;
+            left: 20px;
+            z-index: 501;
+            display: none;
+        }
+
+        .connection-tab {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-top: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 0 0 8px 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .connection-tab:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+
+        .connection-tab.open {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .connection-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+        }
+
+        .connection-indicator.connected {
+            background: var(--success);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* CONNECTION PANEL */
+        .connection-panel {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border-bottom: 2px solid var(--border);
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s;
+            z-index: 500;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .connection-panel.open {
+            max-height: 400px;
+            padding: 1.5rem;
+        }
+
+        .connection-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .connection-section {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .connection-section h3 {
+            color: var(--gold);
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .room-code {
+            background: var(--bg-dark);
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-family: monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            color: var(--accent);
+        }
+
+        .room-code:hover {
+            border-color: var(--accent);
+            transform: scale(1.02);
+        }
+
+        .user-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .user-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            padding: 0.5rem;
+            background: var(--bg-dark);
+            border-radius: 6px;
         }
 
-        .title {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .campaign-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.5rem 1rem;
-            background: var(--bg-hover);
-            border-radius: 8px;
-        }
-
-        .campaign-name {
-            color: var(--gold);
-            font-weight: 600;
-        }
-
-        .btn {
-            padding: 0.6rem 1.2rem;
-            background: var(--bg-hover);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .btn:hover {
+        .user-role {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
             background: var(--accent);
-            border-color: var(--accent);
-            transform: translateY(-1px);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-            border: none;
             color: white;
         }
 
-        .btn-small {
-            padding: 0.4rem 0.8rem;
-            font-size: 0.8rem;
-        }
-
+        /* MAIN LAYOUT */
         .container {
             display: flex;
             height: calc(100vh - 70px);
@@ -347,6 +430,7 @@
             padding: 1rem;
             display: flex;
             flex-direction: column;
+            position: relative;
         }
 
         .tabletop {
@@ -370,7 +454,7 @@
         }
 
         .session-name {
-            font-family: 'Playfair Display', serif;
+            font-family: 'Cinzel', serif;
             font-size: 1.3rem;
             background: linear-gradient(135deg, var(--gold), var(--accent));
             -webkit-background-clip: text;
@@ -401,6 +485,7 @@
             cursor: pointer;
         }
 
+        /* CANVAS */
         .canvas-container {
             flex: 1;
             position: relative;
@@ -417,93 +502,222 @@
             cursor: grabbing;
         }
 
-        /* Stamp Sidebar - DM Only */
-        .stamp-sidebar {
-            width: 280px;
-            background: var(--bg-card);
-            border-right: 1px solid var(--border);
-            overflow-y: auto;
-            transform: translateX(-100%);
-            transition: transform 0.3s;
-            box-shadow: 5px 0 20px rgba(0,0,0,0.3);
+        /* TOKEN STAGING ZONE */
+        .staging-zone {
             position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            z-index: 150;
-        }
-
-        .stamp-sidebar.open {
-            transform: translateX(0);
-        }
-
-        .stamp-header {
-            position: sticky;
-            top: 0;
-            background: var(--bg-hover);
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            border: 2px solid var(--gold);
+            border-radius: 12px;
             padding: 1rem;
-            border-bottom: 1px solid var(--border);
             display: flex;
-            justify-content: space-between;
+            gap: 0.75rem;
             align-items: center;
-            z-index: 10;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            max-width: 80%;
+            overflow-x: auto;
+            z-index: 50;
         }
 
-        .stamp-content {
-            padding: 1rem;
-        }
-
-        .stamp-category {
-            margin-bottom: 1.5rem;
-        }
-
-        .stamp-category h4 {
+        .staging-label {
+            font-size: 0.85rem;
             color: var(--gold);
-            font-size: 0.9rem;
-            margin-bottom: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-weight: 600;
+            white-space: nowrap;
         }
 
-        .stamp-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
+        .staging-tokens {
+            display: flex;
             gap: 0.5rem;
         }
 
-        .stamp-item {
-            aspect-ratio: 1;
-            background: var(--bg-hover);
-            border: 2px solid var(--border);
-            border-radius: 8px;
+        .token-item {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid var(--border);
+            cursor: move;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 2rem;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .token-item:hover {
+            transform: scale(1.1);
+            border-color: var(--accent);
+            z-index: 10;
+        }
+
+        .token-owner {
+            position: absolute;
+            bottom: -20px;
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            white-space: nowrap;
+        }
+
+        /* MINIMAP NAVIGATOR */
+        .minimap-container {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 600;
+            cursor: move;
+        }
+
+        .minimap-container.docked {
+            cursor: default;
+        }
+
+        .minimap {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            width: 180px;
+            transition: all 0.3s;
+        }
+
+        .minimap.collapsed {
+            width: auto;
+            padding: 0.5rem 1rem;
+        }
+
+        .minimap-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .minimap.collapsed .minimap-header {
+            margin-bottom: 0;
+        }
+
+        .minimap-title {
+            font-size: 0.75rem;
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        .minimap-controls {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .minimap-btn {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 0.7rem;
             transition: all 0.2s;
         }
 
-        .stamp-item:hover {
-            transform: scale(1.1);
+        .minimap-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .minimap-content {
+            display: block;
+        }
+
+        .minimap.collapsed .minimap-content {
+            display: none;
+        }
+
+        .minimap-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2px;
+            margin-bottom: 0.5rem;
+        }
+
+        .minimap-cell {
+            aspect-ratio: 1;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .minimap-cell:hover {
             border-color: var(--accent);
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+            transform: scale(1.1);
+            z-index: 1;
         }
 
-        .stamp-item.selected {
-            border-color: var(--gold);
-            background: rgba(251, 191, 36, 0.1);
-            box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+        .minimap-cell.has-content {
+            background: var(--accent);
+            opacity: 0.6;
         }
 
-        /* DM Panel */
+        .minimap-cell.locked::after {
+            content: '🔒';
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+        }
+
+        .minimap-cell.current {
+            border: 2px solid var(--gold);
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        }
+
+        .minimap-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .minimap-action-btn {
+            flex: 1;
+            padding: 0.4rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+            color: var(--text);
+            text-align: center;
+        }
+
+        .minimap-action-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* DM PANEL */
         .dm-panel {
-            width: 400px;
+            width: 420px;
             background: var(--bg-card);
             border-left: 1px solid var(--border);
             overflow-y: auto;
             transform: translateX(100%);
             transition: transform 0.3s;
+            box-shadow: -4px 0 24px rgba(0,0,0,0.4);
         }
 
         .dm-panel.open {
@@ -520,6 +734,11 @@
             justify-content: space-between;
             align-items: center;
             z-index: 10;
+        }
+
+        .dm-header h2 {
+            font-family: 'Cinzel', serif;
+            color: var(--gold);
         }
 
         .dm-content {
@@ -545,10 +764,9 @@
             margin-bottom: 0.75rem;
             color: var(--gold);
             font-size: 1rem;
-        }
-
-        .section.active h3 {
-            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .tool-grid {
@@ -599,6 +817,7 @@
             border: 1px solid var(--border);
             border-radius: 6px;
             cursor: pointer;
+            background: var(--bg-dark);
         }
 
         .grid-selector {
@@ -607,11 +826,6 @@
             border-radius: 8px;
             margin: 1rem 0;
             border: 2px solid var(--border);
-        }
-
-        .grid-selector.active {
-            border-color: var(--accent);
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
         }
 
         .grid-info {
@@ -631,27 +845,6 @@
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 0.5rem;
-            margin-top: 0.75rem;
-        }
-
-        .grid-nav button:nth-child(2) {
-            grid-column: 2;
-        }
-
-        .grid-nav button:nth-child(3) {
-            grid-column: 3;
-        }
-
-        .grid-nav button:nth-child(4) {
-            grid-column: 1;
-        }
-
-        .grid-nav button:nth-child(5) {
-            grid-column: 2;
-        }
-
-        .grid-nav button:nth-child(6) {
-            grid-column: 3;
         }
 
         #mapCanvas {
@@ -664,178 +857,104 @@
             margin: 0.5rem 0;
         }
 
+        .history-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .asset-indicator {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        .asset-indicator .current-asset {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
         .btn-group {
             display: flex;
             gap: 0.5rem;
             margin-top: 0.75rem;
         }
 
-        .asset-library {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+        .fog-groups {
+            display: flex;
+            flex-direction: column;
             gap: 0.5rem;
             margin: 0.75rem 0;
         }
 
-        .asset-item {
-            aspect-ratio: 1;
+        .fog-group-item {
             background: var(--bg-dark);
-            border: 2px solid var(--border);
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            gap: 0.25rem;
-            transition: all 0.2s;
-            padding: 0.5rem;
-        }
-
-        .asset-item:hover {
-            border-color: var(--accent);
-            transform: scale(1.05);
-        }
-
-        .asset-item.selected {
-            border-color: var(--gold);
-            background: rgba(251, 191, 36, 0.1);
-        }
-
-        .asset-preview {
-            font-size: 1.5rem;
-        }
-
-        .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-            visibility: hidden;
-        }
-
-        .modal.active {
-            opacity: 1;
-            pointer-events: all;
-            visibility: visible;
-        }
-
-        .modal-content {
-            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 2rem;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        }
-
-        .campaign-slot {
-            background: var(--bg-dark);
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.75rem;
-            border: 2px solid var(--border);
-            transition: all 0.2s;
-        }
-
-        .campaign-slot:hover {
-            border-color: var(--accent);
-        }
-
-        .campaign-slot.active {
-            border-color: var(--gold);
-            background: rgba(251, 191, 36, 0.05);
-        }
-
-        .campaign-slot-header {
+            padding: 0.75rem;
+            border-radius: 6px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.5rem;
         }
 
-        .campaign-slot-name {
+        .fog-group-item.active {
+            border-color: var(--accent);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .fog-group-name {
             font-weight: 600;
             color: var(--text);
         }
 
-        .campaign-slot-info {
-            font-size: 0.85rem;
-            color: var(--text-dim);
+        .fog-group-controls {
+            display: flex;
+            gap: 0.5rem;
         }
 
-        .modal-header {
-            text-align: center;
-            margin-bottom: 1.5rem;
+        .pending-requests {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
-        .modal-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-            color: var(--text-dim);
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 0.75rem;
+        .request-item {
             background: var(--bg-dark);
+            padding: 0.75rem;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             border: 1px solid var(--border);
-            border-radius: 6px;
+        }
+
+        .request-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .request-name {
+            font-weight: 600;
             color: var(--text);
-            font-size: 0.95rem;
         }
 
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--accent);
+        .request-detail {
+            font-size: 0.75rem;
+            color: var(--text-dim);
         }
 
-        .error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid #ef4444;
-            color: #ef4444;
-            padding: 0.75rem;
-            border-radius: 6px;
-            margin: 1rem 0;
-            display: none;
+        .request-actions {
+            display: flex;
+            gap: 0.5rem;
         }
 
-        .error.show {
-            display: block;
-        }
-
-        .success {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid #10b981;
-            color: #10b981;
-            padding: 0.75rem;
-            border-radius: 6px;
-            margin: 1rem 0;
-            display: none;
-        }
-
-        .success.show {
-            display: block;
-        }
-
+        /* SCROLLBAR */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -850,191 +969,40 @@
             border-radius: 4px;
         }
 
-        /* Minimap Navigator */
-        .minimap {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            width: 180px;
-            height: 180px;
-            background: var(--bg-card);
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 0.75rem;
-            z-index: 500;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-        }
-
-        .minimap-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-
-        .minimap-title {
-            font-size: 0.75rem;
-            color: var(--gold);
-            font-weight: 600;
-        }
-
-        .minimap-close {
-            background: none;
-            border: none;
-            color: var(--text-dim);
-            cursor: pointer;
-            font-size: 0.9rem;
-            padding: 0;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-
-        .minimap-close:hover {
-            background: var(--bg-hover);
-            color: var(--text);
-        }
-
-        .minimap-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 2px;
-            background: var(--bg-dark);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 2px;
-        }
-
-        .minimap-cell {
-            aspect-ratio: 1;
-            background: var(--bg-hover);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            position: relative;
-            transition: all 0.2s;
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .minimap-cell:hover {
-            border-color: var(--accent);
-            transform: scale(1.05);
-            z-index: 1;
-        }
-
-        .minimap-cell.has-content {
-            background: var(--accent);
-            opacity: 0.6;
-        }
-
-        .minimap-cell.locked {
-            background: var(--gold);
-            opacity: 0.8;
-        }
-
-        .minimap-cell.locked::after {
-            content: '🔒';
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.6rem;
-        }
-
-        .minimap-cell.current {
-            border: 2px solid var(--gold);
-            box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
-            background: rgba(251, 191, 36, 0.3);
-        }
-
-        .minimap-actions {
-            display: flex;
-            gap: 0.25rem;
-            margin-top: 0.5rem;
-        }
-
-        .minimap-btn {
-            flex: 1;
-            padding: 0.4rem;
-            background: var(--bg-hover);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.7rem;
-            transition: all 0.2s;
-            text-align: center;
-        }
-
-        .minimap-btn:hover {
-            background: var(--accent);
-            border-color: var(--accent);
-        }
-
-        .minimap-toggle {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-            border: 2px solid var(--border);
-            border-radius: 50%;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
-            z-index: 499;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-        }
-
-        .minimap-toggle:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6);
-        }
-
-        .minimap-toggle.visible {
-            display: flex;
+        /* UTILITY */
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
 <body>
-    <!-- Welcome Screen -->
+    <!-- WELCOME SCREEN -->
     <div class="welcome-screen" id="welcomeScreen">
         <div class="welcome-content">
-            <div class="welcome-title">✨ THE FRACTURED SKY</div>
-            <div class="welcome-subtitle">Multiplayer Virtual Tabletop v2.0</div>
+            <div class="welcome-title">⚔️ THE FRACTURED SKY</div>
+            <div class="welcome-subtitle">Ultimate Virtual Tabletop</div>
             <div class="welcome-buttons">
                 <button class="welcome-btn welcome-btn-primary" onclick="showDMLogin()">🎭 Create Room (DM)</button>
-                <button class="welcome-btn welcome-btn-secondary" onclick="showJoinModal()">👥 Join Room (Player)</button>
+                <button class="welcome-btn welcome-btn-secondary" onclick="showPlayerLogin()">👤 Join Room (Player)</button>
             </div>
-            <p style="position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: var(--text-dim); font-size: 0.75rem;">Version 2.0 - Fresh Build</p>
         </div>
     </div>
 
-    <!-- DM Login Modal -->
+    <!-- DM LOGIN MODAL -->
     <div class="modal" id="dmModal">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-icon">🧙</div>
-                <h2>Dungeon Master Login</h2>
+                <div class="modal-title">Dungeon Master</div>
             </div>
             <form onsubmit="dmLogin(event)">
                 <div class="form-group">
                     <label>USERNAME</label>
-                    <input type="text" id="dmUser" placeholder="Enter username" autocomplete="off" required>
+                    <input type="text" id="dmUser" placeholder="Wizard" required>
                 </div>
                 <div class="form-group">
                     <label>PASSWORD</label>
-                    <input type="password" id="dmPass" placeholder="Enter password" autocomplete="off" required>
+                    <input type="password" id="dmPass" placeholder="Enter password" required>
                 </div>
                 <div class="error" id="dmError">Invalid credentials</div>
                 <button type="submit" class="btn btn-primary" style="width: 100%;">LOGIN & CREATE ROOM</button>
@@ -1043,184 +1011,188 @@
         </div>
     </div>
 
-    <!-- Connection Panel Dropdown -->
-    <div class="connection-panel" id="connectionPanel">
-        <div class="connection-content">
-            <!-- Room Code Section -->
-            <div class="connection-section" id="roomCodeSection" style="display: none;">
-                <h3>🎭 Room Code</h3>
-                <p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.5rem;">Share this FULL code with players:</p>
-                <div class="room-code" id="roomCode" onclick="copyRoomCode()" style="font-size: 0.85rem; word-break: break-all;">----</div>
-                <p style="color: var(--text-dim); font-size: 0.75rem; margin-top: 0.5rem; text-align: center;">⚠️ Copy the entire code • Click to copy</p>
+    <!-- PLAYER LOGIN MODAL -->
+    <div class="modal" id="playerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">👤</div>
+                <div class="modal-title">Join as Player</div>
             </div>
-
-            <!-- Connection Status Section -->
-            <div class="connection-section">
-                <h3>📡 Connection Status</h3>
-                <div class="connection-status">
-                    <div class="status-indicator" id="statusIndicator"></div>
-                    <span id="statusText">Disconnected</span>
+            <form onsubmit="playerLogin(event)">
+                <div class="form-group">
+                    <label>YOUR NAME</label>
+                    <input type="text" id="playerName" placeholder="Enter character name" required>
                 </div>
+                <div class="form-group">
+                    <label>ROOM CODE</label>
+                    <input type="text" id="roomCodeInput" placeholder="Paste full room code" required>
+                </div>
+                <div class="error" id="playerError">Connection failed</div>
+                <div class="success" id="playerSuccess">Request sent! Waiting for DM approval...</div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">REQUEST TO JOIN</button>
+                <button type="button" class="btn" onclick="closePlayerModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOKEN REQUEST MODAL (DM) -->
+    <div class="modal" id="tokenRequestModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">🎲</div>
+                <div class="modal-title">Create Token</div>
             </div>
-
-            <!-- Connected Users Section -->
-            <div class="connection-section">
-                <h3>👥 Connected Users</h3>
-                <div class="connected-users" id="connectedUsers">
-                    <p style="color: var(--text-dim); font-size: 0.85rem;">No users connected</p>
-                </div>
+            <div class="form-group">
+                <label>TOKEN EMOJI</label>
+                <input type="text" id="tokenEmoji" placeholder="⚔️" maxlength="2">
+            </div>
+            <div class="form-group">
+                <label>TOKEN COLOR</label>
+                <input type="color" id="tokenColor" value="#e74c3c">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="createToken()" style="flex: 1;">Create</button>
+                <button class="btn" onclick="closeTokenModal()">Cancel</button>
             </div>
         </div>
     </div>
 
+    <!-- FOG GROUP MODAL -->
+    <div class="modal" id="fogGroupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">👥</div>
+                <div class="modal-title">Create Fog Group</div>
+            </div>
+            <div class="form-group">
+                <label>GROUP NAME</label>
+                <input type="text" id="fogGroupName" placeholder="e.g., Party A, Solo Explorer" required>
+            </div>
+            <div class="info">Players in this group will share fog visibility</div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="createFogGroup()" style="flex: 1;">Create Group</button>
+                <button class="btn" onclick="closeFogGroupModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HEADER -->
     <div class="header">
-        <div class="title">✨ THE FRACTURED SKY</div>
-        <div class="campaign-info" id="campaignInfo" style="display: none;">
-            <span style="color: var(--text-dim);">Campaign:</span>
-            <span class="campaign-name" id="currentCampaignName">Untitled Campaign</span>
-        </div>
+        <div class="title">⚔️ THE FRACTURED SKY</div>
+        <div class="campaign-badge" id="campaignBadge" style="display: none;">Campaign Name</div>
         <div class="header-actions">
-            <button class="btn" onclick="manageCampaigns()" id="manageCampaignsBtn" style="display: none;">📁 Campaigns</button>
-            <button class="btn btn-primary" onclick="toggleDMPanel()" id="dmPanelBtn" style="display: none;">🎭 DM Controls</button>
+            <button class="btn" id="dmControlsBtn" onclick="toggleDMPanel()" style="display: none;">🎭 DM Controls</button>
         </div>
     </div>
 
-    <!-- Connection Tab -->
-    <div style="position: fixed; top: 70px; left: 20px; z-index: 501; display: none;" id="connectionTabContainer">
-        <button class="connection-tab" id="connectionTab" onclick="toggleConnectionPanel()">
+    <!-- CONNECTION TAB -->
+    <div class="connection-tab-container" id="connectionTabContainer">
+        <div class="connection-tab" onclick="toggleConnectionPanel()" id="connectionTab">
             <div class="connection-indicator" id="tabIndicator"></div>
             <span id="tabText">Connection</span>
             <span id="tabArrow">▼</span>
-        </button>
+        </div>
     </div>
 
+    <!-- CONNECTION PANEL -->
+    <div class="connection-panel" id="connectionPanel">
+        <div class="connection-content">
+            <div class="connection-section" id="roomCodeSection" style="display: none;">
+                <h3>🎭 Room Code</h3>
+                <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Share this FULL code:</p>
+                <div class="room-code" id="roomCode" onclick="copyRoomCode()">----</div>
+                <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; text-align: center;">Click to copy</p>
+            </div>
+            <div class="connection-section">
+                <h3>📡 Status</h3>
+                <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: var(--bg-dark); border-radius: 6px;">
+                    <div class="connection-indicator" id="statusIndicator"></div>
+                    <span id="statusText">Disconnected</span>
+                </div>
+            </div>
+            <div class="connection-section">
+                <h3>👥 Connected Users</h3>
+                <div class="user-list" id="userList">
+                    <p style="font-size: 0.85rem; color: var(--text-dim);">No users</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
     <div class="container">
         <div class="main-area">
             <div class="tabletop">
                 <div class="tabletop-header">
-                    <div class="session-name">The Fractured Sky</div>
+                    <div class="session-name">Session</div>
                     <div class="zoom-controls">
-                        <span style="color: var(--text-dim); font-size: 0.9rem;">Zoom:</span>
+                        <span style="font-size: 0.9rem; color: var(--text-dim);">Zoom:</span>
                         <input type="range" class="slider" id="zoomSlider" min="25" max="200" value="100" oninput="setZoom(this.value)">
                         <span id="zoomValue" style="min-width: 50px; font-size: 0.9rem;">100%</span>
                     </div>
                 </div>
-                <div class="canvas-container" id="canvasContainer">
-                    <!-- Stamp Sidebar (DM Only) -->
-                    <div class="stamp-sidebar" id="stampSidebar">
-                        <div class="stamp-header">
-                            <h3 style="color: var(--gold);">🏰 Stamp Library</h3>
-                            <button class="btn btn-small" onclick="closeStamps()">✕</button>
-                        </div>
-                        <div class="stamp-content">
-                            <div class="stamp-category">
-                                <h4>🌲 Vegetation</h4>
-                                <div class="stamp-grid">
-                                    <div class="stamp-item" onclick="selectStamp('🌲')">🌲</div>
-                                    <div class="stamp-item" onclick="selectStamp('🌳')">🌳</div>
-                                    <div class="stamp-item" onclick="selectStamp('🌴')">🌴</div>
-                                    <div class="stamp-item" onclick="selectStamp('🎋')">🎋</div>
-                                    <div class="stamp-item" onclick="selectStamp('🍃')">🍃</div>
-                                    <div class="stamp-item" onclick="selectStamp('🍄')">🍄</div>
-                                    <div class="stamp-item" onclick="selectStamp('🌻')">🌻</div>
-                                    <div class="stamp-item" onclick="selectStamp('🌹')">🌹</div>
-                                </div>
-                            </div>
-                            <div class="stamp-category">
-                                <h4>🏔️ Natural Features</h4>
-                                <div class="stamp-grid">
-                                    <div class="stamp-item" onclick="selectStamp('🏔️')">🏔️</div>
-                                    <div class="stamp-item" onclick="selectStamp('⛰️')">⛰️</div>
-                                    <div class="stamp-item" onclick="selectStamp('🗻')">🗻</div>
-                                    <div class="stamp-item" onclick="selectStamp('🌋')">🌋</div>
-                                    <div class="stamp-item" onclick="selectStamp('🏝️')">🏝️</div>
-                                    <div class="stamp-item" onclick="selectStamp('🏜️')">🏜️</div>
-                                </div>
-                            </div>
-                            <div class="stamp-category">
-                                <h4>🏰 Buildings</h4>
-                                <div class="stamp-grid">
-                                    <div class="stamp-item" onclick="selectStamp('🏰')">🏰</div>
-                                    <div class="stamp-item" onclick="selectStamp('🏯')">🏯</div>
-                                    <div class="stamp-item" onclick="selectStamp('🏛️')">🏛️</div>
-                                    <div class="stamp-item" onclick="selectStamp('⛪')">⛪</div>
-                                    <div class="stamp-item" onclick="selectStamp('🏘️')">🏘️</div>
-                                    <div class="stamp-item" onclick="selectStamp('🏠')">🏠</div>
-                                    <div class="stamp-item" onclick="selectStamp('⛺')">⛺</div>
-                                    <div class="stamp-item" onclick="selectStamp('🗼')">🗼</div>
-                                </div>
-                            </div>
-                            <div class="stamp-category">
-                                <h4>⚔️ Objects</h4>
-                                <div class="stamp-grid">
-                                    <div class="stamp-item" onclick="selectStamp('⚔️')">⚔️</div>
-                                    <div class="stamp-item" onclick="selectStamp('🗡️')">🗡️</div>
-                                    <div class="stamp-item" onclick="selectStamp('🛡️')">🛡️</div>
-                                    <div class="stamp-item" onclick="selectStamp('🏹')">🏹</div>
-                                    <div class="stamp-item" onclick="selectStamp('🔮')">🔮</div>
-                                    <div class="stamp-item" onclick="selectStamp('💎')">💎</div>
-                                    <div class="stamp-item" onclick="selectStamp('🔥')">🔥</div>
-                                    <div class="stamp-item" onclick="selectStamp('⚡')">⚡</div>
-                                </div>
-                            </div>
-                            <div class="stamp-category">
-                                <h4>🐉 Creatures</h4>
-                                <div class="stamp-grid">
-                                    <div class="stamp-item" onclick="selectStamp('🐉')">🐉</div>
-                                    <div class="stamp-item" onclick="selectStamp('🦅')">🦅</div>
-                                    <div class="stamp-item" onclick="selectStamp('🐺')">🐺</div>
-                                    <div class="stamp-item" onclick="selectStamp('🦁')">🦁</div>
-                                    <div class="stamp-item" onclick="selectStamp('🐻')">🐻</div>
-                                    <div class="stamp-item" onclick="selectStamp('💀')">💀</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="canvas-container">
                     <canvas id="mainCanvas"></canvas>
+                    
+                    <!-- TOKEN STAGING ZONE -->
+                    <div class="staging-zone" id="stagingZone" style="display: none;">
+                        <div class="staging-label">🎲 TOKENS</div>
+                        <div class="staging-tokens" id="stagingTokens"></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- DM Panel -->
+        <!-- DM PANEL -->
         <div class="dm-panel" id="dmPanel">
             <div class="dm-header">
-                <h2>🎭 Dungeon Master</h2>
+                <h2>🎭 DM Controls</h2>
                 <button class="btn btn-small" onclick="toggleDMPanel()">✕</button>
             </div>
             <div class="dm-content">
-                <!-- Campaign Manager -->
-                <div class="section" id="campaignSection">
-                    <h3>📁 Campaign Manager</h3>
-                    <div id="campaignSlots"></div>
-                    <button class="btn btn-primary" onclick="createNewCampaign()" id="createCampaignBtn" style="width: 100%;">+ New Campaign</button>
+                <!-- PLAYER REQUESTS -->
+                <div class="section" id="requestsSection">
+                    <h3>📬 Player Requests</h3>
+                    <div class="pending-requests" id="pendingRequests">
+                        <p style="font-size: 0.85rem; color: var(--text-dim);">No pending requests</p>
+                    </div>
                 </div>
 
-                <!-- Grid Map Builder -->
+                <!-- MAP BUILDER -->
                 <div class="section active" id="mapSection">
-                    <h3>🗺️ Grid Map Builder (3x3)</h3>
+                    <h3>🗺️ Map Builder</h3>
                     
-                    <div class="grid-selector active">
+                    <div class="grid-selector">
                         <div class="grid-info">
                             Cell: <span class="current" id="currentCell">Center</span>
                         </div>
                         <div class="grid-nav">
-                            <button class="btn btn-small" onclick="selectCell(0, 0)">↖</button>
-                            <button class="btn btn-small" onclick="selectCell(1, 0)">↑</button>
-                            <button class="btn btn-small" onclick="selectCell(2, 0)">↗</button>
-                            <button class="btn btn-small" onclick="selectCell(0, 1)">←</button>
-                            <button class="btn btn-small" onclick="selectCell(1, 1)" style="background: var(--accent); color: white;">●</button>
-                            <button class="btn btn-small" onclick="selectCell(2, 1)">→</button>
-                            <button class="btn btn-small" onclick="selectCell(0, 2)">↙</button>
-                            <button class="btn btn-small" onclick="selectCell(1, 2)">↓</button>
-                            <button class="btn btn-small" onclick="selectCell(2, 2)">↘</button>
+                            <button class="btn btn-small" onclick="selectCell(0,0)">↖</button>
+                            <button class="btn btn-small" onclick="selectCell(1,0)">↑</button>
+                            <button class="btn btn-small" onclick="selectCell(2,0)">↗</button>
+                            <button class="btn btn-small" onclick="selectCell(0,1)">←</button>
+                            <button class="btn btn-small" onclick="selectCell(1,1)">●</button>
+                            <button class="btn btn-small" onclick="selectCell(2,1)">→</button>
+                            <button class="btn btn-small" onclick="selectCell(0,2)">↙</button>
+                            <button class="btn btn-small" onclick="selectCell(1,2)">↓</button>
+                            <button class="btn btn-small" onclick="selectCell(2,2)">↘</button>
                         </div>
+                    </div>
+
+                    <div class="history-controls">
+                        <button class="btn btn-small" onclick="undo()" id="undoBtn" disabled>↶ Undo</button>
+                        <button class="btn btn-small" onclick="redo()" id="redoBtn" disabled>↷ Redo</button>
                     </div>
 
                     <div class="tool-grid">
                         <div class="tool-btn active" onclick="setTool('brush')" id="brushBtn">🖌️<br>Brush</div>
-                        <div class="tool-btn" onclick="setTool('fill')" id="fillBtn">🪣<br>Fill</div>
                         <div class="tool-btn" onclick="setTool('eraser')" id="eraserBtn">🧹<br>Erase</div>
-                        <div class="tool-btn" onclick="setTool('stamp'); openStamps();" id="stampBtn">🏰<br>Stamps</div>
+                        <div class="tool-btn" onclick="setTool('texture')" id="textureBtn">🎨<br>Texture</div>
+                        <div class="tool-btn" onclick="setTool('image')" id="imageBtn">🖼️<br>Image</div>
+                    </div>
+
+                    <div class="asset-indicator">
+                        Active: <span class="current-asset" id="currentAsset">Brush</span>
                     </div>
 
                     <div class="control-row">
@@ -1236,240 +1208,134 @@
                     <canvas id="mapCanvas" width="400" height="400"></canvas>
 
                     <div class="btn-group">
-                        <input type="file" id="mapImport" accept="image/*" style="display: none;" onchange="importMap(event)">
-                        <button class="btn" onclick="document.getElementById('mapImport').click()">📤 Import</button>
-                        <button class="btn btn-primary" onclick="submitCell()" style="flex: 1;">✓ Submit</button>
-                        <button class="btn" onclick="clearCell()">Clear</button>
+                        <button class="btn btn-primary" onclick="submitCell()">✓ Submit</button>
+                        <button class="btn" onclick="clearMapCanvas()">Clear</button>
                     </div>
-                    
-                    <button class="btn" onclick="toggleLockCell()" id="lockBtn" style="width: 100%; margin-top: 0.5rem;">🔓 Lock Cell</button>
                 </div>
 
-                <!-- Textures & Patterns -->
-                <div class="section" id="assetSection">
-                    <h3>🎨 Textures & Patterns</h3>
-                    <div class="asset-library">
-                        <div class="asset-item" onclick="applyTexture('grass')">
-                            <div class="asset-preview">🟩</div>
-                            <div>Grass</div>
-                        </div>
-                        <div class="asset-item" onclick="applyTexture('stone')">
-                            <div class="asset-preview">⬜</div>
-                            <div>Stone</div>
-                        </div>
-                        <div class="asset-item" onclick="applyTexture('dirt')">
-                            <div class="asset-preview">🟫</div>
-                            <div>Dirt</div>
-                        </div>
-                        <div class="asset-item" onclick="applyTexture('water')">
-                            <div class="asset-preview">🟦</div>
-                            <div>Water</div>
-                        </div>
-                        <div class="asset-item" onclick="applyTexture('gravel')">
-                            <div class="asset-preview">🪨</div>
-                            <div>Gravel</div>
-                        </div>
-                        <div class="asset-item" onclick="applyTexture('sand')">
-                            <div class="asset-preview">🟨</div>
-                            <div>Sand</div>
-                        </div>
-                        <div class="asset-item" onclick="applyTexture('wood')">
-                            <div class="asset-preview">🪵</div>
-                            <div>Wood</div>
-                        </div>
-                        <div class="asset-item" onclick="applyTexture('brick')">
-                            <div class="asset-preview">🧱</div>
-                            <div>Brick</div>
-                        </div>
-                        <div class="asset-item" onclick="applyTexture('bridge')">
-                            <div class="asset-preview">🌉</div>
-                            <div>Bridge</div>
-                        </div>
-                    </div>
-                    <input type="file" id="assetImport" accept="image/*" style="display: none;" onchange="importAsset(event)">
-                    <button class="btn" onclick="document.getElementById('assetImport').click()" style="width: 100%; margin-top: 0.5rem;">📤 Import Asset</button>
-                </div>
-
-                <!-- Fog -->
+                <!-- FOG OF WAR -->
                 <div class="section" id="fogSection">
                     <h3>🌫️ Fog of War</h3>
                     
-                    <div style="margin-bottom: 1rem;">
-                        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Paint Mode:</div>
-                        <div class="tool-grid" style="grid-template-columns: 1fr 1fr;">
-                            <div class="tool-btn active" onclick="setFogMode('brush')" id="fogBrushBtn">🖌️<br>Brush</div>
-                            <div class="tool-btn" onclick="setFogMode('rect')" id="fogRectBtn">▭<br>Rectangle</div>
+                    <div class="fog-groups" id="fogGroups">
+                        <div class="fog-group-item active">
+                            <span class="fog-group-name">Everyone</span>
+                            <button class="btn btn-small btn-primary" onclick="setActiveFogGroup('everyone')">Active</button>
                         </div>
                     </div>
 
+                    <button class="btn" onclick="showFogGroupModal()" style="width: 100%; margin-bottom: 0.75rem;">+ New Group</button>
+
                     <div class="control-row">
-                        <label>Brush Size:</label>
-                        <input type="range" class="slider" id="fogSize" min="20" max="150" value="60" oninput="setFogSize(this.value)" style="flex: 1;">
+                        <label>Size:</label>
+                        <input type="range" class="slider" id="fogSize" min="20" max="150" value="60" style="flex: 1;">
                         <span id="fogSizeValue">60px</span>
                     </div>
-                    
-                    <div class="control-row">
-                        <label>DM Opacity:</label>
-                        <input type="range" class="slider" id="dmFogOpacity" min="0" max="100" value="30" oninput="setDMFogOpacity(this.value)" style="flex: 1;">
-                        <span id="dmFogOpacityValue">30%</span>
-                    </div>
-                    
+
                     <div class="control-row">
                         <label>
-                            <input type="checkbox" id="revealMode" checked> Reveal Mode
+                            <input type="checkbox" id="revealMode" checked> Reveal
                         </label>
                     </div>
+
                     <div class="btn-group">
-                        <button class="btn btn-primary" onclick="toggleFog()" id="fogBtn">Enable Fog</button>
+                        <button class="btn btn-primary" onclick="toggleFogMode()">🌫️ Fog Mode</button>
                         <button class="btn" onclick="resetFog()">Reset</button>
                     </div>
                 </div>
 
-                <!-- Tokens -->
-                <div class="section" id="tokensSection">
+                <!-- TOKENS -->
+                <div class="section" id="tokenSection">
                     <h3>🎲 Tokens</h3>
                     
-                    <div style="margin-bottom: 1rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input type="checkbox" id="gridSnapToggle" onchange="toggleGridSnap()" style="cursor: pointer;">
-                            <span>Enable Grid Snap (25x25)</span>
+                    <div class="control-row">
+                        <label>
+                            <input type="checkbox" id="gridSnap" onchange="toggleGridSnap()" checked> Grid Snap (25px)
                         </label>
-                        <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
-                            Tokens snap to 25px grid when enabled
-                        </p>
                     </div>
-                    
-                    <div class="btn-group">
-                        <button class="btn btn-primary" onclick="addToken('#e74c3c', '⚔️')">⚔️</button>
-                        <button class="btn btn-primary" onclick="addToken('#3498db', '🛡️')">🛡️</button>
-                        <button class="btn btn-primary" onclick="addToken('#2ecc71', '🏹')">🏹</button>
-                        <button class="btn btn-primary" onclick="addToken('#9b59b6', '🔮')">🔮</button>
-                    </div>
-                    <button class="btn" onclick="addCustomToken()" style="width: 100%; margin-top: 0.5rem;">+ Custom Token</button>
+
+                    <button class="btn btn-primary" onclick="showTokenModal()" style="width: 100%;">+ Create Token</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Join Room Modal -->
-    <div class="modal" id="joinModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-icon">🌐</div>
-                <h2>Join Room</h2>
-            </div>
-            <form onsubmit="joinRoom(event)">
-                <div class="form-group">
-                    <label>YOUR NAME</label>
-                    <input type="text" id="playerNameInput" placeholder="Enter your name" autocomplete="off" required>
-                </div>
-                <div class="form-group">
-                    <label>ROOM CODE</label>
-                    <input type="text" id="roomCodeInput" placeholder="Enter room code" autocomplete="off" required>
-                </div>
-                <div class="error" id="joinError">Connection failed</div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">JOIN ROOM</button>
-                <button type="button" class="btn" onclick="closeJoinModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Campaign Name Modal -->
-    <div class="modal" id="campaignNameModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-icon">📁</div>
-                <h2>New Campaign</h2>
-            </div>
-            <form onsubmit="saveCampaignName(event)">
-                <div class="form-group">
-                    <label>CAMPAIGN NAME</label>
-                    <input type="text" id="campaignNameInput" placeholder="Enter campaign name" autocomplete="off" required maxlength="50">
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">CREATE</button>
-                <button type="button" class="btn" onclick="closeCampaignNameModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Minimap Navigator -->
-    <div class="minimap" id="minimap">
-        <div class="minimap-header">
-            <div class="minimap-title">🗺️ Navigator</div>
-            <button class="minimap-close" onclick="toggleMinimap()">✕</button>
-        </div>
-        <div class="minimap-grid" id="minimapGrid"></div>
-        <div class="minimap-actions">
-            <button class="minimap-btn" onclick="recenterView()">⊙ Center</button>
-            <button class="minimap-btn" onclick="resetZoom()">🔍 Reset</button>
-        </div>
-    </div>
-
-    <!-- Minimap Toggle Button -->
-    <button class="minimap-toggle" id="minimapToggle" onclick="toggleMinimap()">🗺️</button>
-
-    <!-- Player Bar -->
-    <div style="position: fixed; bottom: 20px; right: 20px; z-index: 600; display: none;" id="playerBar">
-        <div style="background: var(--bg-card); border: 2px solid var(--border); border-radius: 12px; padding: 1rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                <div style="width: 40px; height: 40px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">👤</div>
-                <div>
-                    <div style="font-weight: 600; color: var(--text);" id="playerNameDisplay">Player</div>
-                    <div style="font-size: 0.75rem; color: var(--text-dim);">Connected</div>
+    <!-- MINIMAP NAVIGATOR -->
+    <div class="minimap-container" id="minimapContainer">
+        <div class="minimap" id="minimap">
+            <div class="minimap-header">
+                <div class="minimap-title">🗺️ Navigator</div>
+                <div class="minimap-controls">
+                    <div class="minimap-btn" onclick="toggleMinimapCollapse()" title="Collapse">−</div>
+                    <div class="minimap-btn" onclick="toggleMinimapDock()" title="Lock/Unlock" id="dockBtn">🔓</div>
                 </div>
             </div>
-            <button class="btn btn-small btn-primary" onclick="createPlayerToken()" style="width: 100%;">+ Create My Token</button>
+            <div class="minimap-content">
+                <div class="minimap-grid" id="minimapGrid"></div>
+                <div class="minimap-actions">
+                    <div class="minimap-action-btn" onclick="recenterView()">⊙ Center</div>
+                    <div class="minimap-action-btn" onclick="resetZoom()">🔍 Reset</div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        console.log('🎮 Fractured Sky VTT v2.0 - Script Loading...');
-        
-        // Multiplayer State
+        console.log('🎮 Fractured Sky Ultimate VTT Loading...');
+
+        // === CORE STATE ===
         let peer = null;
         let isDM = false;
         let myId = null;
         let myName = null;
-        let connections = new Map(); // peerId -> {conn, name, role}
         let roomCode = null;
+        let connections = new Map();
 
-        // Game State
+        // Game state
         let zoom = 1;
         let panX = 0;
         let panY = 0;
-        let tokens = [];
-        let tool = 'brush';
-        let color = '#4a7c59';
-        let size = 8;
-        let stamp = '🌲';
-        let fogSize = 60;
-        let fogMode = 'brush'; // 'brush' or 'rect'
-        let dmFogOpacity = 0.3; // DM can see through fog
-        let currentMode = 'map';
-        let isDrawing = false;
-        let lastX = 0;
-        let lastY = 0;
-        let dragToken = null;
-        let fogInitialized = false;
-        let fogRectStart = null; // For rectangular fog painting
-        let gridSnapEnabled = false;
+        let gridSnapEnabled = true;
         const GRID_SNAP_SIZE = 25;
-        
-        // Campaign Management
-        let campaigns = [];
-        let currentCampaignIndex = null;
-        const MAX_CAMPAIGNS = 3;
-        
-        // Player system
-        let playerTokens = [];
-        let currentPlayer = null;
-        
         const GRID_SIZE = 400;
         const CELL_SIZE = 400;
+
+        // Map builder
         let currentCellX = 1;
         let currentCellY = 1;
         let gridCells = {};
         let lockedCells = {};
+        let tool = 'brush';
+        let color = '#4a7c59';
+        let size = 8;
+        let currentAsset = 'Brush';
+        
+        // History tracking
+        let history = [];
+        let historyIndex = -1;
+        const MAX_HISTORY = 50;
+
+        // Drawing state
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Tokens
+        let stagingTokens = [];
+        let placedTokens = [];
+        let draggedToken = null;
+
+        // Fog
+        let activeFogGroup = 'everyone';
+        let fogGroups = { everyone: { name: 'Everyone', canvas: null } };
+        let fogMode = false;
+
+        // Player requests
+        let pendingRequests = [];
+
+        // Minimap
+        let minimapDocked = false;
+        let minimapDragOffset = null;
 
         const gridNames = [
             ['Top-Left', 'Top-Center', 'Top-Right'],
@@ -1477,87 +1343,149 @@
             ['Bottom-Left', 'Bottom-Center', 'Bottom-Right']
         ];
 
-        // Canvas
+        // Canvas setup
         const canvas = document.getElementById('mainCanvas');
         const ctx = canvas.getContext('2d');
         const mapCanvas = document.getElementById('mapCanvas');
         const mapCtx = mapCanvas.getContext('2d');
-        const fogCanvas = document.createElement('canvas');
-        const fogCtx = fogCanvas.getContext('2d');
 
-        // ========== MULTIPLAYER FUNCTIONS ==========
+        // Initialize fog canvases
+        for (let group in fogGroups) {
+            const fogCanvas = document.createElement('canvas');
+            fogCanvas.width = GRID_SIZE * 3;
+            fogCanvas.height = GRID_SIZE * 3;
+            const fogCtx = fogCanvas.getContext('2d');
+            fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+            fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+            fogGroups[group].canvas = fogCanvas;
+        }
 
+        // === INITIALIZATION ===
+        function init() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            mapCtx.fillStyle = '#f5f5dc';
+            mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+            
+            updateGridDisplay();
+            updateMinimap();
+            saveHistory();
+            
+            // Close DM panel when double-clicking outside
+            document.addEventListener('dblclick', (e) => {
+                if (!isDM) return;
+                const panel = document.getElementById('dmPanel');
+                if (!panel.contains(e.target) && panel.classList.contains('open')) {
+                    toggleDMPanel();
+                    deselectAllTools();
+                }
+            });
+
+            console.log('✅ VTT Ready!');
+        }
+
+        function resizeCanvas() {
+            const container = document.querySelector('.canvas-container');
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+            panX = (canvas.width - GRID_SIZE * 3) / 2;
+            panY = (canvas.height - GRID_SIZE * 3) / 2;
+            draw();
+        }
+
+        // === AUTHENTICATION ===
         function showDMLogin() {
-            console.log('showDMLogin called - opening DM modal');
-            const modal = document.getElementById('dmModal');
-            console.log('DM Modal element:', modal);
-            console.log('DM Modal classes before:', modal.className);
-            modal.classList.add('active');
-            console.log('DM Modal classes after:', modal.className);
-            console.log('DM Modal computed display:', window.getComputedStyle(modal).display);
-            console.log('DM Modal computed visibility:', window.getComputedStyle(modal).visibility);
-            console.log('DM Modal computed opacity:', window.getComputedStyle(modal).opacity);
+            document.getElementById('dmModal').classList.add('active');
         }
 
         function closeDMModal() {
-            console.log('closeDMModal called');
             document.getElementById('dmModal').classList.remove('active');
             document.getElementById('dmError').classList.remove('show');
         }
 
         function dmLogin(e) {
             e.preventDefault();
-            console.log('dmLogin called');
             const user = document.getElementById('dmUser').value;
             const pass = document.getElementById('dmPass').value;
             
-            // Check credentials
             if (user === 'Wizard' && pass === 'Wizard') {
-                console.log('Login successful, creating room...');
                 closeDMModal();
                 createRoom();
             } else {
-                console.log('Login failed - invalid credentials');
                 document.getElementById('dmError').classList.add('show');
             }
         }
 
+        function showPlayerLogin() {
+            document.getElementById('playerModal').classList.add('active');
+        }
+
+        function closePlayerModal() {
+            document.getElementById('playerModal').classList.remove('active');
+            document.getElementById('playerError').classList.remove('show');
+            document.getElementById('playerSuccess').classList.remove('show');
+        }
+
+        function playerLogin(e) {
+            e.preventDefault();
+            myName = document.getElementById('playerName').value;
+            const code = document.getElementById('roomCodeInput').value.trim();
+            
+            peer = new Peer();
+            peer.on('open', (id) => {
+                myId = id;
+                const conn = peer.connect(code);
+                
+                setupConnection(conn, true);
+                
+                conn.on('open', () => {
+                    // Send join request
+                    sendToPeer(conn, {
+                        type: 'playerJoinRequest',
+                        name: myName,
+                        peerId: myId
+                    });
+                    
+                    document.getElementById('playerSuccess').classList.add('show');
+                    
+                    setTimeout(() => {
+                        closePlayerModal();
+                        document.getElementById('welcomeScreen').classList.add('hidden');
+                        document.getElementById('connectionTabContainer').style.display = 'block';
+                        updateConnectionStatus('Waiting for approval...', false);
+                    }, 2000);
+                });
+                
+                conn.on('error', (err) => {
+                    document.getElementById('playerError').textContent = 'Connection failed: ' + err.type;
+                    document.getElementById('playerError').classList.add('show');
+                });
+            });
+        }
+
+        // === MULTIPLAYER ===
         function createRoom() {
             isDM = true;
             myName = 'Dungeon Master';
             
-            // Initialize PeerJS with free cloud server
             peer = new Peer();
-            
             peer.on('open', (id) => {
                 myId = id;
-                roomCode = id; // Store FULL peer ID, not truncated
-                const displayCode = id.substring(0, 8).toUpperCase(); // Just for display
-                
-                console.log('Room created! Full peer ID:', id);
-                console.log('Display code (first 8 chars):', displayCode);
+                roomCode = id;
                 
                 document.getElementById('welcomeScreen').classList.add('hidden');
-                
-                // Show connection tab and update UI
                 document.getElementById('connectionTabContainer').style.display = 'block';
                 document.getElementById('roomCodeSection').style.display = 'block';
-                document.getElementById('roomCode').textContent = roomCode; // Show FULL ID for copying
-                document.getElementById('dmPanelBtn').style.display = 'block';
-                document.getElementById('campaignInfo').style.display = 'flex';
-                document.getElementById('manageCampaignsBtn').style.display = 'block';
+                document.getElementById('roomCode').textContent = roomCode;
+                document.getElementById('dmControlsBtn').style.display = 'block';
+                document.getElementById('stagingZone').style.display = 'flex';
                 
                 updateConnectionStatus('Connected as DM', true);
                 updateUserList();
                 
-                // Load campaigns and show manager
-                loadCampaigns();
-                renderCampaignSlots();
-                
-                // Auto-open connection panel briefly to show room code
                 toggleConnectionPanel();
                 setTimeout(() => {
-                    // Auto-close after 5 seconds
                     if (document.getElementById('connectionPanel').classList.contains('open')) {
                         toggleConnectionPanel();
                     }
@@ -1567,105 +1495,18 @@
             peer.on('connection', (conn) => {
                 setupConnection(conn);
             });
-            
-            peer.on('error', (err) => {
-                console.error('Peer error:', err);
-                alert('Connection error: ' + err.message);
-            });
         }
 
-        function showJoinModal() {
-            console.log('showJoinModal called - opening join modal');
-            const modal = document.getElementById('joinModal');
-            console.log('Join Modal element:', modal);
-            console.log('Join Modal classes before:', modal.className);
-            modal.classList.add('active');
-            console.log('Join Modal classes after:', modal.className);
-            console.log('Join Modal computed opacity:', window.getComputedStyle(modal).opacity);
-        }
-
-        function closeJoinModal() {
-            console.log('closeJoinModal called');
-            document.getElementById('joinModal').classList.remove('active');
-            document.getElementById('joinError').classList.remove('show');
-        }
-
-        function joinRoom(e) {
-            e.preventDefault();
-            
-            myName = document.getElementById('playerNameInput').value;
-            const code = document.getElementById('roomCodeInput').value.trim();
-            
-            console.log('Attempting to join room with code:', code);
-            
-            // Initialize PeerJS
-            peer = new Peer();
-            
-            peer.on('open', (id) => {
-                myId = id;
-                console.log('My peer ID:', id);
-                console.log('Connecting to DM peer ID:', code);
-                
-                // Connect using the full peer ID (no modifications)
-                const conn = peer.connect(code);
-                
-                setupConnection(conn, true);
-                
-                conn.on('open', () => {
-                    console.log('✅ Connection established!');
-                    closeJoinModal();
-                    document.getElementById('welcomeScreen').classList.add('hidden');
-                    
-                    // Show connection tab
-                    document.getElementById('connectionTabContainer').style.display = 'block';
-                    
-                    // Show player bar
-                    currentPlayer = myName;
-                    document.getElementById('playerNameDisplay').textContent = myName;
-                    document.getElementById('playerBar').style.display = 'block';
-                    
-                    updateConnectionStatus('Connected to room', true);
-                    
-                    // Send join message
-                    sendToPeer(conn, {
-                        type: 'join',
-                        name: myName,
-                        role: 'player'
-                    });
-                    
-                    // Request current game state
-                    sendToPeer(conn, { type: 'requestState' });
-                });
-                
-                conn.on('error', (err) => {
-                    console.error('Connection error:', err);
-                    document.getElementById('joinError').textContent = 'Could not connect to room. Check the code and try again.';
-                    document.getElementById('joinError').classList.add('show');
-                });
-            });
-            
-            peer.on('error', (err) => {
-                console.error('Peer error:', err);
-                document.getElementById('joinError').textContent = 'Connection failed: ' + err.type;
-                document.getElementById('joinError').classList.add('show');
-            });
-        }
-
-        function setupConnection(conn, isInitiator = false) {
-            conn.on('data', (data) => {
-                handleMessage(conn, data);
-            });
+        function setupConnection(conn, isPlayer = false) {
+            conn.on('data', (data) => handleMessage(conn, data));
             
             conn.on('open', () => {
-                if (!isInitiator && isDM) {
-                    // DM receiving new connection
-                    connections.set(conn.peer, { conn, name: 'Unknown', role: 'player' });
-                    updateUserList();
-                } else if (isInitiator) {
-                    // Player successfully connected
-                    connections.set(conn.peer, { conn, name: 'Dungeon Master', role: 'dm' });
-                    updateUserList();
+                if (!isPlayer) {
+                    connections.set(conn.peer, { conn, name: 'Unknown', role: 'player', approved: false });
+                } else {
+                    connections.set(conn.peer, { conn, name: 'Dungeon Master', role: 'dm', approved: true });
                 }
+                updateUserList();
             });
             
             conn.on('close', () => {
@@ -1675,69 +1516,65 @@
         }
 
         function handleMessage(conn, data) {
+            console.log('Message received:', data.type);
+            
             switch (data.type) {
-                case 'join':
-                    // Update connection info
-                    connections.set(conn.peer, { conn, name: data.name, role: data.role });
-                    updateUserList();
-                    
-                    // If we're DM, send current state to new player
+                case 'playerJoinRequest':
                     if (isDM) {
-                        sendGameState(conn);
+                        pendingRequests.push({
+                            peerId: conn.peer,
+                            name: data.name,
+                            conn: conn
+                        });
+                        renderPendingRequests();
                     }
                     break;
                     
-                case 'requestState':
+                case 'playerApproved':
+                    myName = data.name;
+                    updateConnectionStatus('Approved! Connected to room', true);
+                    requestGameState(conn);
+                    break;
+                    
+                case 'playerRejected':
+                    alert('Your join request was denied by the DM.');
+                    break;
+                    
+                case 'tokenRequest':
                     if (isDM) {
-                        sendGameState(conn);
+                        // Add to pending requests
+                        pendingRequests.push({
+                            type: 'token',
+                            peerId: conn.peer,
+                            name: data.playerName,
+                            tokenData: data.tokenData,
+                            conn: conn
+                        });
+                        renderPendingRequests();
                     }
+                    break;
+                    
+                case 'tokenApproved':
+                    // Token was approved, add to staging
+                    stagingTokens.push(data.token);
+                    renderStagingTokens();
                     break;
                     
                 case 'gameState':
-                    // Receive full game state
                     loadGameState(data.state);
                     break;
                     
-                case 'cellUpdate':
-                    // Receive cell update
-                    updateCellFromData(data.cellX, data.cellY, data.imageData);
+                case 'gridUpdate':
+                    updateGridFromNetwork(data);
                     break;
                     
                 case 'tokenUpdate':
-                    // Update tokens
-                    tokens = data.tokens;
+                    placedTokens = data.tokens;
                     draw();
                     break;
                     
                 case 'fogUpdate':
-                    // Update fog
-                    loadFogFromData(data.fogData);
-                    break;
-                    
-                case 'lockUpdate':
-                    lockedCells = data.lockedCells;
-                    draw();
-                    break;
-                    
-                case 'gridSnapUpdate':
-                    // Update grid snap setting
-                    gridSnapEnabled = data.enabled;
-                    if (document.getElementById('gridSnapToggle')) {
-                        document.getElementById('gridSnapToggle').checked = data.enabled;
-                    }
-                    break;
-                    
-                case 'playerTokenCreate':
-                    // Player created a token
-                    if (isDM) {
-                        // Add the token and broadcast to everyone
-                        tokens.push(data.token);
-                        draw();
-                        broadcast({
-                            type: 'tokenUpdate',
-                            tokens: tokens
-                        });
-                    }
+                    updateFogFromNetwork(data);
                     break;
             }
         }
@@ -1751,112 +1588,213 @@
         }
 
         function broadcast(data) {
-            connections.forEach(({conn}) => {
-                sendToPeer(conn, data);
+            connections.forEach(({ conn, approved }) => {
+                if (approved) sendToPeer(conn, data);
             });
         }
 
+        function approvePlayer(index) {
+            const request = pendingRequests[index];
+            if (!request || request.type === 'token') return;
+            
+            const connData = connections.get(request.peerId);
+            if (connData) {
+                connData.approved = true;
+                connData.name = request.name;
+                
+                sendToPeer(request.conn, {
+                    type: 'playerApproved',
+                    name: request.name
+                });
+                
+                sendGameState(request.conn);
+            }
+            
+            pendingRequests.splice(index, 1);
+            renderPendingRequests();
+            updateUserList();
+        }
+
+        function rejectPlayer(index) {
+            const request = pendingRequests[index];
+            if (!request || request.type === 'token') return;
+            
+            sendToPeer(request.conn, { type: 'playerRejected' });
+            pendingRequests.splice(index, 1);
+            renderPendingRequests();
+        }
+
+        function approveToken(index) {
+            const request = pendingRequests[index];
+            if (!request || request.type !== 'token') return;
+            
+            const token = {
+                ...request.tokenData,
+                owner: request.name,
+                approved: true
+            };
+            
+            stagingTokens.push(token);
+            renderStagingTokens();
+            
+            sendToPeer(request.conn, {
+                type: 'tokenApproved',
+                token: token
+            });
+            
+            broadcast({
+                type: 'tokenUpdate',
+                tokens: [...stagingTokens, ...placedTokens]
+            });
+            
+            pendingRequests.splice(index, 1);
+            renderPendingRequests();
+        }
+
+        function rejectToken(index) {
+            pendingRequests.splice(index, 1);
+            renderPendingRequests();
+        }
+
+        function renderPendingRequests() {
+            const container = document.getElementById('pendingRequests');
+            
+            if (pendingRequests.length === 0) {
+                container.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-dim);">No pending requests</p>';
+                return;
+            }
+            
+            container.innerHTML = pendingRequests.map((req, idx) => {
+                if (req.type === 'token') {
+                    return `
+                        <div class="request-item">
+                            <div class="request-info">
+                                <div class="request-name">${req.name}</div>
+                                <div class="request-detail">Token: ${req.tokenData.icon}</div>
+                            </div>
+                            <div class="request-actions">
+                                <button class="btn btn-small btn-success" onclick="approveToken(${idx})">✓</button>
+                                <button class="btn btn-small btn-danger" onclick="rejectToken(${idx})">✕</button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="request-item">
+                            <div class="request-info">
+                                <div class="request-name">${req.name}</div>
+                                <div class="request-detail">Wants to join</div>
+                            </div>
+                            <div class="request-actions">
+                                <button class="btn btn-small btn-success" onclick="approvePlayer(${idx})">✓</button>
+                                <button class="btn btn-small btn-danger" onclick="rejectPlayer(${idx})">✕</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+        }
+
         function sendGameState(conn) {
-            const gridCellsData = {};
+            const gridData = {};
             for (let key in gridCells) {
-                gridCellsData[key] = gridCells[key].toDataURL();
+                gridData[key] = gridCells[key].toDataURL();
+            }
+            
+            const fogData = {};
+            for (let group in fogGroups) {
+                fogData[group] = fogGroups[group].canvas.toDataURL();
             }
             
             sendToPeer(conn, {
                 type: 'gameState',
                 state: {
-                    tokens,
-                    gridCells: gridCellsData,
+                    gridCells: gridData,
                     lockedCells,
-                    fog: fogCanvas.toDataURL(),
+                    fogGroups: fogData,
+                    tokens: [...stagingTokens, ...placedTokens],
                     zoom,
                     panX,
-                    panY,
-                    currentCellX,
-                    currentCellY,
-                    gridSnapEnabled
+                    panY
                 }
             });
         }
 
+        function requestGameState(conn) {
+            sendToPeer(conn, { type: 'requestState' });
+        }
+
         function loadGameState(state) {
-            tokens = state.tokens || [];
-            zoom = state.zoom || 1;
-            panX = state.panX || 0;
-            panY = state.panY || 0;
-            currentCellX = state.currentCellX || 1;
-            currentCellY = state.currentCellY || 1;
-            lockedCells = state.lockedCells || {};
-            
-            // Load grid cells
+            // Load grid
             gridCells = {};
             for (let key in state.gridCells) {
                 const img = new Image();
                 img.onload = () => {
-                    const cellCanvas = document.createElement('canvas');
-                    cellCanvas.width = CELL_SIZE;
-                    cellCanvas.height = CELL_SIZE;
-                    const cellCtx = cellCanvas.getContext('2d');
-                    cellCtx.drawImage(img, 0, 0);
-                    gridCells[key] = cellCanvas;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = CELL_SIZE;
+                    canvas.height = CELL_SIZE;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    gridCells[key] = canvas;
                     draw();
                 };
                 img.src = state.gridCells[key];
             }
             
             // Load fog
-            if (state.fog) {
-                loadFogFromData(state.fog);
+            for (let group in state.fogGroups) {
+                if (!fogGroups[group]) {
+                    fogGroups[group] = { name: group, canvas: document.createElement('canvas') };
+                    fogGroups[group].canvas.width = GRID_SIZE * 3;
+                    fogGroups[group].canvas.height = GRID_SIZE * 3;
+                }
+                const img = new Image();
+                img.onload = () => {
+                    const ctx = fogGroups[group].canvas.getContext('2d');
+                    ctx.clearRect(0, 0, fogGroups[group].canvas.width, fogGroups[group].canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    draw();
+                };
+                img.src = state.fogGroups[group];
             }
             
-            // Update UI
+            lockedCells = state.lockedCells || {};
+            zoom = state.zoom || 1;
+            panX = state.panX || 0;
+            panY = state.panY || 0;
+            
             document.getElementById('zoomSlider').value = zoom * 100;
             document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
-            updateGridDisplay();
+            
             draw();
+            updateMinimap();
         }
 
-        function loadFogFromData(fogData) {
+        function updateGridFromNetwork(data) {
             const img = new Image();
             img.onload = () => {
-                fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
-                fogCtx.drawImage(img, 0, 0, fogCanvas.width, fogCanvas.height);
+                const canvas = document.createElement('canvas');
+                canvas.width = CELL_SIZE;
+                canvas.height = CELL_SIZE;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                gridCells[`${data.cellX},${data.cellY}`] = canvas;
                 draw();
+                updateMinimap();
             };
-            img.src = fogData;
+            img.src = data.imageData;
         }
 
-        function updateCellFromData(cellX, cellY, imageData) {
-            const key = `${cellX},${cellY}`;
-            const img = new Image();
-            img.onload = () => {
-                const cellCanvas = document.createElement('canvas');
-                cellCanvas.width = CELL_SIZE;
-                cellCanvas.height = CELL_SIZE;
-                const cellCtx = cellCanvas.getContext('2d');
-                cellCtx.drawImage(img, 0, 0);
-                gridCells[key] = cellCanvas;
-                draw();
-                
-                // If this is the current cell, update map canvas
-                if (cellX === currentCellX && cellY === currentCellY) {
-                    mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-                    mapCtx.drawImage(img, 0, 0);
-                }
-            };
-            img.src = imageData;
-        }
-
-        function updateConnectionStatus(text, connected) {
-            document.getElementById('statusText').textContent = text;
-            const indicator = document.getElementById('statusIndicator');
-            const tabIndicator = document.getElementById('tabIndicator');
-            if (connected) {
-                indicator.classList.add('connected');
-                tabIndicator.classList.add('connected');
-            } else {
-                indicator.classList.remove('connected');
-                tabIndicator.classList.remove('connected');
+        function updateFogFromNetwork(data) {
+            if (fogGroups[data.group]) {
+                const img = new Image();
+                img.onload = () => {
+                    const ctx = fogGroups[data.group].canvas.getContext('2d');
+                    ctx.clearRect(0, 0, fogGroups[data.group].canvas.width, fogGroups[data.group].canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    draw();
+                };
+                img.src = data.fogData;
             }
         }
 
@@ -1867,161 +1805,150 @@
             
             if (panel.classList.contains('open')) {
                 panel.classList.remove('open');
-                panel.classList.add('closed');
                 tab.classList.remove('open');
                 arrow.textContent = '▼';
             } else {
-                panel.classList.remove('closed');
                 panel.classList.add('open');
                 tab.classList.add('open');
                 arrow.textContent = '▲';
             }
         }
 
+        function updateConnectionStatus(text, connected) {
+            document.getElementById('statusText').textContent = text;
+            const indicators = [document.getElementById('statusIndicator'), document.getElementById('tabIndicator')];
+            indicators.forEach(ind => {
+                if (connected) ind.classList.add('connected');
+                else ind.classList.remove('connected');
+            });
+        }
+
         function updateUserList() {
-            const container = document.getElementById('connectedUsers');
+            const container = document.getElementById('userList');
             const users = [];
             
-            if (isDM) {
-                users.push({ name: myName, role: 'DM' });
-            }
+            if (isDM) users.push({ name: myName, role: 'DM' });
             
-            connections.forEach(({name, role}) => {
-                users.push({ name, role: role === 'dm' ? 'DM' : 'Player' });
+            connections.forEach(({ name, role, approved }) => {
+                if (approved) {
+                    users.push({ name, role: role === 'dm' ? 'DM' : 'Player' });
+                }
             });
             
-            if (!isDM && connections.size > 0) {
-                users.unshift({ name: myName, role: 'Player' });
+            if (users.length === 0) {
+                container.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-dim);">No users</p>';
+                return;
             }
             
-            container.innerHTML = users.map(user => `
+            container.innerHTML = users.map(u => `
                 <div class="user-item">
-                    <span style="flex: 1;">${user.name}</span>
-                    <span class="user-role">${user.role}</span>
+                    <span>${u.name}</span>
+                    <span class="user-role">${u.role}</span>
                 </div>
             `).join('');
         }
 
         function copyRoomCode() {
-            const code = document.getElementById('roomCode').textContent;
-            navigator.clipboard.writeText(code).then(() => {
+            navigator.clipboard.writeText(roomCode).then(() => {
                 const elem = document.getElementById('roomCode');
-                const oldText = elem.textContent;
+                const old = elem.textContent;
                 elem.textContent = '✓ Copied!';
                 elem.style.background = 'var(--accent)';
                 setTimeout(() => {
-                    elem.textContent = oldText;
+                    elem.textContent = old;
                     elem.style.background = 'var(--bg-dark)';
                 }, 2000);
-            }).catch(() => {
-                alert('Room code: ' + code);
             });
         }
 
-        // ========== GAME FUNCTIONS ==========
-
-        function resizeCanvas() {
-            const container = document.getElementById('canvasContainer');
-            canvas.width = container.offsetWidth;
-            canvas.height = container.offsetHeight;
-            
-            if (!fogInitialized) {
-                fogCanvas.width = GRID_SIZE * 3;
-                fogCanvas.height = GRID_SIZE * 3;
-                fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
-                fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
-                fogInitialized = true;
-            }
-            
-            panX = (canvas.width - GRID_SIZE * 3) / 2;
-            panY = (canvas.height - GRID_SIZE * 3) / 2;
-            
-            draw();
+        // === TOKENS ===
+        function showTokenModal() {
+            document.getElementById('tokenRequestModal').classList.add('active');
         }
 
-        function init() {
-            console.log('🎮 Initializing game...');
-            resizeCanvas();
-            window.addEventListener('resize', resizeCanvas);
-            
-            mapCtx.fillStyle = '#f5f5dc';
-            mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-            
-            updateGridDisplay();
-            updateMinimap();
-            
-            console.log('✅ Game initialized and ready!');
+        function closeTokenModal() {
+            document.getElementById('tokenRequestModal').classList.remove('active');
         }
 
-        // ========== MINIMAP FUNCTIONS ==========
-
-        function updateMinimap() {
-            const container = document.getElementById('minimapGrid');
-            let html = '';
+        function createToken() {
+            const emoji = document.getElementById('tokenEmoji').value || '⚔️';
+            const color = document.getElementById('tokenColor').value;
             
-            for (let row = 0; row < 3; row++) {
-                for (let col = 0; col < 3; col++) {
-                    const key = `${col},${row}`;
-                    const hasContent = gridCells[key] !== undefined;
-                    const isLocked = lockedCells[key];
-                    const isCurrent = col === currentCellX && row === currentCellY;
-                    
-                    let classes = ['minimap-cell'];
-                    if (hasContent) classes.push('has-content');
-                    if (isLocked) classes.push('locked');
-                    if (isCurrent) classes.push('current');
-                    
-                    html += `<div class="${classes.join(' ')}" onclick="minimapNavigate(${col}, ${row})" title="${gridNames[row][col]}"></div>`;
-                }
-            }
-            
-            container.innerHTML = html;
-        }
-
-        function minimapNavigate(col, row) {
-            // Center the view on the selected cell
-            const cellCenterX = (col + 0.5) * GRID_SIZE;
-            const cellCenterY = (row + 0.5) * GRID_SIZE;
-            
-            panX = canvas.width / 2 - cellCenterX * zoom;
-            panY = canvas.height / 2 - cellCenterY * zoom;
-            
-            draw();
-        }
-
-        function recenterView() {
-            // Center the entire 3x3 grid in the viewport
-            panX = (canvas.width - GRID_SIZE * 3 * zoom) / 2;
-            panY = (canvas.height - GRID_SIZE * 3 * zoom) / 2;
-            draw();
-        }
-
-        function resetZoom() {
-            zoom = 1;
-            document.getElementById('zoomSlider').value = 100;
-            document.getElementById('zoomValue').textContent = '100%';
-            recenterView();
-        }
-
-        function toggleMinimap() {
-            const minimap = document.getElementById('minimap');
-            const toggle = document.getElementById('minimapToggle');
-            
-            if (minimap.style.display === 'none') {
-                minimap.style.display = 'block';
-                toggle.classList.remove('visible');
+            if (isDM) {
+                const token = {
+                    id: Date.now(),
+                    icon: emoji,
+                    color: color,
+                    owner: 'DM',
+                    approved: true
+                };
+                
+                stagingTokens.push(token);
+                renderStagingTokens();
+                closeTokenModal();
+                
+                broadcast({
+                    type: 'tokenUpdate',
+                    tokens: [...stagingTokens, ...placedTokens]
+                });
             } else {
-                minimap.style.display = 'none';
-                toggle.classList.add('visible');
+                // Player requests token
+                connections.forEach(({ conn, role }) => {
+                    if (role === 'dm') {
+                        sendToPeer(conn, {
+                            type: 'tokenRequest',
+                            playerName: myName,
+                            tokenData: {
+                                id: Date.now(),
+                                icon: emoji,
+                                color: color
+                            }
+                        });
+                    }
+                });
+                
+                closeTokenModal();
+                alert('Token request sent to DM for approval!');
             }
         }
 
+        function renderStagingTokens() {
+            const container = document.getElementById('stagingTokens');
+            container.innerHTML = stagingTokens.map(t => `
+                <div class="token-item" draggable="true" ondragstart="dragTokenStart(event, ${t.id})" style="background: ${t.color};">
+                    ${t.icon}
+                    <div class="token-owner">${t.owner}</div>
+                </div>
+            `).join('');
+            
+            if (stagingTokens.length > 0) {
+                document.getElementById('stagingZone').style.display = 'flex';
+            }
+        }
+
+        function dragTokenStart(e, tokenId) {
+            const token = stagingTokens.find(t => t.id === tokenId);
+            e.dataTransfer.setData('application/json', JSON.stringify(token));
+            draggedToken = token;
+        }
+
+        function toggleGridSnap() {
+            gridSnapEnabled = document.getElementById('gridSnap').checked;
+        }
+
+        function snapToGrid(value) {
+            if (!gridSnapEnabled) return value;
+            return Math.round(value / GRID_SNAP_SIZE) * GRID_SNAP_SIZE;
+        }
+
+        // === DRAWING ===
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.save();
             ctx.translate(panX, panY);
             ctx.scale(zoom, zoom);
 
+            // Grid cells
             for (let row = 0; row < 3; row++) {
                 for (let col = 0; col < 3; col++) {
                     const x = col * GRID_SIZE;
@@ -2043,27 +1970,30 @@
                         ctx.strokeStyle = lockedCells[key] ? '#fbbf24' : '#8b5cf6';
                         ctx.lineWidth = 4;
                         ctx.strokeRect(x, y, GRID_SIZE, GRID_SIZE);
-                        
-                        ctx.fillStyle = lockedCells[key] ? 'rgba(251, 191, 36, 0.3)' : 'rgba(139, 92, 246, 0.3)';
-                        ctx.fillRect(x + 5, y + 5, 160, 30);
-                        ctx.fillStyle = lockedCells[key] ? '#fbbf24' : '#8b5cf6';
-                        ctx.font = 'bold 14px Inter';
-                        ctx.textAlign = 'left';
-                        ctx.textBaseline = 'top';
-                        const status = lockedCells[key] ? '🔒 Locked' : '✏️ Editing';
-                        ctx.fillText(`${status}: ${gridNames[row][col]}`, x + 10, y + 12);
-                    }
-                    
-                    if (lockedCells[key] && !(col === currentCellX && row === currentCellY)) {
-                        ctx.fillStyle = 'rgba(251, 191, 36, 0.2)';
-                        ctx.fillRect(x + GRID_SIZE - 40, y + 5, 35, 30);
-                        ctx.font = '20px Arial';
-                        ctx.fillText('🔒', x + GRID_SIZE - 35, y + 25);
                     }
                 }
             }
 
-            tokens.forEach(t => {
+            // Grid snap lines
+            if (gridSnapEnabled) {
+                ctx.strokeStyle = 'rgba(139, 92, 246, 0.15)';
+                ctx.lineWidth = 1;
+                for (let x = 0; x <= GRID_SIZE * 3; x += GRID_SNAP_SIZE) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, GRID_SIZE * 3);
+                    ctx.stroke();
+                }
+                for (let y = 0; y <= GRID_SIZE * 3; y += GRID_SNAP_SIZE) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(GRID_SIZE * 3, y);
+                    ctx.stroke();
+                }
+            }
+
+            // Placed tokens
+            placedTokens.forEach(t => {
                 ctx.fillStyle = t.color;
                 ctx.beginPath();
                 ctx.arc(t.x, t.y, 30, 0, Math.PI * 2);
@@ -2080,70 +2010,26 @@
 
             ctx.restore();
 
-            // Draw grid lines if snap is enabled
-            if (gridSnapEnabled) {
+            // Fog
+            if (fogGroups[activeFogGroup]) {
                 ctx.save();
                 ctx.translate(panX, panY);
                 ctx.scale(zoom, zoom);
-                ctx.strokeStyle = 'rgba(139, 92, 246, 0.15)';
-                ctx.lineWidth = 1;
-                
-                // Draw vertical lines
-                for (let x = 0; x <= GRID_SIZE * 3; x += GRID_SNAP_SIZE) {
-                    ctx.beginPath();
-                    ctx.moveTo(x, 0);
-                    ctx.lineTo(x, GRID_SIZE * 3);
-                    ctx.stroke();
-                }
-                
-                // Draw horizontal lines
-                for (let y = 0; y <= GRID_SIZE * 3; y += GRID_SNAP_SIZE) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, y);
-                    ctx.lineTo(GRID_SIZE * 3, y);
-                    ctx.stroke();
-                }
-                
+                if (isDM) ctx.globalAlpha = 0.3;
+                ctx.drawImage(fogGroups[activeFogGroup].canvas, 0, 0, GRID_SIZE * 3, GRID_SIZE * 3);
                 ctx.restore();
             }
 
-            // Fog layer - with DM opacity control
-            ctx.save();
-            ctx.translate(panX, panY);
-            ctx.scale(zoom, zoom);
-            
-            // Apply DM-specific opacity
-            if (isDM) {
-                ctx.globalAlpha = dmFogOpacity;
-            }
-            
-            ctx.drawImage(fogCanvas, 0, 0, GRID_SIZE * 3, GRID_SIZE * 3);
-            ctx.restore();
-            
-            // Draw fog rectangle preview if in rect mode
-            if (currentMode === 'fog' && fogMode === 'rect' && fogRectStart && isDrawing) {
-                ctx.save();
-                ctx.strokeStyle = document.getElementById('revealMode').checked ? '#10b981' : '#ef4444';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5, 5]);
-                
-                const width = lastX - fogRectStart.x;
-                const height = lastY - fogRectStart.y;
-                ctx.strokeRect(fogRectStart.x, fogRectStart.y, width, height);
-                ctx.restore();
-            }
-            
             updateMinimap();
         }
 
-        function selectCell(cellX, cellY) {
+        // === MAP BUILDER ===
+        function selectCell(x, y) {
             if (!isDM) return;
-            if (cellX < 0 || cellX > 2 || cellY < 0 || cellY > 2) return;
+            currentCellX = x;
+            currentCellY = y;
             
-            currentCellX = cellX;
-            currentCellY = cellY;
-            
-            const key = `${cellX},${cellY}`;
+            const key = `${x},${y}`;
             if (gridCells[key]) {
                 mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
                 mapCtx.drawImage(gridCells[key], 0, 0);
@@ -2153,7 +2039,6 @@
             }
             
             updateGridDisplay();
-            updateMinimap();
             draw();
         }
 
@@ -2161,9 +2046,71 @@
             document.getElementById('currentCell').textContent = gridNames[currentCellY][currentCellX];
         }
 
-        function submitCell() {
-            if (!isDM) return;
+        function setTool(t) {
+            tool = t;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(t + 'Btn').classList.add('active');
             
+            const assetNames = {
+                brush: 'Brush',
+                eraser: 'Eraser',
+                texture: 'Texture',
+                image: 'Image'
+            };
+            currentAsset = assetNames[t] || t;
+            document.getElementById('currentAsset').textContent = currentAsset;
+        }
+
+        function setSize(v) {
+            size = v;
+            document.getElementById('sizeValue').textContent = v + 'px';
+        }
+
+        function saveHistory() {
+            const imageData = mapCtx.getImageData(0, 0, mapCanvas.width, mapCanvas.height);
+            
+            if (historyIndex < history.length - 1) {
+                history = history.slice(0, historyIndex + 1);
+            }
+            
+            history.push(imageData);
+            if (history.length > MAX_HISTORY) {
+                history.shift();
+            } else {
+                historyIndex++;
+            }
+            
+            updateHistoryButtons();
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                mapCtx.putImageData(history[historyIndex], 0, 0);
+                updateHistoryButtons();
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                mapCtx.putImageData(history[historyIndex], 0, 0);
+                updateHistoryButtons();
+            }
+        }
+
+        function updateHistoryButtons() {
+            document.getElementById('undoBtn').disabled = historyIndex <= 0;
+            document.getElementById('redoBtn').disabled = historyIndex >= history.length - 1;
+        }
+
+        function clearMapCanvas() {
+            mapCtx.fillStyle = '#f5f5dc';
+            mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+            saveHistory();
+        }
+
+        function submitCell() {
             const key = `${currentCellX},${currentCellY}`;
             const cellCanvas = document.createElement('canvas');
             cellCanvas.width = CELL_SIZE;
@@ -2172,153 +2119,38 @@
             cellCtx.drawImage(mapCanvas, 0, 0);
             gridCells[key] = cellCanvas;
             
-            updateMinimap();
             draw();
             
-            // Broadcast to all players
             broadcast({
-                type: 'cellUpdate',
+                type: 'gridUpdate',
                 cellX: currentCellX,
                 cellY: currentCellY,
                 imageData: cellCanvas.toDataURL()
             });
-            
-            alert(`${gridNames[currentCellY][currentCellX]} submitted!`);
         }
 
-        function toggleLockCell() {
-            if (!isDM) return;
-            
-            const key = `${currentCellX},${currentCellY}`;
-            if (!gridCells[key]) {
-                alert('Submit the cell first!');
-                return;
-            }
-            
-            lockedCells[key] = !lockedCells[key];
-            updateMinimap();
-            draw();
-            
-            broadcast({
-                type: 'lockUpdate',
-                lockedCells: lockedCells
-            });
-        }
-
-        function clearCell() {
-            if (!isDM) return;
-            mapCtx.fillStyle = '#f5f5dc';
-            mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-        }
-
-        function setTool(t) {
-            if (!isDM) return;
-            tool = t;
+        function deselectAllTools() {
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            const btn = document.getElementById(t + 'Btn');
-            if (btn) btn.classList.add('active');
+            tool = null;
+            currentAsset = 'None';
+            document.getElementById('currentAsset').textContent = currentAsset;
         }
 
-        function setSize(v) {
-            size = v;
-            document.getElementById('sizeValue').textContent = v + 'px';
-        }
-
-        function openStamps() {
-            if (!isDM) return;
-            document.getElementById('stampSidebar').classList.add('open');
-        }
-
-        function closeStamps() {
-            document.getElementById('stampSidebar').classList.remove('open');
-        }
-
-        function selectStamp(s) {
-            stamp = s;
-            document.querySelectorAll('.stamp-item').forEach(item => item.classList.remove('selected'));
-            event.target.classList.add('selected');
-            closeStamps();
-            setTool('stamp');
-        }
-
-        document.getElementById('colorPicker').addEventListener('change', e => {
-            color = e.target.value;
-        });
-
-        const textures = {
-            grass: '#4a7c59',
-            stone: '#8a8a8a',
-            dirt: '#8b4513',
-            water: '#1e90ff',
-            gravel: '#696969',
-            sand: '#f4a460',
-            wood: '#daa520',
-            brick: '#b22222'
-        };
-
-        function applyTexture(type) {
-            if (!isDM) return;
-            
-            if (type === 'bridge') {
-                mapCtx.font = '96px Arial';
-                mapCtx.fillText('🌉', 150, 250);
-            } else if (textures[type]) {
-                mapCtx.fillStyle = textures[type];
-                mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-            }
-        }
-
-        function importMap(e) {
-            if (!isDM) return;
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ev => {
-                const img = new Image();
-                img.onload = () => {
-                    mapCtx.drawImage(img, 0, 0, mapCanvas.width, mapCanvas.height);
-                };
-                img.src = ev.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function importAsset(e) {
-            if (!isDM) return;
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ev => {
-                const img = new Image();
-                img.onload = () => {
-                    mapCtx.drawImage(img, 50, 50, 300, 300);
-                };
-                img.src = ev.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        mapCanvas.addEventListener('mousedown', e => {
-            if (!isDM) return;
+        // Map canvas drawing
+        mapCanvas.addEventListener('mousedown', (e) => {
             isDrawing = true;
             const rect = mapCanvas.getBoundingClientRect();
-            const scaleX = mapCanvas.width / rect.width;
-            const scaleY = mapCanvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-
+            const x = (e.clientX - rect.left) * (mapCanvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (mapCanvas.height / rect.height);
+            lastX = x;
+            lastY = y;
+            
             if (tool === 'brush') {
                 mapCtx.beginPath();
                 mapCtx.moveTo(x, y);
                 mapCtx.strokeStyle = color;
                 mapCtx.lineWidth = size;
                 mapCtx.lineCap = 'round';
-            } else if (tool === 'fill') {
-                mapCtx.fillStyle = color;
-                mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-            } else if (tool === 'stamp') {
-                mapCtx.font = '48px Arial';
-                mapCtx.fillText(stamp, x - 24, y + 12);
             } else if (tool === 'eraser') {
                 mapCtx.globalCompositeOperation = 'destination-out';
                 mapCtx.beginPath();
@@ -2327,192 +2159,192 @@
             }
         });
 
-        mapCanvas.addEventListener('mousemove', e => {
-            if (!isDrawing || !isDM) return;
+        mapCanvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
             const rect = mapCanvas.getBoundingClientRect();
-            const scaleX = mapCanvas.width / rect.width;
-            const scaleY = mapCanvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-
-            if (tool === 'brush') {
-                mapCtx.lineTo(x, y);
-                mapCtx.stroke();
-            } else if (tool === 'eraser') {
+            const x = (e.clientX - rect.left) * (mapCanvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (mapCanvas.height / rect.height);
+            
+            if (tool === 'brush' || tool === 'eraser') {
                 mapCtx.lineTo(x, y);
                 mapCtx.stroke();
             }
         });
 
         mapCanvas.addEventListener('mouseup', () => {
-            isDrawing = false;
-            if (tool === 'eraser') {
-                mapCtx.globalCompositeOperation = 'source-over';
+            if (isDrawing) {
+                isDrawing = false;
+                if (tool === 'eraser') {
+                    mapCtx.globalCompositeOperation = 'source-over';
+                }
+                saveHistory();
             }
         });
 
-        function setFogSize(v) {
-            fogSize = v;
-            document.getElementById('fogSizeValue').textContent = v + 'px';
-        }
-
-        function setFogMode(mode) {
-            if (!isDM) return;
-            fogMode = mode;
-            document.querySelectorAll('#fogSection .tool-btn').forEach(b => b.classList.remove('active'));
-            const btn = document.getElementById(`fog${mode.charAt(0).toUpperCase() + mode.slice(1)}Btn`);
-            if (btn) btn.classList.add('active');
-        }
-
-        function setDMFogOpacity(v) {
-            if (!isDM) return;
-            dmFogOpacity = v / 100;
-            document.getElementById('dmFogOpacityValue').textContent = v + '%';
-            draw();
-        }
-
-        function toggleFog() {
-            if (!isDM) return;
-            currentMode = currentMode === 'fog' ? 'map' : 'fog';
-        }
-
-        function resetFog() {
-            if (!isDM) return;
-            fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
-            fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
-            draw();
-            
-            broadcast({
-                type: 'fogUpdate',
-                fogData: fogCanvas.toDataURL()
-            });
-        }
-
-        function applyFog(x, y) {
-            if (!isDM) return;
-            
-            const reveal = document.getElementById('revealMode').checked;
-            
-            fogCtx.save();
-            
-            if (reveal) {
-                fogCtx.globalCompositeOperation = 'destination-out';
-                fogCtx.fillStyle = 'rgba(0,0,0,1)';
-            } else {
-                fogCtx.globalCompositeOperation = 'source-over';
-                fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+        mapCanvas.addEventListener('mouseleave', () => {
+            if (isDrawing) {
+                isDrawing = false;
+                if (tool === 'eraser') {
+                    mapCtx.globalCompositeOperation = 'source-over';
+                }
+                saveHistory();
             }
-            
-            fogCtx.beginPath();
-            fogCtx.arc(x, y, fogSize, 0, Math.PI * 2);
-            fogCtx.fill();
-            
-            fogCtx.restore();
-            
-            draw();
-            
-            // Broadcast fog updates (throttled)
-            if (!this.fogUpdateTimeout) {
-                this.fogUpdateTimeout = setTimeout(() => {
-                    broadcast({
-                        type: 'fogUpdate',
-                        fogData: fogCanvas.toDataURL()
-                    });
-                    this.fogUpdateTimeout = null;
-                }, 100);
-            }
-        }
+        });
 
-        function applyFogRect(x1, y1, x2, y2) {
-            if (!isDM) return;
-            
-            const reveal = document.getElementById('revealMode').checked;
-            
-            fogCtx.save();
-            
-            if (reveal) {
-                fogCtx.globalCompositeOperation = 'destination-out';
-                fogCtx.fillStyle = 'rgba(0,0,0,1)';
-            } else {
-                fogCtx.globalCompositeOperation = 'source-over';
-                fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
-            }
-            
-            const width = x2 - x1;
-            const height = y2 - y1;
-            fogCtx.fillRect(x1, y1, width, height);
-            
-            fogCtx.restore();
-            
-            draw();
-            
-            // Broadcast fog update
-            broadcast({
-                type: 'fogUpdate',
-                fogData: fogCanvas.toDataURL()
-            });
-        }
+        document.getElementById('colorPicker').addEventListener('change', (e) => {
+            color = e.target.value;
+        });
 
-        function addToken(c, i) {
-            if (!isDM) return;
-            tokens.push({ x: 200, y: 200, color: c, icon: i });
+        // Main canvas interaction
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            lastX = e.clientX;
+            lastY = e.clientY;
+            isDrawing = true;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            panX += e.clientX - lastX;
+            panY += e.clientY - lastY;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            draw();
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+
+        canvas.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        canvas.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (!draggedToken) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = snapToGrid((e.clientX - rect.left - panX) / zoom);
+            const y = snapToGrid((e.clientY - rect.top - panY) / zoom);
+            
+            const placedToken = {
+                ...draggedToken,
+                x,
+                y
+            };
+            
+            placedTokens.push(placedToken);
+            stagingTokens = stagingTokens.filter(t => t.id !== draggedToken.id);
+            
+            renderStagingTokens();
             draw();
             
             broadcast({
                 type: 'tokenUpdate',
-                tokens: tokens
+                tokens: [...stagingTokens, ...placedTokens]
             });
-        }
-
-        function addCustomToken() {
-            if (!isDM) return;
-            const i = prompt('Emoji:', '⚔️') || '⚔️';
-            const c = prompt('Color:', '#e74c3c') || '#e74c3c';
-            addToken(c, i);
-        }
-
-        function toggleGridSnap() {
-            if (!isDM) return;
-            gridSnapEnabled = document.getElementById('gridSnapToggle').checked;
             
-            // Broadcast grid snap setting to all players
-            broadcast({
-                type: 'gridSnapUpdate',
-                enabled: gridSnapEnabled
-            });
+            draggedToken = null;
+        });
+
+        // === FOG ===
+        function showFogGroupModal() {
+            document.getElementById('fogGroupModal').classList.add('active');
         }
 
-        function snapToGrid(value) {
-            if (!gridSnapEnabled) return value;
-            return Math.round(value / GRID_SNAP_SIZE) * GRID_SNAP_SIZE;
+        function closeFogGroupModal() {
+            document.getElementById('fogGroupModal').classList.remove('active');
         }
 
-        function createPlayerToken() {
-            if (!currentPlayer) {
-                alert('You need to join a room first!');
-                return;
+        function createFogGroup() {
+            const name = document.getElementById('fogGroupName').value.trim();
+            if (!name) return;
+            
+            const id = 'group_' + Date.now();
+            const fogCanvas = document.createElement('canvas');
+            fogCanvas.width = GRID_SIZE * 3;
+            fogCanvas.height = GRID_SIZE * 3;
+            const fogCtx = fogCanvas.getContext('2d');
+            fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+            fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+            
+            fogGroups[id] = { name, canvas: fogCanvas };
+            renderFogGroups();
+            closeFogGroupModal();
+        }
+
+        function renderFogGroups() {
+            const container = document.getElementById('fogGroups');
+            container.innerHTML = Object.keys(fogGroups).map(id => `
+                <div class="fog-group-item ${activeFogGroup === id ? 'active' : ''}">
+                    <span class="fog-group-name">${fogGroups[id].name}</span>
+                    <button class="btn btn-small ${activeFogGroup === id ? 'btn-primary' : ''}" onclick="setActiveFogGroup('${id}')">
+                        ${activeFogGroup === id ? 'Active' : 'Select'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function setActiveFogGroup(groupId) {
+            activeFogGroup = groupId;
+            renderFogGroups();
+            draw();
+        }
+
+        function toggleFogMode() {
+            fogMode = !fogMode;
+            // Implement fog painting mode
+        }
+
+        function resetFog() {
+            if (fogGroups[activeFogGroup]) {
+                const ctx = fogGroups[activeFogGroup].canvas.getContext('2d');
+                ctx.fillStyle = 'rgba(0,0,0,0.9)';
+                ctx.fillRect(0, 0, fogGroups[activeFogGroup].canvas.width, fogGroups[activeFogGroup].canvas.height);
+                draw();
+            }
+        }
+
+        // === MINIMAP ===
+        function updateMinimap() {
+            const grid = document.getElementById('minimapGrid');
+            let html = '';
+            
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    const key = `${col},${row}`;
+                    const classes = ['minimap-cell'];
+                    if (gridCells[key]) classes.push('has-content');
+                    if (lockedCells[key]) classes.push('locked');
+                    if (col === currentCellX && row === currentCellY) classes.push('current');
+                    
+                    html += `<div class="${classes.join(' ')}" onclick="minimapNavigate(${col}, ${row})"></div>`;
+                }
             }
             
-            const i = prompt('Token Emoji:', '⚔️') || '⚔️';
-            const c = prompt('Token Color:', '#e74c3c') || '#e74c3c';
-            
-            const newToken = {
-                x: snapToGrid(600),
-                y: snapToGrid(600),
-                color: c,
-                icon: i,
-                owner: currentPlayer
-            };
-            
-            // Send to DM to add to game
-            connections.forEach(({conn, role}) => {
-                if (role === 'dm') {
-                    sendToPeer(conn, {
-                        type: 'playerTokenCreate',
-                        token: newToken
-                    });
-                }
-            });
+            grid.innerHTML = html;
+        }
+
+        function minimapNavigate(col, row) {
+            const centerX = (col + 0.5) * GRID_SIZE;
+            const centerY = (row + 0.5) * GRID_SIZE;
+            panX = canvas.width / 2 - centerX * zoom;
+            panY = canvas.height / 2 - centerY * zoom;
+            draw();
+        }
+
+        function recenterView() {
+            panX = (canvas.width - GRID_SIZE * 3 * zoom) / 2;
+            panY = (canvas.height - GRID_SIZE * 3 * zoom) / 2;
+            draw();
+        }
+
+        function resetZoom() {
+            zoom = 1;
+            document.getElementById('zoomSlider').value = 100;
+            document.getElementById('zoomValue').textContent = '100%';
+            recenterView();
         }
 
         function setZoom(v) {
@@ -2521,332 +2353,51 @@
             draw();
         }
 
-        canvas.addEventListener('mousedown', e => {
-            const rect = canvas.getBoundingClientRect();
-            const mx = (e.clientX - rect.left - panX) / zoom;
-            const my = (e.clientY - rect.top - panY) / zoom;
+        function toggleMinimapCollapse() {
+            document.getElementById('minimap').classList.toggle('collapsed');
+        }
 
-            if (currentMode === 'fog' && isDM) {
-                isDrawing = true;
-                
-                if (fogMode === 'brush') {
-                    applyFog(mx, my);
-                } else if (fogMode === 'rect') {
-                    fogRectStart = { x: e.clientX, y: e.clientY };
-                    lastX = e.clientX;
-                    lastY = e.clientY;
-                }
-                return;
-            }
-
-            // Check for token dragging - DM can move any, players can move their own
-            dragToken = tokens.find(t => {
-                const dx = mx - t.x;
-                const dy = my - t.y;
-                const canMove = isDM || t.owner === currentPlayer;
-                return canMove && Math.sqrt(dx*dx + dy*dy) < 30;
-            });
-
-            if (dragToken) {
-                isDrawing = true;
-                return;
-            }
-
-            lastX = e.clientX;
-            lastY = e.clientY;
-            isDrawing = true;
-        });
-
-        canvas.addEventListener('mousemove', e => {
-            if (!isDrawing) return;
+        function toggleMinimapDock() {
+            minimapDocked = !minimapDocked;
+            const container = document.getElementById('minimapContainer');
+            const btn = document.getElementById('dockBtn');
             
-            const rect = canvas.getBoundingClientRect();
-            const mx = (e.clientX - rect.left - panX) / zoom;
-            const my = (e.clientY - rect.top - panY) / zoom;
-
-            if (currentMode === 'fog' && isDM) {
-                if (fogMode === 'brush') {
-                    applyFog(mx, my);
-                } else if (fogMode === 'rect') {
-                    lastX = e.clientX;
-                    lastY = e.clientY;
-                    draw(); // Redraw to show preview rectangle
-                }
-                return;
+            if (minimapDocked) {
+                container.classList.add('docked');
+                btn.textContent = '🔒';
+            } else {
+                container.classList.remove('docked');
+                btn.textContent = '🔓';
             }
+        }
 
-            if (dragToken) {
-                // Allow DM to move any token, players can only move their own
-                if (isDM || dragToken.owner === currentPlayer) {
-                    dragToken.x = snapToGrid(mx);
-                    dragToken.y = snapToGrid(my);
-                    draw();
-                    
-                    // Broadcast token update
-                    if (isDM) {
-                        broadcast({
-                            type: 'tokenUpdate',
-                            tokens: tokens
-                        });
-                    } else {
-                        // Players send update to DM who will broadcast
-                        connections.forEach(({conn, role}) => {
-                            if (role === 'dm') {
-                                sendToPeer(conn, {
-                                    type: 'tokenUpdate',
-                                    tokens: tokens
-                                });
-                            }
-                        });
-                    }
-                }
-                return;
-            }
-
-            panX += e.clientX - lastX;
-            panY += e.clientY - lastY;
-            lastX = e.clientX;
-            lastY = e.clientY;
-            draw();
-        });
-
-        canvas.addEventListener('mouseup', e => {
-            if (currentMode === 'fog' && fogMode === 'rect' && fogRectStart && isDrawing) {
-                // Convert screen coordinates to fog canvas coordinates
-                const rect = canvas.getBoundingClientRect();
-                const startX = (fogRectStart.x - rect.left - panX) / zoom;
-                const startY = (fogRectStart.y - rect.top - panY) / zoom;
-                const endX = (e.clientX - rect.left - panX) / zoom;
-                const endY = (e.clientY - rect.top - panY) / zoom;
-                
-                applyFogRect(startX, startY, endX, endY);
-                fogRectStart = null;
-            }
+        // Minimap dragging
+        const minimapContainer = document.getElementById('minimapContainer');
+        minimapContainer.addEventListener('mousedown', (e) => {
+            if (minimapDocked) return;
+            if (e.target.closest('.minimap-btn') || e.target.closest('.minimap-cell')) return;
             
-            isDrawing = false;
-            dragToken = null;
+            minimapDragOffset = {
+                x: e.clientX - minimapContainer.offsetLeft,
+                y: e.clientY - minimapContainer.offsetTop
+            };
         });
 
+        document.addEventListener('mousemove', (e) => {
+            if (!minimapDragOffset || minimapDocked) return;
+            
+            minimapContainer.style.left = (e.clientX - minimapDragOffset.x) + 'px';
+            minimapContainer.style.top = (e.clientY - minimapDragOffset.y) + 'px';
+            minimapContainer.style.bottom = 'auto';
+        });
+
+        document.addEventListener('mouseup', () => {
+            minimapDragOffset = null;
+        });
+
+        // === UI ===
         function toggleDMPanel() {
-            if (!isDM) return;
-            const panel = document.getElementById('dmPanel');
-            panel.classList.toggle('open');
-        }
-
-        // ========== CAMPAIGN MANAGEMENT ==========
-
-        function loadCampaigns() {
-            const saved = localStorage.getItem('fracturedSkyCampaigns');
-            if (saved) {
-                campaigns = JSON.parse(saved);
-            }
-        }
-
-        function saveCampaigns() {
-            localStorage.setItem('fracturedSkyCampaigns', JSON.stringify(campaigns));
-        }
-
-        function renderCampaignSlots() {
-            if (!isDM) return;
-            
-            const container = document.getElementById('campaignSlots');
-            const createBtn = document.getElementById('createCampaignBtn');
-            
-            container.innerHTML = campaigns.map((campaign, idx) => `
-                <div class="campaign-slot ${currentCampaignIndex === idx ? 'active' : ''}">
-                    <div class="campaign-slot-header">
-                        <span class="campaign-slot-name">${campaign.name}</span>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <button class="btn btn-small btn-primary" onclick="loadCampaign(${idx})">Load</button>
-                            <button class="btn btn-small" onclick="saveToCampaign(${idx})">Save</button>
-                            <button class="btn btn-small" onclick="deleteCampaign(${idx})">🗑️</button>
-                        </div>
-                    </div>
-                    <div class="campaign-slot-info">
-                        Last saved: ${new Date(campaign.lastModified).toLocaleString()}
-                    </div>
-                </div>
-            `).join('');
-            
-            // Disable create button if max campaigns reached
-            if (campaigns.length >= MAX_CAMPAIGNS) {
-                createBtn.disabled = true;
-                createBtn.style.opacity = '0.5';
-                createBtn.textContent = `Max ${MAX_CAMPAIGNS} Campaigns`;
-            } else {
-                createBtn.disabled = false;
-                createBtn.style.opacity = '1';
-                createBtn.textContent = '+ New Campaign';
-            }
-        }
-
-        function manageCampaigns() {
-            if (!isDM) return;
-            document.getElementById('dmPanel').classList.add('open');
-            const campaignSection = document.getElementById('campaignSection');
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            if (campaignSection) campaignSection.classList.add('active');
-        }
-
-        function createNewCampaign() {
-            if (campaigns.length >= MAX_CAMPAIGNS) {
-                alert(`Maximum ${MAX_CAMPAIGNS} campaigns reached. Delete a campaign to create a new one.`);
-                return;
-            }
-            document.getElementById('campaignNameModal').classList.add('active');
-        }
-
-        function closeCampaignNameModal() {
-            document.getElementById('campaignNameModal').classList.remove('active');
-            document.getElementById('campaignNameInput').value = '';
-        }
-
-        function saveCampaignName(e) {
-            e.preventDefault();
-            const name = document.getElementById('campaignNameInput').value.trim();
-            
-            const newCampaign = {
-                name: name,
-                lastModified: Date.now(),
-                data: {
-                    tokens: [],
-                    gridCells: {},
-                    lockedCells: {},
-                    fog: fogCanvas.toDataURL(),
-                    zoom: 1,
-                    panX: 0,
-                    panY: 0,
-                    currentCellX: 1,
-                    currentCellY: 1
-                }
-            };
-            
-            campaigns.push(newCampaign);
-            currentCampaignIndex = campaigns.length - 1;
-            saveCampaigns();
-            
-            document.getElementById('currentCampaignName').textContent = name;
-            closeCampaignNameModal();
-            renderCampaignSlots();
-            
-            alert(`Campaign "${name}" created!`);
-        }
-
-        function saveToCampaign(idx) {
-            if (idx >= campaigns.length) return;
-            
-            campaigns[idx].data = {
-                tokens: tokens,
-                gridCells: {},
-                lockedCells: lockedCells,
-                fog: fogCanvas.toDataURL(),
-                zoom: zoom,
-                panX: panX,
-                panY: panY,
-                currentCellX: currentCellX,
-                currentCellY: currentCellY
-            };
-            
-            // Save grid cells as data URLs
-            for (let key in gridCells) {
-                campaigns[idx].data.gridCells[key] = gridCells[key].toDataURL();
-            }
-            
-            campaigns[idx].lastModified = Date.now();
-            currentCampaignIndex = idx;
-            saveCampaigns();
-            
-            document.getElementById('currentCampaignName').textContent = campaigns[idx].name;
-            renderCampaignSlots();
-            
-            alert(`Saved to campaign "${campaigns[idx].name}"!`);
-        }
-
-        function loadCampaign(idx) {
-            if (idx >= campaigns.length) return;
-            
-            const campaign = campaigns[idx];
-            const data = campaign.data;
-            
-            tokens = data.tokens || [];
-            zoom = data.zoom || 1;
-            panX = data.panX || 0;
-            panY = data.panY || 0;
-            currentCellX = data.currentCellX || 1;
-            currentCellY = data.currentCellY || 1;
-            lockedCells = data.lockedCells || {};
-            
-            gridCells = {};
-            for (let key in data.gridCells) {
-                const img = new Image();
-                img.onload = () => {
-                    const cellCanvas = document.createElement('canvas');
-                    cellCanvas.width = CELL_SIZE;
-                    cellCanvas.height = CELL_SIZE;
-                    const cellCtx = cellCanvas.getContext('2d');
-                    cellCtx.drawImage(img, 0, 0);
-                    gridCells[key] = cellCanvas;
-                    draw();
-                };
-                img.src = data.gridCells[key];
-            }
-            
-            if (data.fog) {
-                const img = new Image();
-                img.onload = () => {
-                    fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
-                    fogCtx.drawImage(img, 0, 0, fogCanvas.width, fogCanvas.height);
-                    draw();
-                };
-                img.src = data.fog;
-            }
-            
-            // Load the current cell into the map canvas
-            const key = `${currentCellX},${currentCellY}`;
-            if (gridCells[key]) {
-                mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-                mapCtx.drawImage(gridCells[key], 0, 0);
-            } else {
-                mapCtx.fillStyle = '#f5f5dc';
-                mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-            }
-            
-            document.getElementById('zoomSlider').value = zoom * 100;
-            document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
-            document.getElementById('currentCampaignName').textContent = campaign.name;
-            currentCampaignIndex = idx;
-            
-            updateGridDisplay();
-            updateMinimap();
-            draw();
-            renderCampaignSlots();
-            
-            // Broadcast to all connected players
-            connections.forEach(({conn}) => {
-                sendGameState(conn);
-            });
-            
-            alert(`Loaded campaign "${campaign.name}"!`);
-        }
-
-        function deleteCampaign(idx) {
-            if (idx >= campaigns.length) return;
-            
-            if (!confirm(`Delete campaign "${campaigns[idx].name}"? This cannot be undone.`)) {
-                return;
-            }
-            
-            campaigns.splice(idx, 1);
-            
-            if (currentCampaignIndex === idx) {
-                currentCampaignIndex = null;
-                document.getElementById('currentCampaignName').textContent = 'Untitled Campaign';
-            } else if (currentCampaignIndex > idx) {
-                currentCampaignIndex--;
-            }
-            
-            saveCampaigns();
-            renderCampaignSlots();
+            document.getElementById('dmPanel').classList.toggle('open');
         }
 
         init();
