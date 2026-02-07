@@ -1080,8 +1080,8 @@
     </div>
 
     <!-- Connection Tab -->
-    <div style="position: fixed; top: 70px; left: 20px; z-index: 501;">
-        <button class="connection-tab" id="connectionTab" onclick="toggleConnectionPanel()" style="display: none;">
+    <div style="position: fixed; top: 70px; left: 20px; z-index: 501; display: none;" id="connectionTabContainer">
+        <button class="connection-tab" id="connectionTab" onclick="toggleConnectionPanel()">
             <div class="connection-indicator" id="tabIndicator"></div>
             <span id="tabText">Connection</span>
             <span id="tabArrow">▼</span>
@@ -1516,7 +1516,7 @@
                 document.getElementById('welcomeScreen').classList.add('hidden');
                 
                 // Show connection tab and update UI
-                document.getElementById('connectionTab').style.display = 'flex';
+                document.getElementById('connectionTabContainer').style.display = 'block';
                 document.getElementById('roomCodeSection').style.display = 'block';
                 document.getElementById('roomCode').textContent = roomCode;
                 document.getElementById('dmPanelBtn').style.display = 'block';
@@ -1583,7 +1583,7 @@
                     document.getElementById('welcomeScreen').classList.add('hidden');
                     
                     // Show connection tab
-                    document.getElementById('connectionTab').style.display = 'flex';
+                    document.getElementById('connectionTabContainer').style.display = 'block';
                     
                     // Show player bar
                     currentPlayer = myName;
