@@ -714,15 +714,17 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            z-index: 9999;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s;
+            visibility: hidden;
         }
 
         .modal.active {
             opacity: 1;
             pointer-events: all;
+            visibility: visible;
         }
 
         .modal-content {
@@ -1487,7 +1489,14 @@
 
         function showDMLogin() {
             console.log('showDMLogin called - opening DM modal');
-            document.getElementById('dmModal').classList.add('active');
+            const modal = document.getElementById('dmModal');
+            console.log('DM Modal element:', modal);
+            console.log('DM Modal classes before:', modal.className);
+            modal.classList.add('active');
+            console.log('DM Modal classes after:', modal.className);
+            console.log('DM Modal computed display:', window.getComputedStyle(modal).display);
+            console.log('DM Modal computed visibility:', window.getComputedStyle(modal).visibility);
+            console.log('DM Modal computed opacity:', window.getComputedStyle(modal).opacity);
         }
 
         function closeDMModal() {
@@ -1563,7 +1572,12 @@
 
         function showJoinModal() {
             console.log('showJoinModal called - opening join modal');
-            document.getElementById('joinModal').classList.add('active');
+            const modal = document.getElementById('joinModal');
+            console.log('Join Modal element:', modal);
+            console.log('Join Modal classes before:', modal.className);
+            modal.classList.add('active');
+            console.log('Join Modal classes after:', modal.className);
+            console.log('Join Modal computed opacity:', window.getComputedStyle(modal).opacity);
         }
 
         function closeJoinModal() {
