@@ -1128,9 +1128,11 @@
         <div class="connection-content">
             <div class="connection-section" id="roomCodeSection" style="display: none;">
                 <h3>🎭 Room Code</h3>
-                <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Share this FULL code:</p>
-                <div class="room-code" id="roomCode" onclick="copyRoomCode()">----</div>
-                <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; text-align: center;">Click to copy</p>
+                <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Share this code with players:</p>
+                <div class="room-code" id="roomCode" onclick="copyRoomCode()" style="user-select: text; cursor: pointer;" title="Click to copy">----</div>
+                <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; text-align: center;">
+                    💡 Click to copy • Or select text manually (Ctrl+C)
+                </p>
             </div>
             <div class="connection-section">
                 <h3>📡 Status</h3>
@@ -2243,16 +2245,62 @@
         }
 
         function copyRoomCode() {
-            navigator.clipboard.writeText(roomCode).then(() => {
+            if (!roomCode) {
+                console.error('No room code to copy');
+                return;
+            }
+            
+            // Try modern clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(roomCode).then(() => {
+                    const elem = document.getElementById('roomCode');
+                    const old = elem.textContent;
+                    elem.textContent = '✓ Copied!';
+                    elem.style.background = 'var(--accent)';
+                    elem.style.color = 'white';
+                    setTimeout(() => {
+                        elem.textContent = old;
+                        elem.style.background = 'var(--bg-dark)';
+                        elem.style.color = 'var(--accent)';
+                    }, 2000);
+                    console.log('✅ Room code copied:', roomCode);
+                }).catch(err => {
+                    console.error('Clipboard API failed:', err);
+                    fallbackCopy();
+                });
+            } else {
+                // Fallback for older browsers
+                fallbackCopy();
+            }
+        }
+        
+        function fallbackCopy() {
+            try {
+                // Create temporary textarea
+                const textarea = document.createElement('textarea');
+                textarea.value = roomCode;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                
                 const elem = document.getElementById('roomCode');
                 const old = elem.textContent;
                 elem.textContent = '✓ Copied!';
                 elem.style.background = 'var(--accent)';
+                elem.style.color = 'white';
                 setTimeout(() => {
                     elem.textContent = old;
                     elem.style.background = 'var(--bg-dark)';
+                    elem.style.color = 'var(--accent)';
                 }, 2000);
-            });
+                console.log('✅ Room code copied (fallback):', roomCode);
+            } catch (err) {
+                console.error('Copy failed:', err);
+                alert('Could not copy. Room code: ' + roomCode);
+            }
         }
 
         // === TOKENS ===
