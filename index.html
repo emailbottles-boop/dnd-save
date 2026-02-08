@@ -1250,6 +1250,8 @@
                         <div class="tool-btn" onclick="setTool('fill')" id="fillBtn">🪣<br>Fill</div>
                         <div class="tool-btn" onclick="setTool('eraser')" id="eraserBtn">🧹<br>Erase</div>
                         <div class="tool-btn" onclick="setTool('stamp')" id="stampBtn">🏰<br>Stamp</div>
+                        <div class="tool-btn" onclick="setTool('image')" id="imageBtn">🖼️<br>Image</div>
+                        <div class="tool-btn" onclick="setTool('select')" id="selectBtn">👆<br>Select</div>
                     </div>
 
                     <div class="asset-indicator">
@@ -1301,9 +1303,14 @@
 
                     <div class="btn-group">
                         <input type="file" id="mapImport" accept="image/*" style="display: none;" onchange="importMapImage(event)">
-                        <button class="btn" onclick="document.getElementById('mapImport').click()">📥 Import</button>
+                        <input type="file" id="imageImport" accept="image/*" style="display: none;" onchange="importImageToCanvas(event)">
+                        <button class="btn" onclick="document.getElementById('imageImport').click()">🖼️ Place Image</button>
                         <button class="btn btn-primary" onclick="submitCell()">✓ Submit</button>
                         <button class="btn" onclick="clearMapCanvas()">Clear</button>
+                    </div>
+                    
+                    <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-dim); padding: 0.5rem; background: var(--bg-dark); border-radius: 6px;">
+                        💡 <strong>Place Image:</strong> Upload images to main canvas - they can be moved, resized & rotated! Use Select tool (👆) to manipulate them.
                     </div>
                 </div>
 
@@ -1430,6 +1437,12 @@
         let currentStamp = '🏰';
         let tokenType = 'emoji'; // 'emoji' or 'image'
         let tokenImageData = null;
+        
+        // Image layer for DM
+        let placedImages = []; // { img, x, y, width, height, rotation, gridX, gridY }
+        let selectedImage = null;
+        let imageResizeHandle = null; // 'nw', 'ne', 'sw', 'se', 'rotate'
+        let imageDragStart = null;
         
         // History tracking
         let history = [];
@@ -1784,8 +1797,44 @@
                 case 'fogUpdate':
                     updateFogFromNetwork(data);
                     break;
+                    
+                case 'imagesUpdate':
+                    // Load images from network
+                    placedImages = [];
+                    data.images.forEach(imgData => {
+                        const img = new Image();
+                        img.onload = () => {
+                            placedImages.push({
+                                img: img,
+                                x: imgData.x,
+                                y: imgData.y,
+                                width: imgData.width,
+                                height: imgData.height,
+                                rotation: imgData.rotation,
+                                gridX: imgData.gridX,
+                                gridY: imgData.gridY
+                            });
+                            draw();
+                        };
+                        img.src = imgData.src;
+                    });
+                    break;
             }
         }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Delete selected image
+            if (e.key === 'Delete' && selectedImage && isDM) {
+                const index = placedImages.indexOf(selectedImage);
+                if (index > -1) {
+                    placedImages.splice(index, 1);
+                    selectedImage = null;
+                    draw();
+                    broadcastImages();
+                }
+            }
+        });
 
         function sendToPeer(conn, data) {
             try {
@@ -2246,6 +2295,41 @@
                 }
             }
 
+            // Placed images (DM layer)
+            placedImages.forEach(pi => {
+                ctx.save();
+                ctx.translate(pi.x + pi.width / 2, pi.y + pi.height / 2);
+                ctx.rotate(pi.rotation * Math.PI / 180);
+                ctx.drawImage(pi.img, -pi.width / 2, -pi.height / 2, pi.width, pi.height);
+                ctx.restore();
+                
+                // Draw selection handles if selected
+                if (isDM && selectedImage === pi) {
+                    ctx.strokeStyle = '#8b5cf6';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeRect(pi.x, pi.y, pi.width, pi.height);
+                    ctx.setLineDash([]);
+                    
+                    // Corner handles for resize
+                    const handleSize = 8;
+                    ctx.fillStyle = '#8b5cf6';
+                    ctx.fillRect(pi.x - handleSize/2, pi.y - handleSize/2, handleSize, handleSize);
+                    ctx.fillRect(pi.x + pi.width - handleSize/2, pi.y - handleSize/2, handleSize, handleSize);
+                    ctx.fillRect(pi.x - handleSize/2, pi.y + pi.height - handleSize/2, handleSize, handleSize);
+                    ctx.fillRect(pi.x + pi.width - handleSize/2, pi.y + pi.height - handleSize/2, handleSize, handleSize);
+                    
+                    // Rotation handle
+                    ctx.beginPath();
+                    ctx.arc(pi.x + pi.width / 2, pi.y - 20, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.fill();
+                    ctx.strokeStyle = '#8b5cf6';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+
             // Placed tokens
             placedTokens.forEach(t => {
                 ctx.fillStyle = t.color;
@@ -2340,6 +2424,12 @@
                 document.getElementById('stampLibrary').style.display = 'none';
             }
             
+            // Deselect image when switching tools
+            if (t !== 'select') {
+                selectedImage = null;
+                draw();
+            }
+            
             tool = t;
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             const toolBtn = document.getElementById(t + 'Btn');
@@ -2349,6 +2439,8 @@
                 brush: 'Brush',
                 fill: 'Fill',
                 stamp: 'Stamp: ' + currentStamp,
+                image: 'Place Image',
+                select: 'Select & Move',
                 eraser: eraserMode === 'content' ? 
                        (lastToolBeforeEraser === 'brush' ? 'Brush Strokes' : 
                         lastToolBeforeEraser === 'fill' ? 'Fill Areas' :
@@ -2383,6 +2475,73 @@
                 img.src = e.target.result;
             };
             reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function importImageToCanvas(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Place image at center of current cell
+                    const cellX = currentCellX * GRID_SIZE + GRID_SIZE / 2;
+                    const cellY = currentCellY * GRID_SIZE + GRID_SIZE / 2;
+                    
+                    // Scale image to fit within cell
+                    const maxSize = GRID_SIZE * 0.8;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > maxSize || height > maxSize) {
+                        const scale = Math.min(maxSize / width, maxSize / height);
+                        width *= scale;
+                        height *= scale;
+                    }
+                    
+                    const placedImg = {
+                        img: img,
+                        x: cellX - width / 2,
+                        y: cellY - height / 2,
+                        width: width,
+                        height: height,
+                        rotation: 0,
+                        gridX: currentCellX,
+                        gridY: currentCellY
+                    };
+                    
+                    placedImages.push(placedImg);
+                    selectedImage = placedImg;
+                    setTool('select');
+                    draw();
+                    
+                    // Broadcast to players
+                    broadcastImages();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function broadcastImages() {
+            const imageData = placedImages.map(pi => ({
+                src: pi.img.src,
+                x: pi.x,
+                y: pi.y,
+                width: pi.width,
+                height: pi.height,
+                rotation: pi.rotation,
+                gridX: pi.gridX,
+                gridY: pi.gridY
+            }));
+            
+            broadcast({
+                type: 'imagesUpdate',
+                images: imageData
+            });
         }
 
         function setEraserMode(mode) {
@@ -2584,6 +2743,53 @@
             const mx = (screenX - rect.left - panX) / zoom;
             const my = (screenY - rect.top - panY) / zoom;
             
+            // Image selection and manipulation (Select tool)
+            if (isDM && tool === 'select') {
+                // Check if clicking on rotation handle
+                if (selectedImage) {
+                    const rotX = selectedImage.x + selectedImage.width / 2;
+                    const rotY = selectedImage.y - 20;
+                    if (Math.hypot(mx - rotX, my - rotY) < 10) {
+                        imageResizeHandle = 'rotate';
+                        imageDragStart = { x: mx, y: my };
+                        return;
+                    }
+                    
+                    // Check corner handles for resize
+                    const handleSize = 8;
+                    const handles = [
+                        { type: 'nw', x: selectedImage.x, y: selectedImage.y },
+                        { type: 'ne', x: selectedImage.x + selectedImage.width, y: selectedImage.y },
+                        { type: 'sw', x: selectedImage.x, y: selectedImage.y + selectedImage.height },
+                        { type: 'se', x: selectedImage.x + selectedImage.width, y: selectedImage.y + selectedImage.height }
+                    ];
+                    
+                    for (let h of handles) {
+                        if (Math.abs(mx - h.x) < handleSize && Math.abs(my - h.y) < handleSize) {
+                            imageResizeHandle = h.type;
+                            imageDragStart = { x: mx, y: my, origWidth: selectedImage.width, origHeight: selectedImage.height, origX: selectedImage.x, origY: selectedImage.y };
+                            return;
+                        }
+                    }
+                }
+                
+                // Check if clicking on an image
+                for (let i = placedImages.length - 1; i >= 0; i--) {
+                    const pi = placedImages[i];
+                    if (mx >= pi.x && mx <= pi.x + pi.width && my >= pi.y && my <= pi.y + pi.height) {
+                        selectedImage = pi;
+                        imageDragStart = { x: mx, y: my, imgX: pi.x, imgY: pi.y };
+                        draw();
+                        return;
+                    }
+                }
+                
+                // Clicked empty space - deselect
+                selectedImage = null;
+                draw();
+                return;
+            }
+            
             // Check if fog mode is enabled
             if (isDM && fogMode) {
                 isFogDrawing = true;
@@ -2607,6 +2813,54 @@
             const screenY = e.clientY;
             const mx = (screenX - rect.left - panX) / zoom;
             const my = (screenY - rect.top - panY) / zoom;
+            
+            // Image manipulation
+            if (isDM && selectedImage && imageDragStart) {
+                if (imageResizeHandle === 'rotate') {
+                    // Rotate around center
+                    const centerX = selectedImage.x + selectedImage.width / 2;
+                    const centerY = selectedImage.y + selectedImage.height / 2;
+                    const angle = Math.atan2(my - centerY, mx - centerX) * 180 / Math.PI + 90;
+                    selectedImage.rotation = angle;
+                    draw();
+                    return;
+                } else if (imageResizeHandle) {
+                    // Resize
+                    const dx = mx - imageDragStart.x;
+                    const dy = my - imageDragStart.y;
+                    
+                    if (imageResizeHandle === 'se') {
+                        selectedImage.width = imageDragStart.origWidth + dx;
+                        selectedImage.height = imageDragStart.origHeight + dy;
+                    } else if (imageResizeHandle === 'nw') {
+                        selectedImage.width = imageDragStart.origWidth - dx;
+                        selectedImage.height = imageDragStart.origHeight - dy;
+                        selectedImage.x = imageDragStart.origX + dx;
+                        selectedImage.y = imageDragStart.origY + dy;
+                    } else if (imageResizeHandle === 'ne') {
+                        selectedImage.width = imageDragStart.origWidth + dx;
+                        selectedImage.height = imageDragStart.origHeight - dy;
+                        selectedImage.y = imageDragStart.origY + dy;
+                    } else if (imageResizeHandle === 'sw') {
+                        selectedImage.width = imageDragStart.origWidth - dx;
+                        selectedImage.height = imageDragStart.origHeight + dy;
+                        selectedImage.x = imageDragStart.origX + dx;
+                    }
+                    
+                    // Minimum size
+                    if (selectedImage.width < 50) selectedImage.width = 50;
+                    if (selectedImage.height < 50) selectedImage.height = 50;
+                    
+                    draw();
+                    return;
+                } else {
+                    // Move
+                    selectedImage.x = imageDragStart.imgX + (mx - imageDragStart.x);
+                    selectedImage.y = imageDragStart.imgY + (my - imageDragStart.y);
+                    draw();
+                    return;
+                }
+            }
             
             // Fog painting
             if (isDM && isFogDrawing) {
@@ -2640,6 +2894,13 @@
         });
 
         canvas.addEventListener('mouseup', (e) => {
+            // Image manipulation complete
+            if (imageDragStart) {
+                imageDragStart = null;
+                imageResizeHandle = null;
+                broadcastImages();
+            }
+            
             if (isFogDrawing && fogPaintMode === 'rect' && fogRectStart) {
                 const rect = canvas.getBoundingClientRect();
                 const mx = (e.clientX - rect.left - panX) / zoom;
