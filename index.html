@@ -1657,8 +1657,16 @@
             }
             const modal = document.getElementById('dmModal');
             console.log('DM Modal element:', modal);
+            
+            // Force display with both class and inline styles
             modal.classList.add('active');
+            modal.style.display = 'flex';
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
+            modal.style.pointerEvents = 'all';
+            
             console.log('DM Modal classes:', modal.className);
+            console.log('DM Modal display:', modal.style.display);
             
             // Debug computed styles
             setTimeout(() => {
@@ -1673,7 +1681,9 @@
 
         function closeDMModal() {
             console.log('closeDMModal called');
-            document.getElementById('dmModal').classList.remove('active');
+            const modal = document.getElementById('dmModal');
+            modal.classList.remove('active');
+            modal.style.display = 'none';
             document.getElementById('dmError').classList.remove('show');
             document.getElementById('dmInfo').style.display = 'none';
         }
@@ -1706,12 +1716,22 @@
             console.log('👤 showPlayerLogin called');
             const modal = document.getElementById('playerModal');
             console.log('Player Modal element:', modal);
+            
+            // Force display with both class and inline styles
             modal.classList.add('active');
+            modal.style.display = 'flex';
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
+            modal.style.pointerEvents = 'all';
+            
             console.log('Player Modal classes:', modal.className);
+            console.log('Player Modal display:', modal.style.display);
         }
 
         function closePlayerModal() {
-            document.getElementById('playerModal').classList.remove('active');
+            const modal = document.getElementById('playerModal');
+            modal.classList.remove('active');
+            modal.style.display = 'none';
             document.getElementById('playerError').classList.remove('show');
             document.getElementById('playerSuccess').classList.remove('show');
         }
