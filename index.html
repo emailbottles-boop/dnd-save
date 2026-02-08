@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>The Fractured Sky - Ultimate VTT v3.0</title>
+    <title>The Fractured Sky - Ultimate VTT</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
@@ -204,17 +202,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 99999;
+            z-index: 9999;
             opacity: 0;
             visibility: hidden;
-            pointer-events: none;
             transition: all 0.3s;
         }
 
         .modal.active {
             opacity: 1;
             visibility: visible;
-            pointer-events: all;
         }
 
         .modal-content {
@@ -984,14 +980,11 @@
     <div class="welcome-screen" id="welcomeScreen">
         <div class="welcome-content">
             <div class="welcome-title">⚔️ THE FRACTURED SKY</div>
-            <div class="welcome-subtitle">Ultimate Virtual Tabletop v3.0</div>
+            <div class="welcome-subtitle">Ultimate Virtual Tabletop</div>
             <div class="welcome-buttons">
                 <button class="welcome-btn welcome-btn-primary" onclick="showDMLogin()">🎭 Create Room (DM)</button>
                 <button class="welcome-btn welcome-btn-secondary" onclick="showPlayerLogin()">👤 Join Room (Player)</button>
             </div>
-            <p style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-size: 0.75rem; color: var(--text-dim);">
-                Build: 1770456189 • Click a button to test
-            </p>
         </div>
     </div>
 
@@ -1009,7 +1002,7 @@
                 </div>
                 <div class="form-group">
                     <label>PASSWORD</label>
-                    <input type="password" id="dmPass" placeholder="FracturedSky2025!" required>
+                    <input type="password" id="dmPass" placeholder="Enter password" required>
                 </div>
                 <div class="form-group">
                     <label>SESSION ID (Optional - leave blank for new session)</label>
@@ -1056,24 +1049,8 @@
                 <div class="modal-title">Create Token</div>
             </div>
             <div class="form-group">
-                <label>TOKEN TYPE</label>
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                    <button class="btn btn-primary" onclick="setTokenType('emoji')" id="emojiTokenBtn" style="flex: 1;">Emoji</button>
-                    <button class="btn" onclick="setTokenType('image')" id="imageTokenBtn" style="flex: 1;">Image</button>
-                </div>
-            </div>
-            <div id="emojiTokenInputs">
-                <div class="form-group">
-                    <label>TOKEN EMOJI</label>
-                    <input type="text" id="tokenEmoji" placeholder="⚔️" maxlength="2">
-                </div>
-            </div>
-            <div id="imageTokenInputs" style="display: none;">
-                <div class="form-group">
-                    <label>TOKEN IMAGE</label>
-                    <input type="file" id="tokenImageFile" accept="image/*" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text);">
-                    <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-dim);">Upload PNG, JPG, or GIF (will be resized to 60x60)</div>
-                </div>
+                <label>TOKEN EMOJI</label>
+                <input type="text" id="tokenEmoji" placeholder="⚔️" maxlength="2">
             </div>
             <div class="form-group">
                 <label>TOKEN COLOR</label>
@@ -1179,38 +1156,6 @@
                 <button class="btn btn-small" onclick="toggleDMPanel()">✕</button>
             </div>
             <div class="dm-content">
-                <!-- CAMPAIGN MANAGER -->
-                <div class="section" id="campaignSection">
-                    <h3>💾 Campaign Manager</h3>
-                    
-                    <div style="margin-bottom: 1rem;">
-                        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Export/Import Campaign:</div>
-                        <div class="btn-group">
-                            <button class="btn btn-primary" onclick="exportCampaign()" style="flex: 1;">📥 Export .JSON</button>
-                            <button class="btn" onclick="document.getElementById('importFile').click()" style="flex: 1;">📤 Import .JSON</button>
-                        </div>
-                        <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importCampaign(event)">
-                    </div>
-
-                    <div style="margin-bottom: 1rem;">
-                        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Cloud Campaign Link (Google Drive, Dropbox, etc.):</div>
-                        <input type="text" id="cloudLink" placeholder="Paste shareable link here" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.85rem; margin-bottom: 0.5rem;">
-                        <div class="btn-group">
-                            <button class="btn btn-primary" onclick="saveCloudLink()" style="flex: 1;">💾 Save Link</button>
-                            <button class="btn" onclick="openCloudLink()" style="flex: 1;">🔗 Open Link</button>
-                        </div>
-                        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; padding: 0.5rem; background: var(--bg-dark); border-radius: 6px;">
-                            💡 Upload exported .json to Google Drive → Get shareable link → Paste here → Save<br>
-                            Other DMs can use this link to access the campaign!
-                        </div>
-                    </div>
-
-                    <div class="success" id="exportSuccess">Campaign exported!</div>
-                    <div class="success" id="importSuccess">Campaign imported!</div>
-                    <div class="success" id="linkSuccess">Cloud link saved!</div>
-                    <div class="error" id="importError">Import failed. Check file format.</div>
-                </div>
-
                 <!-- PLAYER REQUESTS -->
                 <div class="section" id="requestsSection">
                     <h3>📬 Player Requests</h3>
@@ -1247,41 +1192,20 @@
 
                     <div class="tool-grid">
                         <div class="tool-btn active" onclick="setTool('brush')" id="brushBtn">🖌️<br>Brush</div>
-                        <div class="tool-btn" onclick="setTool('fill')" id="fillBtn">🪣<br>Fill</div>
                         <div class="tool-btn" onclick="setTool('eraser')" id="eraserBtn">🧹<br>Erase</div>
-                        <div class="tool-btn" onclick="setTool('stamp')" id="stampBtn">🏰<br>Stamp</div>
+                        <div class="tool-btn" onclick="setTool('texture')" id="textureBtn">🎨<br>Texture</div>
                         <div class="tool-btn" onclick="setTool('image')" id="imageBtn">🖼️<br>Image</div>
-                        <div class="tool-btn" onclick="setTool('select')" id="selectBtn">👆<br>Select</div>
                     </div>
 
                     <div class="asset-indicator">
                         Active: <span class="current-asset" id="currentAsset">Brush</span>
                     </div>
 
-                    <!-- STAMP LIBRARY -->
-                    <div id="stampLibrary" style="display: none; margin: 0.75rem 0;">
-                        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Select Stamp:</div>
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
-                            <div class="tool-btn" onclick="setStamp('🌲')">🌲</div>
-                            <div class="tool-btn" onclick="setStamp('🏰')">🏰</div>
-                            <div class="tool-btn" onclick="setStamp('⛰️')">⛰️</div>
-                            <div class="tool-btn" onclick="setStamp('🏔️')">🏔️</div>
-                            <div class="tool-btn" onclick="setStamp('🏛️')">🏛️</div>
-                            <div class="tool-btn" onclick="setStamp('🗿')">🗿</div>
-                            <div class="tool-btn" onclick="setStamp('⛺')">⛺</div>
-                            <div class="tool-btn" onclick="setStamp('🏚️')">🏚️</div>
-                            <div class="tool-btn" onclick="setStamp('🌳')">🌳</div>
-                            <div class="tool-btn" onclick="setStamp('🌴')">🌴</div>
-                            <div class="tool-btn" onclick="setStamp('🌊')">🌊</div>
-                            <div class="tool-btn" onclick="setStamp('🔥')">🔥</div>
-                        </div>
-                    </div>
-
                     <!-- ERASER MODE TOGGLE -->
                     <div id="eraserOptions" style="display: none; margin: 0.75rem 0; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px;">
                         <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Eraser Mode:</div>
                         <div style="display: flex; gap: 0.5rem;">
-                            <button class="btn btn-small btn-primary" onclick="setEraserMode('content')" id="eraseContentBtn" style="flex: 1;">Content Only</button>
+                            <button class="btn btn-small" onclick="setEraserMode('content')" id="eraseContentBtn" style="flex: 1;">Content Only</button>
                             <button class="btn btn-small" onclick="setEraserMode('all')" id="eraseAllBtn" style="flex: 1;">Everything</button>
                         </div>
                         <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem;" id="eraserModeDesc">
@@ -1291,7 +1215,7 @@
 
                     <div class="control-row">
                         <label>Color:</label>
-                        <input type="color" id="colorPicker" value="#4a7c59" onchange="updateColor(this.value)">
+                        <input type="color" id="colorPicker" value="#4a7c59">
                     </div>
                     <div class="control-row">
                         <label>Size:</label>
@@ -1302,15 +1226,8 @@
                     <canvas id="mapCanvas" width="400" height="400"></canvas>
 
                     <div class="btn-group">
-                        <input type="file" id="mapImport" accept="image/*" style="display: none;" onchange="importMapImage(event)">
-                        <input type="file" id="imageImport" accept="image/*" style="display: none;" onchange="importImageToCanvas(event)">
-                        <button class="btn" onclick="document.getElementById('imageImport').click()">🖼️ Place Image</button>
                         <button class="btn btn-primary" onclick="submitCell()">✓ Submit</button>
                         <button class="btn" onclick="clearMapCanvas()">Clear</button>
-                    </div>
-                    
-                    <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-dim); padding: 0.5rem; background: var(--bg-dark); border-radius: 6px;">
-                        💡 <strong>Place Image:</strong> Upload images to main canvas - they can be moved, resized & rotated! Use Select tool (👆) to manipulate them.
                     </div>
                 </div>
 
@@ -1318,47 +1235,30 @@
                 <div class="section" id="fogSection">
                     <h3>🌫️ Fog of War</h3>
                     
-                    <button class="btn btn-primary" onclick="toggleFogMode()" id="fogModeToggle" style="width: 100%; margin-bottom: 1rem; transition: all 0.3s;">
-                        🌫️ Fog Paint Mode: OFF
-                    </button>
-                    
-                    <div id="fogControls" style="opacity: 0.5; pointer-events: none; transition: all 0.3s;">
-                        <div class="fog-groups" id="fogGroups">
-                            <div class="fog-group-item active">
-                                <span class="fog-group-name">Everyone</span>
-                                <button class="btn btn-small btn-primary" onclick="setActiveFogGroup('everyone')">Active</button>
-                            </div>
+                    <div class="fog-groups" id="fogGroups">
+                        <div class="fog-group-item active">
+                            <span class="fog-group-name">Everyone</span>
+                            <button class="btn btn-small btn-primary" onclick="setActiveFogGroup('everyone')">Active</button>
                         </div>
+                    </div>
 
-                        <button class="btn" onclick="showFogGroupModal()" style="width: 100%; margin-bottom: 0.75rem;">+ New Group</button>
+                    <button class="btn" onclick="showFogGroupModal()" style="width: 100%; margin-bottom: 0.75rem;">+ New Group</button>
 
-                        <div style="margin-bottom: 0.75rem;">
-                            <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Fog Paint Mode:</div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                                <button class="btn btn-small btn-primary" onclick="setFogPaintMode('brush')" id="fogBrushBtn">🖌️ Brush</button>
-                                <button class="btn btn-small" onclick="setFogPaintMode('rect')" id="fogRectBtn">▭ Rectangle</button>
-                            </div>
-                        </div>
+                    <div class="control-row">
+                        <label>Size:</label>
+                        <input type="range" class="slider" id="fogSize" min="20" max="150" value="60" style="flex: 1;">
+                        <span id="fogSizeValue">60px</span>
+                    </div>
 
-                        <div class="control-row">
-                            <label>Brush Size:</label>
-                            <input type="range" class="slider" id="fogSize" min="20" max="150" value="60" oninput="updateFogSize(this.value)" style="flex: 1;">
-                            <span id="fogSizeValue">60px</span>
-                        </div>
+                    <div class="control-row">
+                        <label>
+                            <input type="checkbox" id="revealMode" checked> Reveal
+                        </label>
+                    </div>
 
-                        <div class="control-row">
-                            <label>
-                                <input type="checkbox" id="revealMode" checked> Reveal Fog
-                            </label>
-                        </div>
-
-                        <div class="btn-group">
-                            <button class="btn" onclick="resetFog()">Reset All Fog</button>
-                        </div>
-                        
-                        <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; font-size: 0.75rem; color: var(--text-dim);">
-                            💡 Hold Ctrl + Click on the map to paint fog
-                        </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="toggleFogMode()">🌫️ Fog Mode</button>
+                        <button class="btn" onclick="resetFog()">Reset</button>
                     </div>
                 </div>
 
@@ -1399,11 +1299,7 @@
     </div>
 
     <script>
-        console.clear();
-        console.log('%c🎮 THE FRACTURED SKY - Ultimate VTT v3.0', 'font-size: 20px; font-weight: bold; color: #8b5cf6;');
-        console.log('%cBuild: 1770456189', 'font-size: 14px; color: #fbbf24;');
-        console.log('%cScript started at:', 'font-weight: bold;', new Date().toLocaleTimeString());
-        console.log('%c✓ JavaScript is loading...', 'color: #10b981;');
+        console.log('🎮 Fractured Sky Ultimate VTT Loading...');
 
         // === CORE STATE ===
         let peer = null;
@@ -1434,15 +1330,6 @@
         let currentAsset = 'Brush';
         let lastToolBeforeEraser = 'brush'; // Track tool before eraser
         let eraserMode = 'content'; // 'content' or 'all'
-        let currentStamp = '🏰';
-        let tokenType = 'emoji'; // 'emoji' or 'image'
-        let tokenImageData = null;
-        
-        // Image layer for DM
-        let placedImages = []; // { img, x, y, width, height, rotation, gridX, gridY }
-        let selectedImage = null;
-        let imageResizeHandle = null; // 'nw', 'ne', 'sw', 'se', 'rotate'
-        let imageDragStart = null;
         
         // History tracking
         let history = [];
@@ -1463,10 +1350,6 @@
         let activeFogGroup = 'everyone';
         let fogGroups = { everyone: { name: 'Everyone', canvas: null } };
         let fogMode = false;
-        let fogPaintMode = 'brush'; // 'brush' or 'rect'
-        let fogBrushSize = 60;
-        let fogRectStart = null;
-        let isFogDrawing = false;
         let dmFogOpacity = 0.3; // DM sees through fog
 
         // Player requests
@@ -1535,30 +1418,15 @@
 
         // === AUTHENTICATION ===
         function showDMLogin() {
-            console.log('🎭 showDMLogin called');
             // Pre-fill session ID from localStorage if available
             const savedSession = localStorage.getItem('fracturedSkySessionId');
             if (savedSession) {
                 document.getElementById('sessionId').value = savedSession;
             }
-            const modal = document.getElementById('dmModal');
-            console.log('DM Modal element:', modal);
-            modal.classList.add('active');
-            console.log('DM Modal classes:', modal.className);
-            
-            // Debug computed styles
-            setTimeout(() => {
-                const computed = window.getComputedStyle(modal);
-                console.log('Modal computed opacity:', computed.opacity);
-                console.log('Modal computed visibility:', computed.visibility);
-                console.log('Modal computed z-index:', computed.zIndex);
-                console.log('Modal computed display:', computed.display);
-                console.log('Modal computed pointer-events:', computed.pointerEvents);
-            }, 100);
+            document.getElementById('dmModal').classList.add('active');
         }
 
         function closeDMModal() {
-            console.log('closeDMModal called');
             document.getElementById('dmModal').classList.remove('active');
             document.getElementById('dmError').classList.remove('show');
             document.getElementById('dmInfo').style.display = 'none';
@@ -1566,13 +1434,11 @@
 
         function dmLogin(e) {
             e.preventDefault();
-            console.log('dmLogin called');
             const user = document.getElementById('dmUser').value;
             const pass = document.getElementById('dmPass').value;
             const sessionId = document.getElementById('sessionId').value.trim();
             
-            // Changed password to avoid security warnings
-            if (user === 'Wizard' && pass === 'FracturedSky2025!') {
+            if (user === 'Wizard' && pass === 'Wizard') {
                 closeDMModal();
                 
                 if (sessionId) {
@@ -1589,11 +1455,7 @@
         }
 
         function showPlayerLogin() {
-            console.log('👤 showPlayerLogin called');
-            const modal = document.getElementById('playerModal');
-            console.log('Player Modal element:', modal);
-            modal.classList.add('active');
-            console.log('Player Modal classes:', modal.className);
+            document.getElementById('playerModal').classList.add('active');
         }
 
         function closePlayerModal() {
@@ -1641,30 +1503,23 @@
 
         // === MULTIPLAYER ===
         function createRoom(existingId = null) {
-            console.log('🎭 createRoom called with existingId:', existingId);
             isDM = true;
             myName = 'Dungeon Master';
             
             // Use existing peer ID if provided
             if (existingId) {
-                console.log('Creating peer with existing ID:', existingId);
                 peer = new Peer(existingId);
             } else {
-                console.log('Creating peer with new ID');
                 peer = new Peer();
             }
             
-            console.log('Peer object created:', peer);
-            
             peer.on('open', (id) => {
-                console.log('✅ Peer connection opened! ID:', id);
                 myId = id;
                 roomCode = id;
                 savedPeerId = id;
                 
                 // Save to localStorage for easy recovery
                 localStorage.setItem('fracturedSkySessionId', id);
-                console.log('💾 Saved session ID to localStorage');
                 
                 document.getElementById('welcomeScreen').classList.add('hidden');
                 document.getElementById('connectionTabContainer').style.display = 'block';
@@ -1673,10 +1528,8 @@
                 document.getElementById('dmControlsBtn').style.display = 'block';
                 document.getElementById('stagingZone').style.display = 'flex';
                 
-                console.log('UI updated, calling updateConnectionStatus');
                 updateConnectionStatus('Connected as DM', true);
                 updateUserList();
-                loadSavedCloudLink();
                 
                 // Show success if rejoining
                 if (existingId) {
@@ -1689,33 +1542,21 @@
                         toggleConnectionPanel();
                     }
                 }, 5000);
-                
-                console.log('✅ createRoom complete!');
             });
             
             peer.on('connection', (conn) => {
-                console.log('👥 Incoming connection from:', conn.peer);
                 setupConnection(conn);
             });
             
             peer.on('error', (err) => {
-                console.error('❌ Peer error:', err);
-                console.error('Error type:', err.type);
-                console.error('Error message:', err.message);
-                
+                console.error('Peer error:', err);
                 if (err.type === 'unavailable-id') {
                     alert('⚠️ Session ID unavailable or in use. Creating new session...');
                     createRoom(); // Fallback to new session
-                } else if (err.type === 'network') {
-                    alert('⚠️ Network error. Check your internet connection.');
-                } else if (err.type === 'peer-unavailable') {
-                    alert('⚠️ Could not connect to PeerJS server. Try again.');
                 } else {
-                    alert('❌ Connection error: ' + err.type + ' - ' + err.message);
+                    alert('Connection error: ' + err.message);
                 }
             });
-            
-            console.log('Peer event listeners set up');
         }
 
         function setupConnection(conn, isPlayer = false) {
@@ -1797,44 +1638,8 @@
                 case 'fogUpdate':
                     updateFogFromNetwork(data);
                     break;
-                    
-                case 'imagesUpdate':
-                    // Load images from network
-                    placedImages = [];
-                    data.images.forEach(imgData => {
-                        const img = new Image();
-                        img.onload = () => {
-                            placedImages.push({
-                                img: img,
-                                x: imgData.x,
-                                y: imgData.y,
-                                width: imgData.width,
-                                height: imgData.height,
-                                rotation: imgData.rotation,
-                                gridX: imgData.gridX,
-                                gridY: imgData.gridY
-                            });
-                            draw();
-                        };
-                        img.src = imgData.src;
-                    });
-                    break;
             }
         }
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            // Delete selected image
-            if (e.key === 'Delete' && selectedImage && isDM) {
-                const index = placedImages.indexOf(selectedImage);
-                if (index > -1) {
-                    placedImages.splice(index, 1);
-                    selectedImage = null;
-                    draw();
-                    broadcastImages();
-                }
-            }
-        });
 
         function sendToPeer(conn, data) {
             try {
@@ -2121,108 +1926,62 @@
         // === TOKENS ===
         function showTokenModal() {
             document.getElementById('tokenRequestModal').classList.add('active');
-            setTokenType('emoji'); // Default to emoji
         }
 
         function closeTokenModal() {
             document.getElementById('tokenRequestModal').classList.remove('active');
-            tokenImageData = null;
-        }
-
-        function setTokenType(type) {
-            tokenType = type;
-            
-            document.getElementById('emojiTokenBtn').classList.remove('btn-primary');
-            document.getElementById('imageTokenBtn').classList.remove('btn-primary');
-            
-            if (type === 'emoji') {
-                document.getElementById('emojiTokenBtn').classList.add('btn-primary');
-                document.getElementById('emojiTokenInputs').style.display = 'block';
-                document.getElementById('imageTokenInputs').style.display = 'none';
-            } else {
-                document.getElementById('imageTokenBtn').classList.add('btn-primary');
-                document.getElementById('emojiTokenInputs').style.display = 'none';
-                document.getElementById('imageTokenInputs').style.display = 'block';
-            }
         }
 
         function createToken() {
+            const emoji = document.getElementById('tokenEmoji').value || '⚔️';
             const color = document.getElementById('tokenColor').value;
             
-            if (tokenType === 'emoji') {
-                const emoji = document.getElementById('tokenEmoji').value || '⚔️';
+            if (isDM) {
+                const token = {
+                    id: Date.now(),
+                    icon: emoji,
+                    color: color,
+                    owner: 'DM',
+                    approved: true
+                };
                 
-                if (isDM) {
-                    const token = {
-                        id: Date.now(),
-                        type: 'emoji',
-                        icon: emoji,
-                        color: color,
-                        owner: 'DM',
-                        approved: true
-                    };
-                    
-                    stagingTokens.push(token);
-                    renderStagingTokens();
-                    closeTokenModal();
-                    
-                    broadcast({
-                        type: 'tokenUpdate',
-                        tokens: [...stagingTokens, ...placedTokens]
-                    });
-                }
+                stagingTokens.push(token);
+                renderStagingTokens();
+                closeTokenModal();
+                
+                broadcast({
+                    type: 'tokenUpdate',
+                    tokens: [...stagingTokens, ...placedTokens]
+                });
             } else {
-                // Image token
-                const file = document.getElementById('tokenImageFile').files[0];
-                if (!file) {
-                    alert('Please select an image file');
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    if (isDM) {
-                        const token = {
-                            id: Date.now(),
-                            type: 'image',
-                            imageData: e.target.result,
-                            color: color,
-                            owner: 'DM',
-                            approved: true
-                        };
-                        
-                        stagingTokens.push(token);
-                        renderStagingTokens();
-                        closeTokenModal();
-                        
-                        broadcast({
-                            type: 'tokenUpdate',
-                            tokens: [...stagingTokens, ...placedTokens]
+                // Player requests token
+                connections.forEach(({ conn, role }) => {
+                    if (role === 'dm') {
+                        sendToPeer(conn, {
+                            type: 'tokenRequest',
+                            playerName: myName,
+                            tokenData: {
+                                id: Date.now(),
+                                icon: emoji,
+                                color: color
+                            }
                         });
                     }
-                };
-                reader.readAsDataURL(file);
+                });
+                
+                closeTokenModal();
+                alert('Token request sent to DM for approval!');
             }
         }
 
         function renderStagingTokens() {
             const container = document.getElementById('stagingTokens');
-            container.innerHTML = stagingTokens.map(t => {
-                if (t.type === 'image') {
-                    return `
-                        <div class="token-item" draggable="true" ondragstart="dragTokenStart(event, ${t.id})" style="background: ${t.color}; background-image: url('${t.imageData}'); background-size: cover; background-position: center;">
-                            <div class="token-owner">${t.owner}</div>
-                        </div>
-                    `;
-                } else {
-                    return `
-                        <div class="token-item" draggable="true" ondragstart="dragTokenStart(event, ${t.id})" style="background: ${t.color};">
-                            ${t.icon}
-                            <div class="token-owner">${t.owner}</div>
-                        </div>
-                    `;
-                }
-            }).join('');
+            container.innerHTML = stagingTokens.map(t => `
+                <div class="token-item" draggable="true" ondragstart="dragTokenStart(event, ${t.id})" style="background: ${t.color};">
+                    ${t.icon}
+                    <div class="token-owner">${t.owner}</div>
+                </div>
+            `).join('');
             
             if (stagingTokens.length > 0) {
                 document.getElementById('stagingZone').style.display = 'flex';
@@ -2295,41 +2054,6 @@
                 }
             }
 
-            // Placed images (DM layer)
-            placedImages.forEach(pi => {
-                ctx.save();
-                ctx.translate(pi.x + pi.width / 2, pi.y + pi.height / 2);
-                ctx.rotate(pi.rotation * Math.PI / 180);
-                ctx.drawImage(pi.img, -pi.width / 2, -pi.height / 2, pi.width, pi.height);
-                ctx.restore();
-                
-                // Draw selection handles if selected
-                if (isDM && selectedImage === pi) {
-                    ctx.strokeStyle = '#8b5cf6';
-                    ctx.lineWidth = 2;
-                    ctx.setLineDash([5, 5]);
-                    ctx.strokeRect(pi.x, pi.y, pi.width, pi.height);
-                    ctx.setLineDash([]);
-                    
-                    // Corner handles for resize
-                    const handleSize = 8;
-                    ctx.fillStyle = '#8b5cf6';
-                    ctx.fillRect(pi.x - handleSize/2, pi.y - handleSize/2, handleSize, handleSize);
-                    ctx.fillRect(pi.x + pi.width - handleSize/2, pi.y - handleSize/2, handleSize, handleSize);
-                    ctx.fillRect(pi.x - handleSize/2, pi.y + pi.height - handleSize/2, handleSize, handleSize);
-                    ctx.fillRect(pi.x + pi.width - handleSize/2, pi.y + pi.height - handleSize/2, handleSize, handleSize);
-                    
-                    // Rotation handle
-                    ctx.beginPath();
-                    ctx.arc(pi.x + pi.width / 2, pi.y - 20, 6, 0, Math.PI * 2);
-                    ctx.fillStyle = '#fbbf24';
-                    ctx.fill();
-                    ctx.strokeStyle = '#8b5cf6';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                }
-            });
-
             // Placed tokens
             placedTokens.forEach(t => {
                 ctx.fillStyle = t.color;
@@ -2339,25 +2063,11 @@
                 ctx.strokeStyle = '#fbbf24';
                 ctx.lineWidth = 3;
                 ctx.stroke();
-                
-                if (t.type === 'image' && t.imageData) {
-                    // Draw image token
-                    const img = new Image();
-                    img.src = t.imageData;
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.arc(t.x, t.y, 28, 0, Math.PI * 2);
-                    ctx.clip();
-                    ctx.drawImage(img, t.x - 28, t.y - 28, 56, 56);
-                    ctx.restore();
-                } else {
-                    // Draw emoji token
-                    ctx.fillStyle = '#fff';
-                    ctx.font = '32px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(t.icon || '⚔️', t.x, t.y);
-                }
+                ctx.fillStyle = '#fff';
+                ctx.font = '32px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(t.icon, t.x, t.y);
             });
 
             ctx.restore();
@@ -2417,131 +2127,22 @@
                 document.getElementById('eraserOptions').style.display = 'none';
             }
             
-            // Show/hide stamp library
-            if (t === 'stamp') {
-                document.getElementById('stampLibrary').style.display = 'block';
-            } else {
-                document.getElementById('stampLibrary').style.display = 'none';
-            }
-            
-            // Deselect image when switching tools
-            if (t !== 'select') {
-                selectedImage = null;
-                draw();
-            }
-            
             tool = t;
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            const toolBtn = document.getElementById(t + 'Btn');
-            if (toolBtn) toolBtn.classList.add('active');
+            document.getElementById(t + 'Btn').classList.add('active');
             
             const assetNames = {
                 brush: 'Brush',
-                fill: 'Fill',
-                stamp: 'Stamp: ' + currentStamp,
-                image: 'Place Image',
-                select: 'Select & Move',
                 eraser: eraserMode === 'content' ? 
                        (lastToolBeforeEraser === 'brush' ? 'Brush Strokes' : 
-                        lastToolBeforeEraser === 'fill' ? 'Fill Areas' :
-                        lastToolBeforeEraser === 'stamp' ? 'Stamps' : 'Content') :
-                       'Everything'
+                        lastToolBeforeEraser === 'texture' ? 'Textures' : 
+                        lastToolBeforeEraser === 'image' ? 'Images' : 'Content') :
+                       'Everything',
+                texture: 'Texture',
+                image: 'Image'
             };
             currentAsset = assetNames[t] || t;
             document.getElementById('currentAsset').textContent = currentAsset;
-        }
-
-        function setStamp(emoji) {
-            currentStamp = emoji;
-            currentAsset = 'Stamp: ' + emoji;
-            document.getElementById('currentAsset').textContent = currentAsset;
-        }
-
-        function updateColor(value) {
-            color = value;
-        }
-
-        function importMapImage(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    mapCtx.drawImage(img, 0, 0, mapCanvas.width, mapCanvas.height);
-                    saveHistory();
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-            event.target.value = '';
-        }
-
-        function importImageToCanvas(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    // Place image at center of current cell
-                    const cellX = currentCellX * GRID_SIZE + GRID_SIZE / 2;
-                    const cellY = currentCellY * GRID_SIZE + GRID_SIZE / 2;
-                    
-                    // Scale image to fit within cell
-                    const maxSize = GRID_SIZE * 0.8;
-                    let width = img.width;
-                    let height = img.height;
-                    
-                    if (width > maxSize || height > maxSize) {
-                        const scale = Math.min(maxSize / width, maxSize / height);
-                        width *= scale;
-                        height *= scale;
-                    }
-                    
-                    const placedImg = {
-                        img: img,
-                        x: cellX - width / 2,
-                        y: cellY - height / 2,
-                        width: width,
-                        height: height,
-                        rotation: 0,
-                        gridX: currentCellX,
-                        gridY: currentCellY
-                    };
-                    
-                    placedImages.push(placedImg);
-                    selectedImage = placedImg;
-                    setTool('select');
-                    draw();
-                    
-                    // Broadcast to players
-                    broadcastImages();
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-            event.target.value = '';
-        }
-
-        function broadcastImages() {
-            const imageData = placedImages.map(pi => ({
-                src: pi.img.src,
-                x: pi.x,
-                y: pi.y,
-                width: pi.width,
-                height: pi.height,
-                rotation: pi.rotation,
-                gridX: pi.gridX,
-                gridY: pi.gridY
-            }));
-            
-            broadcast({
-                type: 'imagesUpdate',
-                images: imageData
-            });
         }
 
         function setEraserMode(mode) {
@@ -2666,18 +2267,6 @@
                 mapCtx.lineWidth = size;
                 mapCtx.lineCap = 'round';
                 mapCtx.lineJoin = 'round';
-            } else if (tool === 'fill') {
-                mapCtx.fillStyle = color;
-                mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-                saveHistory();
-                isDrawing = false;
-            } else if (tool === 'stamp') {
-                mapCtx.font = '48px Arial';
-                mapCtx.textAlign = 'center';
-                mapCtx.textBaseline = 'middle';
-                mapCtx.fillText(currentStamp, x, y);
-                saveHistory();
-                isDrawing = false;
             } else if (tool === 'eraser') {
                 mapCtx.save();
                 
@@ -2738,179 +2327,21 @@
         // Main canvas interaction
         canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
-            const screenX = e.clientX;
-            const screenY = e.clientY;
-            const mx = (screenX - rect.left - panX) / zoom;
-            const my = (screenY - rect.top - panY) / zoom;
-            
-            // Image selection and manipulation (Select tool)
-            if (isDM && tool === 'select') {
-                // Check if clicking on rotation handle
-                if (selectedImage) {
-                    const rotX = selectedImage.x + selectedImage.width / 2;
-                    const rotY = selectedImage.y - 20;
-                    if (Math.hypot(mx - rotX, my - rotY) < 10) {
-                        imageResizeHandle = 'rotate';
-                        imageDragStart = { x: mx, y: my };
-                        return;
-                    }
-                    
-                    // Check corner handles for resize
-                    const handleSize = 8;
-                    const handles = [
-                        { type: 'nw', x: selectedImage.x, y: selectedImage.y },
-                        { type: 'ne', x: selectedImage.x + selectedImage.width, y: selectedImage.y },
-                        { type: 'sw', x: selectedImage.x, y: selectedImage.y + selectedImage.height },
-                        { type: 'se', x: selectedImage.x + selectedImage.width, y: selectedImage.y + selectedImage.height }
-                    ];
-                    
-                    for (let h of handles) {
-                        if (Math.abs(mx - h.x) < handleSize && Math.abs(my - h.y) < handleSize) {
-                            imageResizeHandle = h.type;
-                            imageDragStart = { x: mx, y: my, origWidth: selectedImage.width, origHeight: selectedImage.height, origX: selectedImage.x, origY: selectedImage.y };
-                            return;
-                        }
-                    }
-                }
-                
-                // Check if clicking on an image
-                for (let i = placedImages.length - 1; i >= 0; i--) {
-                    const pi = placedImages[i];
-                    if (mx >= pi.x && mx <= pi.x + pi.width && my >= pi.y && my <= pi.y + pi.height) {
-                        selectedImage = pi;
-                        imageDragStart = { x: mx, y: my, imgX: pi.x, imgY: pi.y };
-                        draw();
-                        return;
-                    }
-                }
-                
-                // Clicked empty space - deselect
-                selectedImage = null;
-                draw();
-                return;
-            }
-            
-            // Check if fog mode is enabled
-            if (isDM && fogMode) {
-                isFogDrawing = true;
-                
-                if (fogPaintMode === 'brush') {
-                    paintFog(mx, my);
-                } else if (fogPaintMode === 'rect') {
-                    fogRectStart = { x: mx, y: my };
-                }
-                return;
-            }
-            
-            lastX = screenX;
-            lastY = screenY;
+            lastX = e.clientX;
+            lastY = e.clientY;
             isDrawing = true;
         });
 
         canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const screenX = e.clientX;
-            const screenY = e.clientY;
-            const mx = (screenX - rect.left - panX) / zoom;
-            const my = (screenY - rect.top - panY) / zoom;
-            
-            // Image manipulation
-            if (isDM && selectedImage && imageDragStart) {
-                if (imageResizeHandle === 'rotate') {
-                    // Rotate around center
-                    const centerX = selectedImage.x + selectedImage.width / 2;
-                    const centerY = selectedImage.y + selectedImage.height / 2;
-                    const angle = Math.atan2(my - centerY, mx - centerX) * 180 / Math.PI + 90;
-                    selectedImage.rotation = angle;
-                    draw();
-                    return;
-                } else if (imageResizeHandle) {
-                    // Resize
-                    const dx = mx - imageDragStart.x;
-                    const dy = my - imageDragStart.y;
-                    
-                    if (imageResizeHandle === 'se') {
-                        selectedImage.width = imageDragStart.origWidth + dx;
-                        selectedImage.height = imageDragStart.origHeight + dy;
-                    } else if (imageResizeHandle === 'nw') {
-                        selectedImage.width = imageDragStart.origWidth - dx;
-                        selectedImage.height = imageDragStart.origHeight - dy;
-                        selectedImage.x = imageDragStart.origX + dx;
-                        selectedImage.y = imageDragStart.origY + dy;
-                    } else if (imageResizeHandle === 'ne') {
-                        selectedImage.width = imageDragStart.origWidth + dx;
-                        selectedImage.height = imageDragStart.origHeight - dy;
-                        selectedImage.y = imageDragStart.origY + dy;
-                    } else if (imageResizeHandle === 'sw') {
-                        selectedImage.width = imageDragStart.origWidth - dx;
-                        selectedImage.height = imageDragStart.origHeight + dy;
-                        selectedImage.x = imageDragStart.origX + dx;
-                    }
-                    
-                    // Minimum size
-                    if (selectedImage.width < 50) selectedImage.width = 50;
-                    if (selectedImage.height < 50) selectedImage.height = 50;
-                    
-                    draw();
-                    return;
-                } else {
-                    // Move
-                    selectedImage.x = imageDragStart.imgX + (mx - imageDragStart.x);
-                    selectedImage.y = imageDragStart.imgY + (my - imageDragStart.y);
-                    draw();
-                    return;
-                }
-            }
-            
-            // Fog painting
-            if (isDM && isFogDrawing) {
-                if (fogPaintMode === 'brush') {
-                    paintFog(mx, my);
-                } else if (fogPaintMode === 'rect' && fogRectStart) {
-                    // Just update for preview, actual painting on mouseup
-                    draw();
-                    
-                    // Draw preview rectangle
-                    ctx.save();
-                    const reveal = document.getElementById('revealMode').checked;
-                    ctx.strokeStyle = reveal ? '#10b981' : '#ef4444';
-                    ctx.lineWidth = 2 / zoom;
-                    ctx.setLineDash([5 / zoom, 5 / zoom]);
-                    ctx.translate(panX, panY);
-                    ctx.scale(zoom, zoom);
-                    ctx.strokeRect(fogRectStart.x, fogRectStart.y, mx - fogRectStart.x, my - fogRectStart.y);
-                    ctx.restore();
-                }
-                return;
-            }
-            
-            // Normal panning (only when fog mode is OFF)
-            if (!isDrawing || fogMode) return;
-            panX += screenX - lastX;
-            panY += screenY - lastY;
-            lastX = screenX;
-            lastY = screenY;
+            if (!isDrawing) return;
+            panX += e.clientX - lastX;
+            panY += e.clientY - lastY;
+            lastX = e.clientX;
+            lastY = e.clientY;
             draw();
         });
 
-        canvas.addEventListener('mouseup', (e) => {
-            // Image manipulation complete
-            if (imageDragStart) {
-                imageDragStart = null;
-                imageResizeHandle = null;
-                broadcastImages();
-            }
-            
-            if (isFogDrawing && fogPaintMode === 'rect' && fogRectStart) {
-                const rect = canvas.getBoundingClientRect();
-                const mx = (e.clientX - rect.left - panX) / zoom;
-                const my = (e.clientY - rect.top - panY) / zoom;
-                
-                paintFogRect(fogRectStart.x, fogRectStart.y, mx, my);
-                fogRectStart = null;
-            }
-            
-            isFogDrawing = false;
+        canvas.addEventListener('mouseup', () => {
             isDrawing = false;
         });
 
@@ -2970,8 +2401,6 @@
             fogGroups[id] = { name, canvas: fogCanvas };
             renderFogGroups();
             closeFogGroupModal();
-            
-            document.getElementById('fogGroupName').value = '';
         }
 
         function renderFogGroups() {
@@ -2992,337 +2421,17 @@
             draw();
         }
 
-        function setFogPaintMode(mode) {
-            fogPaintMode = mode;
-            document.getElementById('fogBrushBtn').classList.remove('btn-primary');
-            document.getElementById('fogRectBtn').classList.remove('btn-primary');
-            
-            if (mode === 'brush') {
-                document.getElementById('fogBrushBtn').classList.add('btn-primary');
-            } else {
-                document.getElementById('fogRectBtn').classList.add('btn-primary');
-            }
-        }
-
         function toggleFogMode() {
-            if (!isDM) return;
-            
             fogMode = !fogMode;
-            const btn = document.getElementById('fogModeToggle');
-            const controls = document.getElementById('fogControls');
-            
-            if (fogMode) {
-                // FOG MODE ON - Orange button
-                btn.style.background = 'linear-gradient(135deg, #f97316, #ea580c)';
-                btn.style.borderColor = '#f97316';
-                btn.textContent = '🌫️ Fog Paint Mode: ON';
-                controls.style.opacity = '1';
-                controls.style.pointerEvents = 'all';
-            } else {
-                // FOG MODE OFF - Purple button
-                btn.style.background = '';
-                btn.style.borderColor = '';
-                btn.classList.add('btn-primary');
-                btn.textContent = '🌫️ Fog Paint Mode: OFF';
-                controls.style.opacity = '0.5';
-                controls.style.pointerEvents = 'none';
-            }
-        }
-
-        function updateFogSize(value) {
-            fogBrushSize = parseInt(value);
-            document.getElementById('fogSizeValue').textContent = value + 'px';
+            // Implement fog painting mode
         }
 
         function resetFog() {
-            if (!isDM) return;
-            if (!confirm('Reset all fog for the active group?')) return;
-            
             if (fogGroups[activeFogGroup]) {
                 const ctx = fogGroups[activeFogGroup].canvas.getContext('2d');
                 ctx.fillStyle = 'rgba(0,0,0,0.9)';
                 ctx.fillRect(0, 0, fogGroups[activeFogGroup].canvas.width, fogGroups[activeFogGroup].canvas.height);
                 draw();
-                
-                broadcast({
-                    type: 'fogUpdate',
-                    group: activeFogGroup,
-                    fogData: fogGroups[activeFogGroup].canvas.toDataURL()
-                });
-            }
-        }
-
-        function paintFog(x, y) {
-            if (!isDM || !fogGroups[activeFogGroup]) return;
-            
-            const fogCtx = fogGroups[activeFogGroup].canvas.getContext('2d');
-            const reveal = document.getElementById('revealMode').checked;
-            
-            fogCtx.save();
-            
-            if (reveal) {
-                // Erase fog (reveal map)
-                fogCtx.globalCompositeOperation = 'destination-out';
-                fogCtx.fillStyle = 'rgba(0,0,0,1)';
-            } else {
-                // Add fog (hide map)
-                fogCtx.globalCompositeOperation = 'source-over';
-                fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
-            }
-            
-            fogCtx.beginPath();
-            fogCtx.arc(x, y, fogBrushSize, 0, Math.PI * 2);
-            fogCtx.fill();
-            fogCtx.restore();
-            
-            draw();
-        }
-
-        function paintFogRect(x1, y1, x2, y2) {
-            if (!isDM || !fogGroups[activeFogGroup]) return;
-            
-            const fogCtx = fogGroups[activeFogGroup].canvas.getContext('2d');
-            const reveal = document.getElementById('revealMode').checked;
-            
-            fogCtx.save();
-            
-            if (reveal) {
-                fogCtx.globalCompositeOperation = 'destination-out';
-                fogCtx.fillStyle = 'rgba(0,0,0,1)';
-            } else {
-                fogCtx.globalCompositeOperation = 'source-over';
-                fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
-            }
-            
-            const width = x2 - x1;
-            const height = y2 - y1;
-            fogCtx.fillRect(x1, y1, width, height);
-            fogCtx.restore();
-            
-            draw();
-            
-            broadcast({
-                type: 'fogUpdate',
-                group: activeFogGroup,
-                fogData: fogGroups[activeFogGroup].canvas.toDataURL()
-            });
-        }
-
-        // Initialize fog mode buttons
-        setFogPaintMode('brush');
-
-        // === CAMPAIGN EXPORT/IMPORT ===
-        function exportCampaign() {
-            if (!isDM) return;
-            
-            // Serialize grid cells
-            const gridData = {};
-            for (let key in gridCells) {
-                gridData[key] = gridCells[key].toDataURL();
-            }
-            
-            // Serialize fog groups
-            const fogData = {};
-            for (let group in fogGroups) {
-                fogData[group] = {
-                    name: fogGroups[group].name,
-                    canvas: fogGroups[group].canvas.toDataURL()
-                };
-            }
-            
-            const campaignData = {
-                version: '3.0',
-                name: prompt('Campaign name:', 'My Campaign') || 'Untitled Campaign',
-                sessionId: roomCode,
-                exported: new Date().toISOString(),
-                gridCells: gridData,
-                lockedCells: lockedCells,
-                fogGroups: fogData,
-                activeFogGroup: activeFogGroup,
-                stagingTokens: stagingTokens,
-                placedTokens: placedTokens,
-                zoom: zoom,
-                panX: panX,
-                panY: panY,
-                currentCellX: currentCellX,
-                currentCellY: currentCellY
-            };
-            
-            // Create downloadable file
-            const dataStr = JSON.stringify(campaignData, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${campaignData.name.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            
-            document.getElementById('exportSuccess').classList.add('show');
-            setTimeout(() => {
-                document.getElementById('exportSuccess').classList.remove('show');
-            }, 3000);
-            
-            console.log('✅ Campaign exported:', campaignData.name);
-        }
-        
-        function importCampaign(event) {
-            if (!isDM) return;
-            
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    
-                    if (!data.version || !data.gridCells) {
-                        throw new Error('Invalid campaign file format');
-                    }
-                    
-                    // Load grid cells
-                    gridCells = {};
-                    let cellsLoaded = 0;
-                    const totalCells = Object.keys(data.gridCells).length;
-                    
-                    for (let key in data.gridCells) {
-                        const img = new Image();
-                        img.onload = () => {
-                            const cellCanvas = document.createElement('canvas');
-                            cellCanvas.width = CELL_SIZE;
-                            cellCanvas.height = CELL_SIZE;
-                            const cellCtx = cellCanvas.getContext('2d');
-                            cellCtx.drawImage(img, 0, 0);
-                            gridCells[key] = cellCanvas;
-                            
-                            cellsLoaded++;
-                            if (cellsLoaded === totalCells) {
-                                draw();
-                                updateMinimap();
-                            }
-                        };
-                        img.src = data.gridCells[key];
-                    }
-                    
-                    // Load fog groups
-                    fogGroups = {};
-                    for (let group in data.fogGroups) {
-                        const fogCanvas = document.createElement('canvas');
-                        fogCanvas.width = GRID_SIZE * 3;
-                        fogCanvas.height = GRID_SIZE * 3;
-                        const fogCtx = fogCanvas.getContext('2d');
-                        
-                        const img = new Image();
-                        img.onload = () => {
-                            fogCtx.drawImage(img, 0, 0);
-                            draw();
-                        };
-                        img.src = data.fogGroups[group].canvas;
-                        
-                        fogGroups[group] = {
-                            name: data.fogGroups[group].name,
-                            canvas: fogCanvas
-                        };
-                    }
-                    
-                    // Load other data
-                    lockedCells = data.lockedCells || {};
-                    activeFogGroup = data.activeFogGroup || 'everyone';
-                    stagingTokens = data.stagingTokens || [];
-                    placedTokens = data.placedTokens || [];
-                    zoom = data.zoom || 1;
-                    panX = data.panX || 0;
-                    panY = data.panY || 0;
-                    currentCellX = data.currentCellX || 1;
-                    currentCellY = data.currentCellY || 1;
-                    
-                    // Update UI
-                    document.getElementById('zoomSlider').value = zoom * 100;
-                    document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
-                    
-                    updateGridDisplay();
-                    renderFogGroups();
-                    renderStagingTokens();
-                    draw();
-                    updateMinimap();
-                    
-                    // Broadcast to all connected players
-                    connections.forEach(({conn, approved}) => {
-                        if (approved) sendGameState(conn);
-                    });
-                    
-                    document.getElementById('importSuccess').classList.add('show');
-                    setTimeout(() => {
-                        document.getElementById('importSuccess').classList.remove('show');
-                    }, 3000);
-                    
-                    alert('✅ Campaign imported: ' + (data.name || 'Untitled'));
-                    console.log('✅ Campaign imported:', data.name);
-                    
-                } catch (err) {
-                    console.error('Import error:', err);
-                    document.getElementById('importError').textContent = 'Import failed: ' + err.message;
-                    document.getElementById('importError').classList.add('show');
-                    setTimeout(() => {
-                        document.getElementById('importError').classList.remove('show');
-                    }, 5000);
-                }
-            };
-            reader.readAsText(file);
-            
-            // Reset file input
-            event.target.value = '';
-        }
-        
-        function saveCloudLink() {
-            if (!isDM) return;
-            
-            const link = document.getElementById('cloudLink').value.trim();
-            if (!link) {
-                alert('Please enter a cloud link first');
-                return;
-            }
-            
-            // Save to session storage
-            const key = 'fracturedSky_cloudLink_' + roomCode;
-            localStorage.setItem(key, link);
-            
-            document.getElementById('linkSuccess').classList.add('show');
-            setTimeout(() => {
-                document.getElementById('linkSuccess').classList.remove('show');
-            }, 3000);
-            
-            console.log('✅ Cloud link saved for session:', roomCode);
-        }
-        
-        function openCloudLink() {
-            const link = document.getElementById('cloudLink').value.trim();
-            if (!link) {
-                // Try to load saved link
-                const key = 'fracturedSky_cloudLink_' + roomCode;
-                const saved = localStorage.getItem(key);
-                if (saved) {
-                    window.open(saved, '_blank');
-                } else {
-                    alert('No cloud link saved. Paste a link first.');
-                }
-            } else {
-                window.open(link, '_blank');
-            }
-        }
-        
-        // Load saved cloud link on DM connect
-        function loadSavedCloudLink() {
-            if (isDM && roomCode) {
-                const key = 'fracturedSky_cloudLink_' + roomCode;
-                const saved = localStorage.getItem(key);
-                if (saved) {
-                    document.getElementById('cloudLink').value = saved;
-                }
             }
         }
 
@@ -3420,25 +2529,7 @@
             document.getElementById('dmPanel').classList.toggle('open');
         }
 
-        // Global error handler
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            console.error('🚨 JavaScript Error:', msg);
-            console.error('Line:', lineNo, 'Column:', columnNo);
-            console.error('Error object:', error);
-            return false;
-        };
-
-        // Wrap init in try-catch
-        try {
-            console.log('Calling init()...');
-            init();
-            console.log('✅ Init complete, functions should be available');
-            console.log('showDMLogin type:', typeof showDMLogin);
-            console.log('showPlayerLogin type:', typeof showPlayerLogin);
-        } catch (err) {
-            console.error('❌ Init failed:', err);
-            alert('Error loading VTT: ' + err.message);
-        }
+        init();
     </script>
 </body>
 </html>
