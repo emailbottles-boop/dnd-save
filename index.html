@@ -1056,8 +1056,24 @@
                 <div class="modal-title">Create Token</div>
             </div>
             <div class="form-group">
-                <label>TOKEN EMOJI</label>
-                <input type="text" id="tokenEmoji" placeholder="⚔️" maxlength="2">
+                <label>TOKEN TYPE</label>
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                    <button class="btn btn-primary" onclick="setTokenType('emoji')" id="emojiTokenBtn" style="flex: 1;">Emoji</button>
+                    <button class="btn" onclick="setTokenType('image')" id="imageTokenBtn" style="flex: 1;">Image</button>
+                </div>
+            </div>
+            <div id="emojiTokenInputs">
+                <div class="form-group">
+                    <label>TOKEN EMOJI</label>
+                    <input type="text" id="tokenEmoji" placeholder="⚔️" maxlength="2">
+                </div>
+            </div>
+            <div id="imageTokenInputs" style="display: none;">
+                <div class="form-group">
+                    <label>TOKEN IMAGE</label>
+                    <input type="file" id="tokenImageFile" accept="image/*" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text);">
+                    <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-dim);">Upload PNG, JPG, or GIF (will be resized to 60x60)</div>
+                </div>
             </div>
             <div class="form-group">
                 <label>TOKEN COLOR</label>
@@ -1231,20 +1247,39 @@
 
                     <div class="tool-grid">
                         <div class="tool-btn active" onclick="setTool('brush')" id="brushBtn">🖌️<br>Brush</div>
+                        <div class="tool-btn" onclick="setTool('fill')" id="fillBtn">🪣<br>Fill</div>
                         <div class="tool-btn" onclick="setTool('eraser')" id="eraserBtn">🧹<br>Erase</div>
-                        <div class="tool-btn" onclick="setTool('texture')" id="textureBtn">🎨<br>Texture</div>
-                        <div class="tool-btn" onclick="setTool('image')" id="imageBtn">🖼️<br>Image</div>
+                        <div class="tool-btn" onclick="setTool('stamp')" id="stampBtn">🏰<br>Stamp</div>
                     </div>
 
                     <div class="asset-indicator">
                         Active: <span class="current-asset" id="currentAsset">Brush</span>
                     </div>
 
+                    <!-- STAMP LIBRARY -->
+                    <div id="stampLibrary" style="display: none; margin: 0.75rem 0;">
+                        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Select Stamp:</div>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+                            <div class="tool-btn" onclick="setStamp('🌲')">🌲</div>
+                            <div class="tool-btn" onclick="setStamp('🏰')">🏰</div>
+                            <div class="tool-btn" onclick="setStamp('⛰️')">⛰️</div>
+                            <div class="tool-btn" onclick="setStamp('🏔️')">🏔️</div>
+                            <div class="tool-btn" onclick="setStamp('🏛️')">🏛️</div>
+                            <div class="tool-btn" onclick="setStamp('🗿')">🗿</div>
+                            <div class="tool-btn" onclick="setStamp('⛺')">⛺</div>
+                            <div class="tool-btn" onclick="setStamp('🏚️')">🏚️</div>
+                            <div class="tool-btn" onclick="setStamp('🌳')">🌳</div>
+                            <div class="tool-btn" onclick="setStamp('🌴')">🌴</div>
+                            <div class="tool-btn" onclick="setStamp('🌊')">🌊</div>
+                            <div class="tool-btn" onclick="setStamp('🔥')">🔥</div>
+                        </div>
+                    </div>
+
                     <!-- ERASER MODE TOGGLE -->
                     <div id="eraserOptions" style="display: none; margin: 0.75rem 0; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px;">
                         <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Eraser Mode:</div>
                         <div style="display: flex; gap: 0.5rem;">
-                            <button class="btn btn-small" onclick="setEraserMode('content')" id="eraseContentBtn" style="flex: 1;">Content Only</button>
+                            <button class="btn btn-small btn-primary" onclick="setEraserMode('content')" id="eraseContentBtn" style="flex: 1;">Content Only</button>
                             <button class="btn btn-small" onclick="setEraserMode('all')" id="eraseAllBtn" style="flex: 1;">Everything</button>
                         </div>
                         <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem;" id="eraserModeDesc">
@@ -1254,7 +1289,7 @@
 
                     <div class="control-row">
                         <label>Color:</label>
-                        <input type="color" id="colorPicker" value="#4a7c59">
+                        <input type="color" id="colorPicker" value="#4a7c59" onchange="updateColor(this.value)">
                     </div>
                     <div class="control-row">
                         <label>Size:</label>
@@ -1265,6 +1300,8 @@
                     <canvas id="mapCanvas" width="400" height="400"></canvas>
 
                     <div class="btn-group">
+                        <input type="file" id="mapImport" accept="image/*" style="display: none;" onchange="importMapImage(event)">
+                        <button class="btn" onclick="document.getElementById('mapImport').click()">📥 Import</button>
                         <button class="btn btn-primary" onclick="submitCell()">✓ Submit</button>
                         <button class="btn" onclick="clearMapCanvas()">Clear</button>
                     </div>
@@ -1390,6 +1427,9 @@
         let currentAsset = 'Brush';
         let lastToolBeforeEraser = 'brush'; // Track tool before eraser
         let eraserMode = 'content'; // 'content' or 'all'
+        let currentStamp = '🏰';
+        let tokenType = 'emoji'; // 'emoji' or 'image'
+        let tokenImageData = null;
         
         // History tracking
         let history = [];
@@ -2032,62 +2072,108 @@
         // === TOKENS ===
         function showTokenModal() {
             document.getElementById('tokenRequestModal').classList.add('active');
+            setTokenType('emoji'); // Default to emoji
         }
 
         function closeTokenModal() {
             document.getElementById('tokenRequestModal').classList.remove('active');
+            tokenImageData = null;
+        }
+
+        function setTokenType(type) {
+            tokenType = type;
+            
+            document.getElementById('emojiTokenBtn').classList.remove('btn-primary');
+            document.getElementById('imageTokenBtn').classList.remove('btn-primary');
+            
+            if (type === 'emoji') {
+                document.getElementById('emojiTokenBtn').classList.add('btn-primary');
+                document.getElementById('emojiTokenInputs').style.display = 'block';
+                document.getElementById('imageTokenInputs').style.display = 'none';
+            } else {
+                document.getElementById('imageTokenBtn').classList.add('btn-primary');
+                document.getElementById('emojiTokenInputs').style.display = 'none';
+                document.getElementById('imageTokenInputs').style.display = 'block';
+            }
         }
 
         function createToken() {
-            const emoji = document.getElementById('tokenEmoji').value || '⚔️';
             const color = document.getElementById('tokenColor').value;
             
-            if (isDM) {
-                const token = {
-                    id: Date.now(),
-                    icon: emoji,
-                    color: color,
-                    owner: 'DM',
-                    approved: true
-                };
+            if (tokenType === 'emoji') {
+                const emoji = document.getElementById('tokenEmoji').value || '⚔️';
                 
-                stagingTokens.push(token);
-                renderStagingTokens();
-                closeTokenModal();
-                
-                broadcast({
-                    type: 'tokenUpdate',
-                    tokens: [...stagingTokens, ...placedTokens]
-                });
+                if (isDM) {
+                    const token = {
+                        id: Date.now(),
+                        type: 'emoji',
+                        icon: emoji,
+                        color: color,
+                        owner: 'DM',
+                        approved: true
+                    };
+                    
+                    stagingTokens.push(token);
+                    renderStagingTokens();
+                    closeTokenModal();
+                    
+                    broadcast({
+                        type: 'tokenUpdate',
+                        tokens: [...stagingTokens, ...placedTokens]
+                    });
+                }
             } else {
-                // Player requests token
-                connections.forEach(({ conn, role }) => {
-                    if (role === 'dm') {
-                        sendToPeer(conn, {
-                            type: 'tokenRequest',
-                            playerName: myName,
-                            tokenData: {
-                                id: Date.now(),
-                                icon: emoji,
-                                color: color
-                            }
+                // Image token
+                const file = document.getElementById('tokenImageFile').files[0];
+                if (!file) {
+                    alert('Please select an image file');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (isDM) {
+                        const token = {
+                            id: Date.now(),
+                            type: 'image',
+                            imageData: e.target.result,
+                            color: color,
+                            owner: 'DM',
+                            approved: true
+                        };
+                        
+                        stagingTokens.push(token);
+                        renderStagingTokens();
+                        closeTokenModal();
+                        
+                        broadcast({
+                            type: 'tokenUpdate',
+                            tokens: [...stagingTokens, ...placedTokens]
                         });
                     }
-                });
-                
-                closeTokenModal();
-                alert('Token request sent to DM for approval!');
+                };
+                reader.readAsDataURL(file);
             }
         }
 
         function renderStagingTokens() {
             const container = document.getElementById('stagingTokens');
-            container.innerHTML = stagingTokens.map(t => `
-                <div class="token-item" draggable="true" ondragstart="dragTokenStart(event, ${t.id})" style="background: ${t.color};">
-                    ${t.icon}
-                    <div class="token-owner">${t.owner}</div>
-                </div>
-            `).join('');
+            container.innerHTML = stagingTokens.map(t => {
+                if (t.type === 'image') {
+                    return `
+                        <div class="token-item" draggable="true" ondragstart="dragTokenStart(event, ${t.id})" style="background: ${t.color}; background-image: url('${t.imageData}'); background-size: cover; background-position: center;">
+                            <div class="token-owner">${t.owner}</div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="token-item" draggable="true" ondragstart="dragTokenStart(event, ${t.id})" style="background: ${t.color};">
+                            ${t.icon}
+                            <div class="token-owner">${t.owner}</div>
+                        </div>
+                    `;
+                }
+            }).join('');
             
             if (stagingTokens.length > 0) {
                 document.getElementById('stagingZone').style.display = 'flex';
@@ -2169,11 +2255,25 @@
                 ctx.strokeStyle = '#fbbf24';
                 ctx.lineWidth = 3;
                 ctx.stroke();
-                ctx.fillStyle = '#fff';
-                ctx.font = '32px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(t.icon, t.x, t.y);
+                
+                if (t.type === 'image' && t.imageData) {
+                    // Draw image token
+                    const img = new Image();
+                    img.src = t.imageData;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, 28, 0, Math.PI * 2);
+                    ctx.clip();
+                    ctx.drawImage(img, t.x - 28, t.y - 28, 56, 56);
+                    ctx.restore();
+                } else {
+                    // Draw emoji token
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '32px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(t.icon || '⚔️', t.x, t.y);
+                }
             });
 
             ctx.restore();
@@ -2233,22 +2333,56 @@
                 document.getElementById('eraserOptions').style.display = 'none';
             }
             
+            // Show/hide stamp library
+            if (t === 'stamp') {
+                document.getElementById('stampLibrary').style.display = 'block';
+            } else {
+                document.getElementById('stampLibrary').style.display = 'none';
+            }
+            
             tool = t;
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(t + 'Btn').classList.add('active');
+            const toolBtn = document.getElementById(t + 'Btn');
+            if (toolBtn) toolBtn.classList.add('active');
             
             const assetNames = {
                 brush: 'Brush',
+                fill: 'Fill',
+                stamp: 'Stamp: ' + currentStamp,
                 eraser: eraserMode === 'content' ? 
                        (lastToolBeforeEraser === 'brush' ? 'Brush Strokes' : 
-                        lastToolBeforeEraser === 'texture' ? 'Textures' : 
-                        lastToolBeforeEraser === 'image' ? 'Images' : 'Content') :
-                       'Everything',
-                texture: 'Texture',
-                image: 'Image'
+                        lastToolBeforeEraser === 'fill' ? 'Fill Areas' :
+                        lastToolBeforeEraser === 'stamp' ? 'Stamps' : 'Content') :
+                       'Everything'
             };
             currentAsset = assetNames[t] || t;
             document.getElementById('currentAsset').textContent = currentAsset;
+        }
+
+        function setStamp(emoji) {
+            currentStamp = emoji;
+            currentAsset = 'Stamp: ' + emoji;
+            document.getElementById('currentAsset').textContent = currentAsset;
+        }
+
+        function updateColor(value) {
+            color = value;
+        }
+
+        function importMapImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    mapCtx.drawImage(img, 0, 0, mapCanvas.width, mapCanvas.height);
+                    saveHistory();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
         function setEraserMode(mode) {
@@ -2373,6 +2507,18 @@
                 mapCtx.lineWidth = size;
                 mapCtx.lineCap = 'round';
                 mapCtx.lineJoin = 'round';
+            } else if (tool === 'fill') {
+                mapCtx.fillStyle = color;
+                mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+                saveHistory();
+                isDrawing = false;
+            } else if (tool === 'stamp') {
+                mapCtx.font = '48px Arial';
+                mapCtx.textAlign = 'center';
+                mapCtx.textBaseline = 'middle';
+                mapCtx.fillText(currentStamp, x, y);
+                saveHistory();
+                isDrawing = false;
             } else if (tool === 'eraser') {
                 mapCtx.save();
                 
