@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>The Fractured Sky - Ultimate VTT v3.0</title>
+    <title>The Fractured Sky VTT v4.0 - FINAL BUILD</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
@@ -984,13 +984,13 @@
     <div class="welcome-screen" id="welcomeScreen">
         <div class="welcome-content">
             <div class="welcome-title">⚔️ THE FRACTURED SKY</div>
-            <div class="welcome-subtitle">Ultimate Virtual Tabletop v3.0</div>
+            <div class="welcome-subtitle">Ultimate Virtual Tabletop v4.0 FINAL</div>
             <div class="welcome-buttons">
                 <button class="welcome-btn welcome-btn-primary" onclick="showDMLogin()">🎭 Create Room (DM)</button>
                 <button class="welcome-btn welcome-btn-secondary" onclick="showPlayerLogin()">👤 Join Room (Player)</button>
             </div>
             <p style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-size: 0.75rem; color: var(--text-dim);">
-                Build: 1770456189 • Click a button to test
+                v4.0 Final Build • Click a button above
             </p>
         </div>
     </div>
@@ -1514,10 +1514,11 @@
 
     <script>
         console.clear();
-        console.log('%c🎮 THE FRACTURED SKY - Ultimate VTT v3.0', 'font-size: 20px; font-weight: bold; color: #8b5cf6;');
-        console.log('%cBuild: 1770456189', 'font-size: 14px; color: #fbbf24;');
-        console.log('%cScript started at:', 'font-weight: bold;', new Date().toLocaleTimeString());
-        console.log('%c✓ JavaScript is loading...', 'color: #10b981;');
+        console.log('%c🎮 THE FRACTURED SKY VTT v4.0 FINAL', 'font-size: 24px; font-weight: bold; color: #8b5cf6; background: #1a1f2e; padding: 10px;');
+        console.log('%c✅ JavaScript Loading...', 'font-size: 16px; color: #10b981;');
+        console.log('%cBuild: 1770523324', 'font-size: 14px; color: #fbbf24;');
+        console.log('%cTime:', 'font-weight: bold;', new Date().toLocaleTimeString());
+        console.log('%c--- If you see this, JavaScript is working! ---', 'color: #10b981; font-weight: bold;');
 
         // === CORE STATE ===
         let peer = null;
