@@ -1470,9 +1470,24 @@
     </div>
 
     <!-- PLAYER PANEL (Bottom Right) -->
-    <div id="playerPanel" style="display: none; position: fixed; bottom: 20px; right: 20px; background: var(--bg-card); border: 2px solid var(--border); border-radius: 12px; padding: 1rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 600;">
+    <div id="playerPanel" style="display: none; position: fixed; bottom: 20px; right: 20px; background: var(--bg-card); border: 2px solid var(--border); border-radius: 12px; padding: 1rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 600; min-width: 200px;">
         <div style="font-size: 0.9rem; color: var(--gold); font-weight: 600; margin-bottom: 0.75rem;">👤 Player Actions</div>
-        <button class="btn btn-primary" onclick="showPlayerTokenModal()" style="width: 100%;">+ Create My Token</button>
+        <button class="btn btn-primary" onclick="showPlayerTokenModal()" style="width: 100%; margin-bottom: 0.75rem;">+ Create My Token</button>
+        
+        <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">
+            <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">My Token Size:</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <button class="btn btn-small" onclick="adjustPlayerTokenSize(-5)" style="flex: 0;">−</button>
+                <input type="range" class="slider" id="playerTokenSize" min="15" max="50" value="25" oninput="updatePlayerTokenSize(this.value)" style="flex: 1;">
+                <button class="btn btn-small" onclick="adjustPlayerTokenSize(5)" style="flex: 0;">+</button>
+            </div>
+            <div style="text-align: center; font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+                Size: <span id="playerTokenSizeValue">25</span>px
+            </div>
+            <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 0.5rem; text-align: center;">
+                💡 Adjusts size of your tokens only
+            </div>
+        </div>
     </div>
 
     <!-- PLAYER TOKEN MODAL -->
@@ -1949,7 +1964,22 @@
                     break;
                     
                 case 'tokenUpdate':
-                    placedTokens = data.tokens;
+                    // Separate staging and placed tokens
+                    stagingTokens = [];
+                    placedTokens = [];
+                    
+                    data.tokens.forEach(token => {
+                        if (token.x !== undefined && token.y !== undefined) {
+                            // Has position = placed token
+                            placedTokens.push(token);
+                        } else {
+                            // No position = staging token
+                            stagingTokens.push(token);
+                        }
+                    });
+                    
+                    console.log('🎲 Token update:', stagingTokens.length, 'staging,', placedTokens.length, 'placed');
+                    renderStagingTokens();
                     draw();
                     break;
                     
@@ -2122,6 +2152,18 @@
                 fogData[group] = fogGroups[group].canvas.toDataURL();
             }
             
+            // Serialize placed images
+            const imagesData = placedImages.map(pi => ({
+                src: pi.img.src,
+                x: pi.x,
+                y: pi.y,
+                width: pi.width,
+                height: pi.height,
+                rotation: pi.rotation,
+                gridX: pi.gridX,
+                gridY: pi.gridY
+            }));
+            
             sendToPeer(conn, {
                 type: 'gameState',
                 state: {
@@ -2129,11 +2171,14 @@
                     lockedCells,
                     fogGroups: fogData,
                     tokens: [...stagingTokens, ...placedTokens],
+                    placedImages: imagesData,
                     zoom,
                     panX,
                     panY
                 }
             });
+            
+            console.log('📤 Sent game state:', stagingTokens.length + placedTokens.length, 'tokens,', imagesData.length, 'images');
         }
 
         function requestGameState(conn) {
@@ -2141,6 +2186,8 @@
         }
 
         function loadGameState(state) {
+            console.log('📥 Loading game state...');
+            
             // Load grid
             gridCells = {};
             for (let key in state.gridCells) {
@@ -2172,6 +2219,48 @@
                     draw();
                 };
                 img.src = state.fogGroups[group];
+            }
+            
+            // Load tokens (IMPORTANT!)
+            if (state.tokens) {
+                stagingTokens = [];
+                placedTokens = [];
+                
+                state.tokens.forEach(token => {
+                    // Separate staging vs placed tokens
+                    if (token.x !== undefined && token.y !== undefined) {
+                        // It's a placed token
+                        placedTokens.push(token);
+                    } else {
+                        // It's a staging token
+                        stagingTokens.push(token);
+                    }
+                });
+                
+                console.log('✅ Loaded tokens:', stagingTokens.length, 'staging,', placedTokens.length, 'placed');
+                renderStagingTokens();
+            }
+            
+            // Load placed images if present
+            if (state.placedImages) {
+                placedImages = [];
+                state.placedImages.forEach(imgData => {
+                    const img = new Image();
+                    img.onload = () => {
+                        placedImages.push({
+                            img: img,
+                            x: imgData.x,
+                            y: imgData.y,
+                            width: imgData.width,
+                            height: imgData.height,
+                            rotation: imgData.rotation,
+                            gridX: imgData.gridX,
+                            gridY: imgData.gridY
+                        });
+                        draw();
+                    };
+                    img.src = imgData.src;
+                });
             }
             
             lockedCells = state.lockedCells || {};
@@ -2370,6 +2459,7 @@
                         type: 'emoji',
                         icon: emoji,
                         color: color,
+                        size: 25, // Default size (fits grid)
                         owner: 'DM',
                         approved: true
                     };
@@ -2399,6 +2489,7 @@
                             type: 'image',
                             imageData: e.target.result,
                             color: color,
+                            size: 25, // Default size (fits grid)
                             owner: 'DM',
                             approved: true
                         };
@@ -2544,12 +2635,16 @@
 
             // Placed tokens
             placedTokens.forEach(t => {
+                const tokenSize = t.size || 25; // Default to 25px (fits in grid)
+                const borderWidth = Math.max(2, tokenSize / 12); // Proportional border
+                const fontSize = Math.max(16, tokenSize * 1.3); // Proportional font
+                
                 ctx.fillStyle = t.color;
                 ctx.beginPath();
-                ctx.arc(t.x, t.y, 30, 0, Math.PI * 2);
+                ctx.arc(t.x, t.y, tokenSize, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.strokeStyle = '#fbbf24';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = borderWidth;
                 ctx.stroke();
                 
                 if (t.type === 'image' && t.imageData) {
@@ -2558,14 +2653,15 @@
                     img.src = t.imageData;
                     ctx.save();
                     ctx.beginPath();
-                    ctx.arc(t.x, t.y, 28, 0, Math.PI * 2);
+                    ctx.arc(t.x, t.y, tokenSize - 2, 0, Math.PI * 2);
                     ctx.clip();
-                    ctx.drawImage(img, t.x - 28, t.y - 28, 56, 56);
+                    const imgSize = (tokenSize - 2) * 2;
+                    ctx.drawImage(img, t.x - (tokenSize - 2), t.y - (tokenSize - 2), imgSize, imgSize);
                     ctx.restore();
                 } else {
                     // Draw emoji token
                     ctx.fillStyle = '#fff';
-                    ctx.font = '32px Arial';
+                    ctx.font = `${fontSize}px Arial`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(t.icon || '⚔️', t.x, t.y);
@@ -2777,7 +2873,8 @@
                                 id: Date.now(),
                                 type: 'emoji',
                                 icon: emoji,
-                                color: color
+                                color: color,
+                                size: 25 // Default size
                             }
                         });
                     }
@@ -2804,7 +2901,8 @@
                                     id: Date.now(),
                                     type: 'image',
                                     imageData: e.target.result,
-                                    color: color
+                                    color: color,
+                                    size: 25 // Default size
                                 }
                             });
                         }
@@ -3113,8 +3211,9 @@
             if (!fogMode && tool !== 'select') {
                 for (let i = placedTokens.length - 1; i >= 0; i--) {
                     const token = placedTokens[i];
+                    const tokenSize = token.size || 25;
                     const dist = Math.hypot(mx - token.x, my - token.y);
-                    if (dist < 30) {
+                    if (dist < tokenSize) {
                         // Check permissions: DM can move any token, players can only move their own
                         if (isDM || token.owner === myName) {
                             draggedPlacedToken = token;
@@ -3826,6 +3925,37 @@
         // Save player state periodically
         setInterval(savePlayerState, 60000); // Every minute
 
+        // === PLAYER TOKEN SIZE ===
+        function updatePlayerTokenSize(value) {
+            const size = parseInt(value);
+            document.getElementById('playerTokenSizeValue').textContent = size;
+            
+            // Update all tokens owned by this player
+            let updated = false;
+            placedTokens.forEach(token => {
+                if (token.owner === myName) {
+                    token.size = size;
+                    updated = true;
+                }
+            });
+            
+            if (updated) {
+                draw();
+                // Broadcast token update
+                broadcast({
+                    type: 'tokenUpdate',
+                    tokens: [...stagingTokens, ...placedTokens]
+                });
+            }
+        }
+
+        function adjustPlayerTokenSize(delta) {
+            const slider = document.getElementById('playerTokenSize');
+            const newValue = Math.max(15, Math.min(50, parseInt(slider.value) + delta));
+            slider.value = newValue;
+            updatePlayerTokenSize(newValue);
+        }
+
         // === MINIMAP ===
         function updateMinimap() {
             const grid = document.getElementById('minimapGrid');
@@ -3942,4 +4072,3 @@
     </script>
 </body>
 </html>
-
