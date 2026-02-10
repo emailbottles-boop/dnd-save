@@ -1585,6 +1585,7 @@
         let fogRectStart = null;
         let isFogDrawing = false;
         let dmFogOpacity = 0.3; // DM sees through fog
+        let fogBroadcastTimeout = null; // For throttling broadcasts
 
         // Player requests
         let pendingRequests = [];
@@ -1611,7 +1612,7 @@
             fogCanvas.width = GRID_SIZE * 3;
             fogCanvas.height = GRID_SIZE * 3;
             const fogCtx = fogCanvas.getContext('2d');
-            fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+            fogCtx.fillStyle = 'rgba(0,0,0,1)'; // Full opacity black fog
             fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
             fogGroups[group].canvas = fogCanvas;
         }
@@ -1894,6 +1895,23 @@
                     requestGameState(conn);
                     // Show player panel
                     document.getElementById('playerPanel').style.display = 'block';
+                    
+                    // Auto-restore player state from localStorage
+                    const playerStateKey = 'fracturedSky_player_' + roomCode + '_' + myName;
+                    const savedState = localStorage.getItem(playerStateKey);
+                    if (savedState) {
+                        try {
+                            const state = JSON.parse(savedState);
+                            console.log('✅ Restored player state for:', myName);
+                            console.log('Last session:', new Date(state.lastSeen).toLocaleString());
+                            // Player tokens are managed by DM, so we just log the restore
+                        } catch (err) {
+                            console.error('Failed to restore player state:', err);
+                        }
+                    }
+                    
+                    // Save current player state
+                    savePlayerState();
                     break;
                     
                 case 'playerRejected':
@@ -2182,6 +2200,7 @@
         }
 
         function updateFogFromNetwork(data) {
+            console.log('🌫️ Received fog update for group:', data.group);
             if (fogGroups[data.group]) {
                 const img = new Image();
                 img.onload = () => {
@@ -2189,8 +2208,14 @@
                     ctx.clearRect(0, 0, fogGroups[data.group].canvas.width, fogGroups[data.group].canvas.height);
                     ctx.drawImage(img, 0, 0);
                     draw();
+                    console.log('✅ Fog updated on canvas');
+                };
+                img.onerror = () => {
+                    console.error('❌ Failed to load fog image');
                 };
                 img.src = data.fogData;
+            } else {
+                console.warn('⚠️ Fog group not found:', data.group);
             }
         }
 
@@ -3304,7 +3329,7 @@
             fogCanvas.width = GRID_SIZE * 3;
             fogCanvas.height = GRID_SIZE * 3;
             const fogCtx = fogCanvas.getContext('2d');
-            fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+            fogCtx.fillStyle = 'rgba(0,0,0,1)'; // Full opacity black fog
             fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
             
             fogGroups[id] = { name, canvas: fogCanvas };
@@ -3407,7 +3432,7 @@
             } else {
                 // Add fog (hide map)
                 fogCtx.globalCompositeOperation = 'source-over';
-                fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+                fogCtx.fillStyle = 'rgba(0,0,0,1)'; // Changed to full opacity
             }
             
             fogCtx.beginPath();
@@ -3416,6 +3441,9 @@
             fogCtx.restore();
             
             draw();
+            
+            // Broadcast fog update in real-time (every brush stroke)
+            broadcastFog();
         }
 
         function paintFogRect(x1, y1, x2, y2) {
@@ -3431,7 +3459,7 @@
                 fogCtx.fillStyle = 'rgba(0,0,0,1)';
             } else {
                 fogCtx.globalCompositeOperation = 'source-over';
-                fogCtx.fillStyle = 'rgba(0,0,0,0.9)';
+                fogCtx.fillStyle = 'rgba(0,0,0,1)'; // Changed to full opacity
             }
             
             const width = x2 - x1;
@@ -3441,11 +3469,31 @@
             
             draw();
             
-            broadcast({
-                type: 'fogUpdate',
-                group: activeFogGroup,
-                fogData: fogGroups[activeFogGroup].canvas.toDataURL()
-            });
+            // Broadcast fog update
+            broadcastFog();
+        }
+
+        function broadcastFog() {
+            if (!isDM) return;
+            
+            // Clear any pending broadcast
+            if (fogBroadcastTimeout) {
+                clearTimeout(fogBroadcastTimeout);
+            }
+            
+            // Throttle broadcasts to every 100ms for smooth real-time updates
+            fogBroadcastTimeout = setTimeout(() => {
+                const fogData = fogGroups[activeFogGroup].canvas.toDataURL();
+                console.log('📡 Broadcasting fog update, size:', fogData.length, 'bytes');
+                
+                broadcast({
+                    type: 'fogUpdate',
+                    group: activeFogGroup,
+                    fogData: fogData
+                });
+                
+                fogBroadcastTimeout = null;
+            }, 100);
         }
 
         // Initialize fog mode buttons
@@ -3470,8 +3518,28 @@
                 };
             }
             
+            // Serialize placed images
+            const imagesData = placedImages.map(pi => ({
+                src: pi.img.src,
+                x: pi.x,
+                y: pi.y,
+                width: pi.width,
+                height: pi.height,
+                rotation: pi.rotation,
+                gridX: pi.gridX,
+                gridY: pi.gridY
+            }));
+            
+            // Get player data
+            const playerData = [];
+            connections.forEach(({ name, role, approved }, peerId) => {
+                if (approved) {
+                    playerData.push({ name, role, peerId });
+                }
+            });
+            
             const campaignData = {
-                version: '3.0',
+                version: '4.0',
                 name: prompt('Campaign name:', 'My Campaign') || 'Untitled Campaign',
                 sessionId: roomCode,
                 exported: new Date().toISOString(),
@@ -3481,11 +3549,14 @@
                 activeFogGroup: activeFogGroup,
                 stagingTokens: stagingTokens,
                 placedTokens: placedTokens,
+                placedImages: imagesData,
+                playerData: playerData,
                 zoom: zoom,
                 panX: panX,
                 panY: panY,
                 currentCellX: currentCellX,
-                currentCellY: currentCellY
+                currentCellY: currentCellY,
+                gridSnapEnabled: gridSnapEnabled
             };
             
             // Create downloadable file
@@ -3507,6 +3578,7 @@
             }, 3000);
             
             console.log('✅ Campaign exported:', campaignData.name);
+            console.log('Includes:', playerData.length, 'players,', stagingTokens.length + placedTokens.length, 'tokens');
         }
         
         function importCampaign(event) {
@@ -3560,6 +3632,8 @@
                         img.onload = () => {
                             fogCtx.drawImage(img, 0, 0);
                             draw();
+                            // Broadcast fog to all players
+                            broadcastFog();
                         };
                         img.src = data.fogGroups[group].canvas;
                         
@@ -3567,6 +3641,29 @@
                             name: data.fogGroups[group].name,
                             canvas: fogCanvas
                         };
+                    }
+                    
+                    // Load placed images
+                    if (data.placedImages) {
+                        placedImages = [];
+                        data.placedImages.forEach(imgData => {
+                            const img = new Image();
+                            img.onload = () => {
+                                placedImages.push({
+                                    img: img,
+                                    x: imgData.x,
+                                    y: imgData.y,
+                                    width: imgData.width,
+                                    height: imgData.height,
+                                    rotation: imgData.rotation,
+                                    gridX: imgData.gridX,
+                                    gridY: imgData.gridY
+                                });
+                                draw();
+                                broadcastImages();
+                            };
+                            img.src = imgData.src;
+                        });
                     }
                     
                     // Load other data
@@ -3579,6 +3676,7 @@
                     panY = data.panY || 0;
                     currentCellX = data.currentCellX || 1;
                     currentCellY = data.currentCellY || 1;
+                    gridSnapEnabled = data.gridSnapEnabled !== undefined ? data.gridSnapEnabled : true;
                     
                     // Update UI
                     document.getElementById('zoomSlider').value = zoom * 100;
@@ -3590,7 +3688,7 @@
                     draw();
                     updateMinimap();
                     
-                    // Broadcast to all connected players
+                    // Broadcast complete state to all connected players
                     connections.forEach(({conn, approved}) => {
                         if (approved) sendGameState(conn);
                     });
@@ -3600,8 +3698,12 @@
                         document.getElementById('importSuccess').classList.remove('show');
                     }, 3000);
                     
-                    alert('✅ Campaign imported: ' + (data.name || 'Untitled'));
+                    const playerCount = data.playerData ? data.playerData.length : 0;
+                    const tokenCount = stagingTokens.length + placedTokens.length;
+                    alert('✅ Campaign imported: ' + (data.name || 'Untitled') + '\n' + 
+                          playerCount + ' players, ' + tokenCount + ' tokens loaded');
                     console.log('✅ Campaign imported:', data.name);
+                    console.log('Loaded:', playerCount, 'players,', tokenCount, 'tokens');
                     
                 } catch (err) {
                     console.error('Import error:', err);
@@ -3665,6 +3767,23 @@
                 }
             }
         }
+
+        function savePlayerState() {
+            if (!myName || !roomCode) return;
+            
+            const playerStateKey = 'fracturedSky_player_' + roomCode + '_' + myName;
+            const state = {
+                name: myName,
+                roomCode: roomCode,
+                lastSeen: Date.now(),
+                isDM: isDM
+            };
+            
+            localStorage.setItem(playerStateKey, JSON.stringify(state));
+        }
+
+        // Save player state periodically
+        setInterval(savePlayerState, 60000); // Every minute
 
         // === MINIMAP ===
         function updateMinimap() {
@@ -3782,4 +3901,3 @@
     </script>
 </body>
 </html>
-
