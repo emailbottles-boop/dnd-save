@@ -1469,23 +1469,33 @@
         </div>
     </div>
 
-    <!-- PLAYER PANEL (Bottom Right) -->
-    <div id="playerPanel" style="display: none; position: fixed; bottom: 20px; right: 20px; background: var(--bg-card); border: 2px solid var(--border); border-radius: 12px; padding: 1rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 600; min-width: 200px;">
-        <div style="font-size: 0.9rem; color: var(--gold); font-weight: 600; margin-bottom: 0.75rem;">👤 Player Actions</div>
-        <button class="btn btn-primary" onclick="showPlayerTokenModal()" style="width: 100%; margin-bottom: 0.75rem;">+ Create My Token</button>
-        
-        <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">
-            <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">My Token Size:</div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <button class="btn btn-small" onclick="adjustPlayerTokenSize(-2)" style="flex: 0;">−</button>
-                <input type="range" class="slider" id="playerTokenSize" min="8" max="30" value="12" oninput="updatePlayerTokenSize(this.value)" style="flex: 1;">
-                <button class="btn btn-small" onclick="adjustPlayerTokenSize(2)" style="flex: 0;">+</button>
+    <!-- PLAYER PANEL (Dockable) -->
+    <div class="minimap-container" id="playerPanelContainer" style="display: none; right: 20px; bottom: 20px; left: auto; cursor: move;">
+        <div class="minimap" id="playerPanelDock" style="width: 240px;">
+            <div class="minimap-header">
+                <div class="minimap-title">👤 Player Actions</div>
+                <div class="minimap-controls">
+                    <div class="minimap-btn" onclick="togglePlayerPanelCollapse()" title="Collapse" id="playerCollapseBtn">−</div>
+                    <div class="minimap-btn" onclick="togglePlayerPanelDock()" title="Lock/Unlock" id="playerDockBtn">🔓</div>
+                </div>
             </div>
-            <div style="text-align: center; font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
-                Size: <span id="playerTokenSizeValue">12</span>px
-            </div>
-            <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 0.5rem; text-align: center;">
-                💡 12px fits perfectly in one grid square
+            <div class="minimap-content" id="playerPanelContent">
+                <button class="btn btn-primary" onclick="showPlayerTokenModal()" style="width: 100%; margin-bottom: 0.75rem;">+ Create My Token</button>
+                
+                <div style="padding-top: 0.75rem; border-top: 1px solid var(--border);">
+                    <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">My Token Size:</div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <button class="btn btn-small" onclick="adjustPlayerTokenSize(-2)" style="flex: 0;">−</button>
+                        <input type="range" class="slider" id="playerTokenSize" min="8" max="30" value="12" oninput="updatePlayerTokenSize(this.value)" style="flex: 1;">
+                        <button class="btn btn-small" onclick="adjustPlayerTokenSize(2)" style="flex: 0;">+</button>
+                    </div>
+                    <div style="text-align: center; font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+                        Size: <span id="playerTokenSizeValue">12</span>px
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 0.5rem; text-align: center;">
+                        💡 12px fits perfectly in one grid square
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1910,8 +1920,8 @@
                     myName = data.name;
                     updateConnectionStatus('Approved! Connected to room', true);
                     requestGameState(conn);
-                    // Show player panel
-                    document.getElementById('playerPanel').style.display = 'block';
+                    // Show player panel (dockable)
+                    document.getElementById('playerPanelContainer').style.display = 'block';
                     
                     // Auto-restore player state from localStorage
                     const playerStateKey = 'fracturedSky_player_' + roomCode + '_' + myName;
@@ -3928,6 +3938,57 @@
 
         // Save player state periodically
         setInterval(savePlayerState, 60000); // Every minute
+
+        // === PLAYER PANEL DOCKING ===
+        let playerPanelDocked = false;
+        let playerPanelDragOffset = null;
+
+        function togglePlayerPanelCollapse() {
+            document.getElementById('playerPanelDock').classList.toggle('collapsed');
+            const btn = document.getElementById('playerCollapseBtn');
+            btn.textContent = document.getElementById('playerPanelDock').classList.contains('collapsed') ? '+' : '−';
+        }
+
+        function togglePlayerPanelDock() {
+            playerPanelDocked = !playerPanelDocked;
+            const container = document.getElementById('playerPanelContainer');
+            const btn = document.getElementById('playerDockBtn');
+            
+            if (playerPanelDocked) {
+                container.style.cursor = 'default';
+                btn.textContent = '🔒';
+            } else {
+                container.style.cursor = 'move';
+                btn.textContent = '🔓';
+            }
+        }
+
+        // Player panel dragging
+        const playerPanelContainer = document.getElementById('playerPanelContainer');
+        playerPanelContainer.addEventListener('mousedown', (e) => {
+            if (playerPanelDocked) return;
+            if (e.target.closest('.minimap-btn') || e.target.closest('.btn')) return;
+            
+            playerPanelDragOffset = {
+                x: e.clientX - playerPanelContainer.offsetLeft,
+                y: e.clientY - playerPanelContainer.offsetTop
+            };
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!playerPanelDragOffset || playerPanelDocked) return;
+            
+            playerPanelContainer.style.left = (e.clientX - playerPanelDragOffset.x) + 'px';
+            playerPanelContainer.style.top = (e.clientY - playerPanelDragOffset.y) + 'px';
+            playerPanelContainer.style.right = 'auto';
+            playerPanelContainer.style.bottom = 'auto';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (playerPanelDragOffset) {
+                playerPanelDragOffset = null;
+            }
+        });
 
         // === PLAYER TOKEN SIZE ===
         function updatePlayerTokenSize(value) {
