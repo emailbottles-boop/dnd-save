@@ -102,7 +102,18 @@
         .grid-info { font-size: 0.9rem; color: var(--text-dim); margin-bottom: 0.5rem; text-align: center; }
         .grid-info .current { color: var(--accent); font-weight: 600; font-size: 1.1rem; }
         .grid-nav { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
-        #mapCanvas { width: 100%; height: 250px; border-radius: 8px; border: 1px solid var(--border); background: white; cursor: crosshair; display: block; margin: 0.5rem 0; }
+        #mapCanvas { 
+            width: 100% !important; 
+            height: 250px !important; 
+            border-radius: 8px; 
+            border: 2px solid var(--accent) !important; 
+            background: white !important; 
+            cursor: crosshair; 
+            display: block !important; 
+            margin: 0.5rem 0; 
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
         .btn-group { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
         .minimap-container { position: fixed; bottom: 20px; left: 20px; z-index: 600; cursor: move; }
         .minimap { background: var(--bg-card); border: 2px solid var(--border); border-radius: 12px; padding: 0.75rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4); width: 180px; transition: all 0.3s; }
@@ -332,12 +343,12 @@
                     </div>
 
                     <div class="tool-grid">
-                        <button class="tool-btn" id="brushBtn" onclick="setTool('brush')">🖌️ Brush</button>
-                        <button class="tool-btn" id="fillBtn" onclick="setTool('fill')">🪣 Fill</button>
-                        <button class="tool-btn" id="stampBtn" onclick="setTool('stamp')">📌 Stamp</button>
-                        <button class="tool-btn" id="eraserBtn" onclick="setTool('eraser')">🧹 Eraser</button>
-                        <button class="tool-btn" id="imageBtn" onclick="document.getElementById('imageUpload').click()">🖼️ Image</button>
-                        <button class="tool-btn" id="selectBtn" onclick="setTool('select')">👆 Select</button>
+                        <div class="tool-btn active" onclick="setTool('brush')" id="brushBtn">🖌️<br>Brush</div>
+                        <div class="tool-btn" onclick="setTool('fill')" id="fillBtn">🪣<br>Fill</div>
+                        <div class="tool-btn" onclick="setTool('stamp')" id="stampBtn">📌<br>Stamp</div>
+                        <div class="tool-btn" onclick="setTool('eraser')" id="eraserBtn">🧹<br>Eraser</div>
+                        <div class="tool-btn" onclick="document.getElementById('imageUpload').click()" id="imageBtn">🖼️<br>Image</div>
+                        <div class="tool-btn" onclick="setTool('select')" id="selectBtn">👆<br>Select</div>
                     </div>
 
                     <input type="file" id="imageUpload" accept="image/*" onchange="importImageToCanvas(event)" style="display: none;">
@@ -347,9 +358,9 @@
                         <input type="color" id="colorPicker" value="#4a7c59" onchange="updateColor(this.value)">
                     </div>
                     <div class="control-row">
-                        <label style="min-width: 50px;">Size:</label>
-                        <input type="range" class="slider" id="brushSize" min="1" max="50" value="8" oninput="setSize(this.value)" style="flex: 1; max-width: 200px;">
-                        <span id="sizeValue" style="min-width: 35px; font-size: 0.85rem; text-align: right;">8px</span>
+                        <label>Size:</label>
+                        <input type="range" class="slider" id="sizeSlider" min="1" max="30" value="8" oninput="setSize(this.value)" style="flex: 1;">
+                        <span id="sizeValue">8px</span>
                     </div>
 
                     <canvas id="mapCanvas" width="400" height="400" style="width: 100%; height: 250px; border-radius: 8px; border: 1px solid var(--border); background: white; cursor: crosshair; margin: 0.5rem 0; display: block;"></canvas>
