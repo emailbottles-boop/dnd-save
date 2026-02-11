@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        /* Keep all existing styles - truncated for space */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --bg-dark: #0a0e1a; --bg-card: #151928; --bg-hover: #1f2537;
@@ -16,16 +15,12 @@
             --success: #10b981; --danger: #ef4444;
         }
         body { font-family: 'Inter', sans-serif; background: var(--bg-dark); color: var(--text); overflow: hidden; height: 100vh; user-select: none; }
-        
-        /* Existing styles - keeping original but adding critical ones */
         .header { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; z-index: 100; }
         .title { font-family: 'Cinzel', serif; font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, var(--gold), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .btn { padding: 0.6rem 1.2rem; background: var(--bg-hover); border: 1px solid var(--border); color: var(--text); border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; font-family: 'Inter', sans-serif; }
         .btn:hover { background: var(--accent); border-color: var(--accent); transform: translateY(-1px); }
         .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-secondary)); border: none; color: white; }
         .btn-small { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
-        .btn-success { background: var(--success); border-color: var(--success); color: white; }
-        .btn-danger { background: var(--danger); border-color: var(--danger); color: white; }
         .welcome-screen { position: fixed; inset: 0; background: linear-gradient(135deg, #0a0e1a 0%, #1a1f3a 100%); display: flex; align-items: center; justify-content: center; z-index: 10000; transition: opacity 0.5s; }
         .welcome-screen.hidden { opacity: 0; pointer-events: none; }
         .welcome-content { text-align: center; padding: 3rem; }
@@ -52,7 +47,7 @@
         .main-area { flex: 1; padding: 1rem; display: flex; flex-direction: column; }
         .tabletop { flex: 1; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
         .canvas-container { flex: 1; position: relative; background: radial-gradient(circle at center, #1a1f2e 0%, var(--bg-dark) 100%); overflow: hidden; }
-        #mainCanvas { display: block; cursor: grab; }
+        #mainCanvas { display: block; cursor: grab; width: 100%; height: 100%; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -64,17 +59,17 @@
             <div class="welcome-buttons">
                 <button class="welcome-btn welcome-btn-primary" onclick="showDMLogin()">🎭 Create Room (DM)</button>
                 <button class="welcome-btn welcome-btn-secondary" onclick="showPlayerLogin()">👤 Join Room (Player)</button>
-                <button class="welcome-btn welcome-btn-secondary" id="rejoinDMBtn" style="display:none;" onclick="rejoinAsD M()">🔄 Rejoin Last Session</button>
+                <button class="welcome-btn welcome-btn-secondary" onclick="showDMRejoinModal()">🔄 Rejoin Session (DM)</button>
             </div>
             <p style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-size: 0.75rem; color: var(--text-dim);">
-                v4.0 FIXED - DM Reconnection Enabled
+                v4.0 FIXED - Session Persistence Enabled
             </p>
         </div>
     </div>
 
     <div class="modal" id="dmModal">
         <div class="modal-content">
-            <div class="modal-header" style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">🧙</div>
                 <div style="font-family: 'Cinzel', serif; font-size: 1.5rem; color: var(--gold);">Dungeon Master</div>
             </div>
@@ -94,9 +89,37 @@
         </div>
     </div>
 
+    <div class="modal" id="dmRejoinModal">
+        <div class="modal-content">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🔄</div>
+                <div style="font-family: 'Cinzel', serif; font-size: 1.5rem; color: var(--gold);">Rejoin DM Session</div>
+            </div>
+            <form onsubmit="dmRejoin(event)">
+                <div class="form-group">
+                    <label>USERNAME</label>
+                    <input type="text" id="dmRejoinUser" placeholder="Wizard" required>
+                </div>
+                <div class="form-group">
+                    <label>PASSWORD</label>
+                    <input type="password" id="dmRejoinPass" placeholder="FracturedSky2025!" required>
+                </div>
+                <div class="form-group">
+                    <label>SESSION ID (from your last session)</label>
+                    <input type="text" id="dmRejoinSessionId" placeholder="Paste your session ID here" required>
+                    <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">💡 This is the Room Code you shared with players</p>
+                </div>
+                <div class="error" id="dmRejoinError">Invalid credentials or session not found</div>
+                <div class="success" id="dmRejoinSuccess">Rejoining session...</div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">REJOIN SESSION</button>
+                <button type="button" class="btn" onclick="closeDMRejoinModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
     <div class="modal" id="playerModal">
         <div class="modal-content">
-            <div class="modal-header" style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">👤</div>
                 <div style="font-family: 'Cinzel', serif; font-size: 1.5rem; color: var(--gold);">Join as Player</div>
             </div>
@@ -120,7 +143,8 @@
     <div class="header">
         <div class="title">⚔️ THE FRACTURED SKY</div>
         <div style="display: flex; gap: 0.75rem; align-items: center;">
-            <button class="btn" id="dmControlsBtn" onclick="alert('DM Panel - Original functionality')" style="display: none;">🎭 DM Controls</button>
+            <div id="roomCodeDisplay" style="display: none; padding: 0.5rem 1rem; background: var(--bg-hover); border-radius: 8px; border: 1px solid var(--border); color: var(--gold); font-weight: 600; font-size: 0.9rem; cursor: pointer;" onclick="copyRoomCode()">Room: <span id="roomCodeText">----</span></div>
+            <button class="btn" id="dmControlsBtn" onclick="alert('DM Panel - Full functionality in complete version')" style="display: none;">🎭 DM Controls</button>
         </div>
     </div>
 
@@ -135,132 +159,33 @@
     </div>
 
     <script>
-        // CORE FIX: DM Reconnection with Session Persistence
-        let peer = null;
-        let isDM = false;
-        let myId = null;
-        let myName = null;
-        let roomCode = null;
-        let connections = new Map();
-        let gameState = {}; // Store game state
-        let sessionTimeout = null;
-        
-        const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 minutes
-        const STORAGE_KEY_PREFIX = 'fracturedSky_';
+        let peer = null, isDM = false, myId = null, myName = null, roomCode = null;
+        let connections = new Map(), gameState = {}, sessionTimeout = null;
+        const SESSION_TIMEOUT = 5 * 60 * 1000, STORAGE_KEY = 'fracturedSky_session_';
 
         function init() {
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
-            checkForLastSession();
-            console.log('✅ VTT Ready with Reconnection Support!');
+            window.addEventListener('beforeunload', () => isDM && roomCode && saveSession());
+            console.log('✅ VTT Ready!');
         }
 
         function resizeCanvas() {
-            const container = document.querySelector('.canvas-container');
-            const canvas = document.getElementById('mainCanvas');
+            const canvas = document.getElementById('mainCanvas'), container = canvas.parentElement;
             canvas.width = container.offsetWidth;
             canvas.height = container.offsetHeight;
         }
 
-        // Check for last DM session on load
-        function checkForLastSession() {
-            const lastSession = localStorage.getItem(STORAGE_KEY_PREFIX + 'lastDMSession');
-            if (lastSession) {
-                try {
-                    const session = JSON.parse(lastSession);
-                    const timeSinceLastSeen = Date.now() - session.timestamp;
-                    
-                    if (timeSinceLastSeen < SESSION_TIMEOUT) {
-                        document.getElementById('rejoinDMBtn').style.display = 'block';
-                        document.getElementById('rejoinDMBtn').textContent = 
-                            `🔄 Rejoin Session (${Math.round((SESSION_TIMEOUT - timeSinceLastSeen) / 1000 / 60)} min left)`;
-                    } else {
-                        // Session expired
-                        localStorage.removeItem(STORAGE_KEY_PREFIX + 'lastDMSession');
-                        clearSessionData(session.sessionId);
-                    }
-                } catch (e) {
-                    console.error('Failed to parse session:', e);
-                }
-            }
-        }
-
-        function rejoinAsDM() {
-            const lastSession = localStorage.getItem(STORAGE_KEY_PREFIX + 'lastDMSession');
-            if (!lastSession) {
-                alert('No session found to rejoin');
-                return;
-            }
-
-            try {
-                const session = JSON.parse(lastSession);
-                const sessionData = loadSessionData(session.sessionId);
-                
-                if (!sessionData) {
-                    alert('Session data not found');
-                    localStorage.removeItem(STORAGE_KEY_PREFIX + 'lastDMSession');
-                    return;
-                }
-
-                isDM = true;
-                myName = 'Dungeon Master';
-                
-                // Create peer with NEW ID (PeerJS doesn't allow ID reuse)
-                peer = new Peer();
-                
-                peer.on('open', (newId) => {
-                    myId = newId;
-                    roomCode = newId;
-                    
-                    // Update session with new peer ID
-                    session.sessionId = newId;
-                    session.timestamp = Date.now();
-                    localStorage.setItem(STORAGE_KEY_PREFIX + 'lastDMSession', JSON.stringify(session));
-                    
-                    // Restore game state
-                    gameState = sessionData.gameState || {};
-                    
-                    // Update UI
-                    document.getElementById('welcomeScreen').classList.add('hidden');
-                    document.getElementById('dmControlsBtn').style.display = 'block';
-                    
-                    alert(`✅ Reconnected!\n\nNEW Room Code: ${newId}\n\nShare this NEW code with players.\n\nYour game state has been restored!`);
-                    
-                    // Save session data with new ID
-                    saveSessionData(newId, sessionData);
-                    
-                    // Setup connection listener
-                    peer.on('connection', (conn) => setupConnection(conn));
-                    
-                    console.log('✅ DM Reconnected with new ID:', newId);
-                });
-
-                peer.on('error', (err) => {
-                    console.error('Reconnection error:', err);
-                    alert('Failed to reconnect. Please create a new session.');
-                });
-
-            } catch (e) {
-                console.error('Rejoin failed:', e);
-                alert('Failed to rejoin session');
-            }
-        }
-
-        function showDMLogin() {
-            document.getElementById('dmModal').classList.add('active');
-        }
-
-        function closeDMModal() {
-            document.getElementById('dmModal').classList.remove('active');
-            document.getElementById('dmError').classList.remove('show');
-        }
+        function showDMLogin() { document.getElementById('dmModal').classList.add('active'); }
+        function closeDMModal() { document.getElementById('dmModal').classList.remove('active'); document.getElementById('dmError').classList.remove('show'); }
+        function showDMRejoinModal() { document.getElementById('dmRejoinModal').classList.add('active'); }
+        function closeDMRejoinModal() { document.getElementById('dmRejoinModal').classList.remove('active'); document.getElementById('dmRejoinError').classList.remove('show'); }
+        function showPlayerLogin() { document.getElementById('playerModal').classList.add('active'); }
+        function closePlayerModal() { document.getElementById('playerModal').classList.remove('active'); }
 
         function dmLogin(e) {
             e.preventDefault();
-            const user = document.getElementById('dmUser').value;
-            const pass = document.getElementById('dmPass').value;
-            
-            if (user === 'Wizard' && pass === 'FracturedSky2025!') {
+            if (document.getElementById('dmUser').value === 'Wizard' && document.getElementById('dmPass').value === 'FracturedSky2025!') {
                 closeDMModal();
                 createRoom();
             } else {
@@ -268,88 +193,113 @@
             }
         }
 
-        function createRoom() {
+        function dmRejoin(e) {
+            e.preventDefault();
+            const user = document.getElementById('dmRejoinUser').value;
+            const pass = document.getElementById('dmRejoinPass').value;
+            const sessionId = document.getElementById('dmRejoinSessionId').value.trim();
+
+            if (user !== 'Wizard' || pass !== 'FracturedSky2025!') {
+                document.getElementById('dmRejoinError').textContent = 'Invalid credentials';
+                document.getElementById('dmRejoinError').classList.add('show');
+                return;
+            }
+
+            const sessionData = loadSession(sessionId);
+            if (!sessionData) {
+                document.getElementById('dmRejoinError').textContent = 'Session not found or expired (max 5 min)';
+                document.getElementById('dmRejoinError').classList.add('show');
+                return;
+            }
+
+            document.getElementById('dmRejoinSuccess').classList.add('show');
+            
+            setTimeout(() => {
+                isDM = true;
+                myName = 'Dungeon Master';
+                peer = new Peer(sessionId);
+
+                peer.on('open', (id) => {
+                    myId = roomCode = id;
+                    gameState = sessionData.gameState || {};
+                    
+                    document.getElementById('welcomeScreen').classList.add('hidden');
+                    document.getElementById('dmControlsBtn').style.display = 'block';
+                    document.getElementById('roomCodeDisplay').style.display = 'block';
+                    document.getElementById('roomCodeText').textContent = id.substring(0, 12) + '...';
+                    
+                    closeDMRejoinModal();
+                    alert(`✅ Session Rejoined!\n\nRoom Code: ${id}\n\nGame state restored!\nSession will auto-clear in 5 min if idle.`);
+
+                    peer.on('connection', setupConnection);
+                    startSessionTimeout();
+                    saveSession();
+                    console.log('✅ DM Rejoined:', id);
+                });
+
+                peer.on('error', (err) => {
+                    if (err.type === 'unavailable-id') {
+                        alert('⚠️ Session ID in use or expired.\n\nCreating new session with your saved data...');
+                        createRoomWithData(sessionData.gameState);
+                    } else {
+                        alert('Connection error: ' + err.type);
+                    }
+                });
+            }, 1000);
+        }
+
+        function createRoom(savedData = null) {
             isDM = true;
             myName = 'Dungeon Master';
-            
             peer = new Peer();
-            
+
             peer.on('open', (id) => {
-                myId = id;
-                roomCode = id;
-                
-                // Save DM session
-                const session = {
-                    sessionId: id,
-                    timestamp: Date.now()
-                };
-                localStorage.setItem(STORAGE_KEY_PREFIX + 'lastDMSession', JSON.stringify(session));
-                
-                // Initialize empty game state
-                gameState = {
-                    gridCells: {},
-                    tokens: [],
-                    fogGroups: {},
-                    zoom: 1,
-                    panX: 0,
-                    panY: 0
-                };
-                
-                // Save initial session data
-                saveSessionData(id, { gameState, playerData: [] });
+                myId = roomCode = id;
+                gameState = savedData || { gridCells: {}, tokens: [], fogGroups: {}, zoom: 1, panX: 0, panY: 0 };
                 
                 document.getElementById('welcomeScreen').classList.add('hidden');
                 document.getElementById('dmControlsBtn').style.display = 'block';
+                document.getElementById('roomCodeDisplay').style.display = 'block';
+                document.getElementById('roomCodeText').textContent = id.substring(0, 12) + '...';
                 
-                alert(`✅ Room Created!\n\nRoom Code: ${id}\n\nShare this code with players.\n\nYou can refresh and rejoin within 5 minutes!`);
-                
-                peer.on('connection', (conn) => setupConnection(conn));
-                
-                // Start session timeout
+                alert(`✅ Room Created!\n\nRoom Code: ${id}\n\nShare with players.\n\nYou can rejoin within 5 min after refresh!`);
+
+                peer.on('connection', setupConnection);
                 startSessionTimeout();
-                
-                console.log('✅ DM Room Created:', id);
+                saveSession();
+                console.log('✅ Room Created:', id);
             });
 
             peer.on('error', (err) => {
-                console.error('Peer error:', err);
+                console.error('Error:', err);
                 alert('Connection error: ' + err.type);
             });
         }
 
-        function showPlayerLogin() {
-            document.getElementById('playerModal').classList.add('active');
-        }
-
-        function closePlayerModal() {
-            document.getElementById('playerModal').classList.remove('active');
+        function createRoomWithData(data) {
+            closeDMRejoinModal();
+            createRoom(data);
         }
 
         function playerLogin(e) {
             e.preventDefault();
             myName = document.getElementById('playerName').value;
             const code = document.getElementById('roomCodeInput').value.trim();
-            
+
             peer = new Peer();
             peer.on('open', (id) => {
                 myId = id;
                 const conn = peer.connect(code);
                 
                 conn.on('open', () => {
-                    sendToPeer(conn, {
-                        type: 'playerJoinRequest',
-                        name: myName,
-                        peerId: myId
-                    });
-                    
+                    sendToPeer(conn, { type: 'playerJoinRequest', name: myName, peerId: myId });
                     document.getElementById('playerSuccess').classList.add('show');
-                    
                     setTimeout(() => {
                         closePlayerModal();
                         document.getElementById('welcomeScreen').classList.add('hidden');
                     }, 2000);
                 });
-                
+
                 conn.on('data', (data) => handleMessage(conn, data));
                 conn.on('error', (err) => {
                     document.getElementById('playerError').textContent = 'Connection failed: ' + err.type;
@@ -360,7 +310,6 @@
 
         function setupConnection(conn) {
             connections.set(conn.peer, { conn, name: 'Unknown', role: 'player', approved: false });
-            
             conn.on('data', (data) => handleMessage(conn, data));
             conn.on('close', () => {
                 connections.delete(conn.peer);
@@ -369,101 +318,67 @@
         }
 
         function handleMessage(conn, data) {
-            console.log('Message received:', data.type);
-            // Basic message handling - extend as needed
+            console.log('Message:', data.type);
         }
 
         function sendToPeer(conn, data) {
-            try {
-                conn.send(data);
-            } catch (err) {
-                console.error('Send error:', err);
-            }
+            try { conn.send(data); } catch (err) { console.error('Send error:', err); }
         }
 
-        // Session Management Functions
-        function saveSessionData(sessionId, data) {
-            const key = STORAGE_KEY_PREFIX + 'session_' + sessionId;
-            const sessionData = {
-                ...data,
-                timestamp: Date.now()
+        function saveSession() {
+            if (!isDM || !roomCode) return;
+            const data = {
+                gameState,
+                timestamp: Date.now(),
+                playerData: Array.from(connections.values()).map(c => ({ name: c.name, role: c.role, approved: c.approved }))
             };
-            localStorage.setItem(key, JSON.stringify(sessionData));
+            localStorage.setItem(STORAGE_KEY + roomCode, JSON.stringify(data));
         }
 
-        function loadSessionData(sessionId) {
-            const key = STORAGE_KEY_PREFIX + 'session_' + sessionId;
-            const data = localStorage.getItem(key);
-            return data ? JSON.parse(data) : null;
-        }
-
-        function clearSessionData(sessionId) {
-            const key = STORAGE_KEY_PREFIX + 'session_' + sessionId;
-            localStorage.removeItem(key);
+        function loadSession(sessionId) {
+            const data = localStorage.getItem(STORAGE_KEY + sessionId);
+            if (!data) return null;
+            
+            const session = JSON.parse(data);
+            const age = Date.now() - session.timestamp;
+            
+            if (age > SESSION_TIMEOUT) {
+                localStorage.removeItem(STORAGE_KEY + sessionId);
+                return null;
+            }
+            
+            return session;
         }
 
         function startSessionTimeout() {
             if (sessionTimeout) clearTimeout(sessionTimeout);
-            
             sessionTimeout = setTimeout(() => {
-                if (connections.size === 0 && isDM) {
-                    // No players connected for 5 minutes - clear session
-                    const lastSession = localStorage.getItem(STORAGE_KEY_PREFIX + 'lastDMSession');
-                    if (lastSession) {
-                        const session = JSON.parse(lastSession);
-                        clearSessionData(session.sessionId);
-                        localStorage.removeItem(STORAGE_KEY_PREFIX + 'lastDMSession');
-                    }
-                    console.log('Session timed out - data cleared');
+                if (connections.size === 0 && isDM && roomCode) {
+                    localStorage.removeItem(STORAGE_KEY + roomCode);
+                    console.log('Session expired');
                 }
             }, SESSION_TIMEOUT);
         }
 
         function updateSessionTimeout() {
-            // Restart timeout when last player leaves
             if (connections.size === 0 && isDM) {
                 startSessionTimeout();
             } else if (connections.size > 0 && sessionTimeout) {
-                // Cancel timeout if players are connected
                 clearTimeout(sessionTimeout);
                 sessionTimeout = null;
             }
         }
 
-        // Update session timestamp on important actions
-        function updateSession() {
-            if (!isDM || !roomCode) return;
-            
-            const session = {
-                sessionId: roomCode,
-                timestamp: Date.now()
-            };
-            localStorage.setItem(STORAGE_KEY_PREFIX + 'lastDMSession', JSON.stringify(session));
-            
-            saveSessionData(roomCode, {
-                gameState,
-                playerData: Array.from(connections.values()).map(c => ({
-                    name: c.name,
-                    role: c.role,
-                    approved: c.approved
-                }))
-            });
+        function copyRoomCode() {
+            navigator.clipboard.writeText(roomCode).then(() => {
+                const elem = document.getElementById('roomCodeText');
+                const old = elem.textContent;
+                elem.textContent = '✓ Copied!';
+                setTimeout(() => elem.textContent = old, 2000);
+            }).catch(() => alert('Room Code: ' + roomCode));
         }
 
-        // Call updateSession periodically to keep session alive
-        setInterval(() => {
-            if (isDM && roomCode) {
-                updateSession();
-            }
-        }, 30000); // Every 30 seconds
-
-        // Handle page unload
-        window.addEventListener('beforeunload', () => {
-            if (isDM && roomCode) {
-                updateSession();
-            }
-        });
-
+        setInterval(() => isDM && roomCode && saveSession(), 30000);
         init();
     </script>
 </body>
