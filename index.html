@@ -314,15 +314,15 @@
                             Building: <span class="current" id="currentCell">Center</span>
                         </div>
                         <div class="grid-nav">
-                            <button class="btn btn-small" onclick="selectCell(0, 0)">TL</button>
-                            <button class="btn btn-small" onclick="selectCell(1, 0)">TC</button>
-                            <button class="btn btn-small" onclick="selectCell(2, 0)">TR</button>
-                            <button class="btn btn-small" onclick="selectCell(0, 1)">ML</button>
-                            <button class="btn btn-small" onclick="selectCell(1, 1)">C</button>
-                            <button class="btn btn-small" onclick="selectCell(2, 1)">MR</button>
-                            <button class="btn btn-small" onclick="selectCell(0, 2)">BL</button>
-                            <button class="btn btn-small" onclick="selectCell(1, 2)">BC</button>
-                            <button class="btn btn-small" onclick="selectCell(2, 2)">BR</button>
+                            <button class="btn btn-small" onclick="selectCell(0, 0)">↖</button>
+                            <button class="btn btn-small" onclick="selectCell(1, 0)">↑</button>
+                            <button class="btn btn-small" onclick="selectCell(2, 0)">↗</button>
+                            <button class="btn btn-small" onclick="selectCell(0, 1)">←</button>
+                            <button class="btn btn-small" onclick="selectCell(1, 1)">●</button>
+                            <button class="btn btn-small" onclick="selectCell(2, 1)">→</button>
+                            <button class="btn btn-small" onclick="selectCell(0, 2)">↙</button>
+                            <button class="btn btn-small" onclick="selectCell(1, 2)">↓</button>
+                            <button class="btn btn-small" onclick="selectCell(2, 2)">↘</button>
                         </div>
                     </div>
 
@@ -352,7 +352,7 @@
                         <span id="sizeValue" style="min-width: 35px; font-size: 0.85rem; text-align: right;">8px</span>
                     </div>
 
-                    <canvas id="mapCanvas" width="400" height="400" style="width: 100%; height: 250px; border-radius: 8px; border: 1px solid var(--border); background: white; cursor: crosshair; margin: 0.5rem 0;"></canvas>
+                    <canvas id="mapCanvas" width="400" height="400" style="width: 100%; height: 250px; border-radius: 8px; border: 1px solid var(--border); background: white; cursor: crosshair; margin: 0.5rem 0; display: block;"></canvas>
 
                     <div class="btn-group">
                         <button class="btn btn-small" onclick="undo()" id="undoBtn">↶ Undo</button>
