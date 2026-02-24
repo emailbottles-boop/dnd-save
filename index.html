@@ -1851,6 +1851,15 @@
             });
 
             console.log('✅ VTT Ready!');
+
+            // Auto-reconnect DM if they had an active session before refresh
+            const savedDMSession = localStorage.getItem('fracturedSkySessionId');
+            const wasDM = localStorage.getItem('fracturedSkyIsDM') === 'true';
+            if (wasDM && savedDMSession) {
+                console.log('🔄 Auto-reconnecting DM session:', savedDMSession);
+                updateConnectionStatus('Reconnecting...', false);
+                createRoom(savedDMSession);
+            }
         }
 
         function resizeCanvas() {
@@ -1955,6 +1964,10 @@
             e.preventDefault();
             myName = document.getElementById('playerName').value;
             const code = document.getElementById('roomCodeInput').value.trim();
+            // Joining as player — clear any saved DM session so refresh
+            // doesn't auto-reconnect as DM on this browser.
+            localStorage.removeItem('fracturedSkyIsDM');
+            localStorage.removeItem('fracturedSkySessionId');
             
             peer = new Peer();
             peer.on('open', (id) => {
@@ -2013,6 +2026,7 @@
                 
                 // Save to localStorage for easy recovery
                 localStorage.setItem('fracturedSkySessionId', id);
+                localStorage.setItem('fracturedSkyIsDM', 'true');
                 console.log('💾 Saved session ID to localStorage');
                 
                 document.getElementById('welcomeScreen').classList.add('hidden');
