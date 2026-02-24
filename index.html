@@ -2154,16 +2154,25 @@
 
         function setupConnection(conn, isPlayer = false) {
             conn.on('data', (data) => handleMessage(conn, data));
-            
-            conn.on('open', () => {
+
+            function onConnOpen() {
                 if (!isPlayer) {
                     connections.set(conn.peer, { conn, name: 'Unknown', role: 'player', approved: false });
                 } else {
                     connections.set(conn.peer, { conn, name: 'Dungeon Master', role: 'dm', approved: true });
                 }
                 updateUserList();
-            });
-            
+            }
+
+            // PeerJS can fire 'connection' after the DataChannel is already
+            // open, meaning conn.on('open') would never fire. Guard against
+            // that race by running onConnOpen immediately if already open.
+            if (conn.open) {
+                onConnOpen();
+            } else {
+                conn.on('open', onConnOpen);
+            }
+
             conn.on('close', () => {
                 connections.delete(conn.peer);
                 updateUserList();
