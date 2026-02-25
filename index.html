@@ -2516,6 +2516,7 @@
         // Tokens
         let stagingTokens = [];
         let placedTokens = [];
+        const tokenImageCache = new Map(); // keyed by token id → {img, srcKey}
         let draggedToken = null;
         let draggedPlacedToken = null; // For moving tokens already on the map
         let tokenDragOffset = { x: 0, y: 0 };
@@ -2538,6 +2539,7 @@
         // Minimap
         let minimapDocked = false;
         let minimapDragOffset = null;
+        let _minimapLastState = ''; // dirty-check: skip rebuild when nothing changed
 
         const gridNames = [
             ['Top-Left', 'Top-Center', 'Top-Right'],
@@ -2563,7 +2565,17 @@
         }
 
         // === INITIALIZATION ===
+        // Cached DOM references — set once in init() to avoid repeated getElementById on hot paths
+        let _elStatusText, _elStatusIndicator, _elTabIndicator, _elCurrentCell, _elCurrentAsset, _elMinimapGrid;
+
         function init() {
+            _elStatusText      = document.getElementById('statusText');
+            _elStatusIndicator = document.getElementById('statusIndicator');
+            _elTabIndicator    = document.getElementById('tabIndicator');
+            _elCurrentCell     = document.getElementById('currentCell');
+            _elCurrentAsset    = document.getElementById('currentAsset');
+            _elMinimapGrid     = document.getElementById('minimapGrid');
+
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
 
@@ -3667,9 +3679,9 @@
         }
 
         function updateConnectionStatus(text, connected) {
-            document.getElementById('statusText').textContent = text;
-            const indicators = [document.getElementById('statusIndicator'), document.getElementById('tabIndicator')];
-            indicators.forEach(ind => {
+            if (_elStatusText) _elStatusText.textContent = text;
+            [_elStatusIndicator, _elTabIndicator].forEach(ind => {
+                if (!ind) return;
                 if (connected) ind.classList.add('connected');
                 else ind.classList.remove('connected');
             });
@@ -3989,15 +4001,24 @@
                 ctx.stroke();
                 
                 if (t.type === 'image' && t.imageData) {
-                    // Draw image token
-                    const img = new Image();
-                    img.src = t.imageData;
+                    // Use cached Image to avoid creating a new object every frame
+                    let cached = tokenImageCache.get(t.id);
+                    if (!cached || cached.srcKey !== t.imageData) {
+                        const img = new Image();
+                        img.src = t.imageData;
+                        img.onload = () => draw(); // redraw once loaded
+                        cached = { img, srcKey: t.imageData };
+                        tokenImageCache.set(t.id, cached);
+                    }
+                    const img = cached.img;
                     ctx.save();
                     ctx.beginPath();
                     ctx.arc(t.x, t.y, tokenSize - 1, 0, Math.PI * 2);
                     ctx.clip();
                     const imgSize = (tokenSize - 1) * 2;
-                    ctx.drawImage(img, t.x - (tokenSize - 1), t.y - (tokenSize - 1), imgSize, imgSize);
+                    if (img.complete && img.naturalWidth) {
+                        ctx.drawImage(img, t.x - (tokenSize - 1), t.y - (tokenSize - 1), imgSize, imgSize);
+                    }
                     ctx.restore();
                 } else {
                     // Draw emoji token
@@ -4051,7 +4072,7 @@
         }
 
         function updateGridDisplay() {
-            document.getElementById('currentCell').textContent = gridNames[currentCellY][currentCellX];
+            if (_elCurrentCell) _elCurrentCell.textContent = gridNames[currentCellY][currentCellX];
         }
 
         function setTool(t) {
@@ -4097,13 +4118,13 @@
                        'Everything'
             };
             currentAsset = assetNames[t] || t;
-            document.getElementById('currentAsset').textContent = currentAsset;
+            (_elCurrentAsset||{}).textContent = currentAsset;
         }
 
         function selectStamp(emoji) {
             currentStamp = emoji;
             currentAsset = 'Stamp: ' + emoji;
-            document.getElementById('currentAsset').textContent = currentAsset;
+            (_elCurrentAsset||{}).textContent = currentAsset;
             setTool('stamp'); // Ensure stamp tool is active
         }
 
@@ -4156,12 +4177,18 @@
             };
         });
 
+        let _stampRafPending = false;
         document.addEventListener('mousemove', (e) => {
             if (!stampLibraryDragOffset || stampLibraryDocked) return;
-            
-            stampLibraryContainer.style.left = (e.clientX - stampLibraryDragOffset.x) + 'px';
-            stampLibraryContainer.style.top = (e.clientY - stampLibraryDragOffset.y) + 'px';
-            stampLibraryContainer.style.bottom = 'auto';
+            if (_stampRafPending) return;
+            _stampRafPending = true;
+            requestAnimationFrame(() => {
+                _stampRafPending = false;
+                if (!stampLibraryDragOffset) return;
+                stampLibraryContainer.style.left = (e.clientX - stampLibraryDragOffset.x) + 'px';
+                stampLibraryContainer.style.top = (e.clientY - stampLibraryDragOffset.y) + 'px';
+                stampLibraryContainer.style.bottom = 'auto';
+            });
         });
 
         document.addEventListener('mouseup', () => {
@@ -4259,7 +4286,7 @@
         function setStamp(emoji) {
             currentStamp = emoji;
             currentAsset = 'Stamp: ' + emoji;
-            document.getElementById('currentAsset').textContent = currentAsset;
+            (_elCurrentAsset||{}).textContent = currentAsset;
         }
 
         function updateColor(value) {
@@ -4362,7 +4389,7 @@
                     all: 'Everything'
                 };
                 currentAsset = assetNames[mode];
-                document.getElementById('currentAsset').textContent = currentAsset;
+                (_elCurrentAsset||{}).textContent = currentAsset;
             }
         }
 
@@ -4452,7 +4479,7 @@
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             tool = null;
             currentAsset = 'None';
-            document.getElementById('currentAsset').textContent = currentAsset;
+            (_elCurrentAsset||{}).textContent = currentAsset;
         }
 
         // Map canvas drawing
@@ -5302,13 +5329,19 @@
             };
         });
 
+        let _playerPanelRafPending = false;
         document.addEventListener('mousemove', (e) => {
             if (!playerPanelDragOffset || playerPanelDocked) return;
-            
-            playerPanelContainer.style.left = (e.clientX - playerPanelDragOffset.x) + 'px';
-            playerPanelContainer.style.top = (e.clientY - playerPanelDragOffset.y) + 'px';
-            playerPanelContainer.style.right = 'auto';
-            playerPanelContainer.style.bottom = 'auto';
+            if (_playerPanelRafPending) return;
+            _playerPanelRafPending = true;
+            requestAnimationFrame(() => {
+                _playerPanelRafPending = false;
+                if (!playerPanelDragOffset) return;
+                playerPanelContainer.style.left = (e.clientX - playerPanelDragOffset.x) + 'px';
+                playerPanelContainer.style.top = (e.clientY - playerPanelDragOffset.y) + 'px';
+                playerPanelContainer.style.right = 'auto';
+                playerPanelContainer.style.bottom = 'auto';
+            });
         });
 
         document.addEventListener('mouseup', () => {
@@ -5350,9 +5383,19 @@
 
         // === MINIMAP ===
         function updateMinimap() {
-            const grid = document.getElementById('minimapGrid');
-            let html = '';
-            
+            // Build a compact state string; only rebuild the DOM when something changed
+            let stateKey = `${currentCellX},${currentCellY}`;
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    const key = `${col},${row}`;
+                    stateKey += (gridCells[key] ? '1' : '0') + (lockedCells[key] ? 'L' : '.');
+                }
+            }
+            if (stateKey === _minimapLastState) return;
+            _minimapLastState = stateKey;
+
+            const grid = _elMinimapGrid || document.getElementById('minimapGrid');
+            const cells = [];
             for (let row = 0; row < 3; row++) {
                 for (let col = 0; col < 3; col++) {
                     const key = `${col},${row}`;
@@ -5360,12 +5403,10 @@
                     if (gridCells[key]) classes.push('has-content');
                     if (lockedCells[key]) classes.push('locked');
                     if (col === currentCellX && row === currentCellY) classes.push('current');
-                    
-                    html += `<div class="${classes.join(' ')}" onclick="minimapNavigate(${col}, ${row})"></div>`;
+                    cells.push(`<div class="${classes.join(' ')}" onclick="minimapNavigate(${col}, ${row})"></div>`);
                 }
             }
-            
-            grid.innerHTML = html;
+            grid.innerHTML = cells.join('');
         }
 
         function minimapNavigate(col, row) {
@@ -5425,12 +5466,18 @@
             };
         });
 
+        let _minimapRafPending = false;
         document.addEventListener('mousemove', (e) => {
             if (!minimapDragOffset || minimapDocked) return;
-            
-            minimapContainer.style.left = (e.clientX - minimapDragOffset.x) + 'px';
-            minimapContainer.style.top = (e.clientY - minimapDragOffset.y) + 'px';
-            minimapContainer.style.bottom = 'auto';
+            if (_minimapRafPending) return;
+            _minimapRafPending = true;
+            requestAnimationFrame(() => {
+                _minimapRafPending = false;
+                if (!minimapDragOffset) return;
+                minimapContainer.style.left = (e.clientX - minimapDragOffset.x) + 'px';
+                minimapContainer.style.top = (e.clientY - minimapDragOffset.y) + 'px';
+                minimapContainer.style.bottom = 'auto';
+            });
         });
 
         document.addEventListener('mouseup', () => {
@@ -5534,12 +5581,19 @@
                 e.target.closest('input') || e.target.closest('button')) return;
             musicPanelDragOffset = { x: e.clientX - musicPanel.offsetLeft, y: e.clientY - musicPanel.offsetTop };
         });
+        let _musicRafPending = false;
         document.addEventListener('mousemove', (e) => {
             if (!musicPanelDragOffset) return;
-            musicPanel.style.right = 'auto';
-            musicPanel.style.bottom = 'auto';
-            musicPanel.style.left = (e.clientX - musicPanelDragOffset.x) + 'px';
-            musicPanel.style.top = (e.clientY - musicPanelDragOffset.y) + 'px';
+            if (_musicRafPending) return;
+            _musicRafPending = true;
+            requestAnimationFrame(() => {
+                _musicRafPending = false;
+                if (!musicPanelDragOffset) return;
+                musicPanel.style.right = 'auto';
+                musicPanel.style.bottom = 'auto';
+                musicPanel.style.left = (e.clientX - musicPanelDragOffset.x) + 'px';
+                musicPanel.style.top = (e.clientY - musicPanelDragOffset.y) + 'px';
+            });
         });
         document.addEventListener('mouseup', () => { musicPanelDragOffset = null; });
 
