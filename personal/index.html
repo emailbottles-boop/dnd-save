@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>boop — personal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg:          #0a0e1a;
+            --bg-card:     #131726;
+            --bg-hover:    #1c2238;
+            --accent:      #8b5cf6;
+            --accent2:     #ec4899;
+            --gold:        #fbbf24;
+            --gold-dim:    #d97706;
+            --text:        #e5e7eb;
+            --text-dim:    #9ca3af;
+            --text-faint:  #4b5563;
+            --border:      rgba(139, 92, 246, 0.18);
+            --border-gold: rgba(251, 191, 36, 0.25);
+            --glow:        rgba(139, 92, 246, 0.35);
+            --glow-gold:   rgba(251, 191, 36, 0.25);
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* ── STARS BACKGROUND ─────────────────────────────────── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(1px 1px at 15%  20%, rgba(255,255,255,0.55) 0%, transparent 100%),
+                radial-gradient(1px 1px at 42%  8%,  rgba(255,255,255,0.35) 0%, transparent 100%),
+                radial-gradient(1px 1px at 73%  30%, rgba(255,255,255,0.45) 0%, transparent 100%),
+                radial-gradient(1px 1px at 88%  12%, rgba(255,255,255,0.30) 0%, transparent 100%),
+                radial-gradient(1px 1px at 5%   55%, rgba(255,255,255,0.40) 0%, transparent 100%),
+                radial-gradient(1px 1px at 60%  65%, rgba(255,255,255,0.25) 0%, transparent 100%),
+                radial-gradient(1px 1px at 30%  80%, rgba(255,255,255,0.35) 0%, transparent 100%),
+                radial-gradient(1px 1px at 95%  75%, rgba(255,255,255,0.30) 0%, transparent 100%),
+                radial-gradient(1px 1px at 50%  45%, rgba(255,255,255,0.20) 0%, transparent 100%),
+                radial-gradient(2px 2px at 80%  50%, rgba(251,191,36,0.15) 0%, transparent 100%),
+                radial-gradient(2px 2px at 20%  40%, rgba(139,92,246,0.12) 0%, transparent 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── HEADER ────────────────────────────────────────────── */
+        header {
+            position: relative;
+            z-index: 10;
+            padding: 3.5rem 2rem 2rem;
+            text-align: center;
+        }
+
+        .site-name {
+            font-family: 'Cinzel', serif;
+            font-weight: 900;
+            font-size: clamp(2.8rem, 7vw, 5.5rem);
+            letter-spacing: 0.04em;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--accent) 50%, var(--accent2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            filter: drop-shadow(0 0 30px rgba(139,92,246,0.4));
+        }
+
+        .site-tagline {
+            margin-top: 0.8rem;
+            font-size: 1rem;
+            font-weight: 300;
+            color: var(--text-dim);
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+        }
+
+        .header-divider {
+            margin: 1.8rem auto 0;
+            width: 200px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), var(--gold), var(--accent2), transparent);
+            opacity: 0.6;
+        }
+
+        /* ── SCROLL TRACK ──────────────────────────────────────── */
+        .scroll-section {
+            position: relative;
+            z-index: 10;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 3rem 0 2rem;
+        }
+
+        .scroll-hint {
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--text-faint);
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            margin-bottom: 1.4rem;
+        }
+
+        .scroll-hint span {
+            animation: fadeOsc 3s ease-in-out infinite;
+        }
+
+        @keyframes fadeOsc {
+            0%, 100% { opacity: 0.4; }
+            50%       { opacity: 1;   }
+        }
+
+        .card-track-wrapper {
+            position: relative;
+        }
+
+        /* left/right fade edges */
+        .card-track-wrapper::before,
+        .card-track-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 80px;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .card-track-wrapper::before {
+            left: 0;
+            background: linear-gradient(to right, var(--bg), transparent);
+        }
+        .card-track-wrapper::after {
+            right: 0;
+            background: linear-gradient(to left, var(--bg), transparent);
+        }
+
+        .card-track {
+            display: flex;
+            gap: 1.4rem;
+            overflow-x: auto;
+            overflow-y: visible;
+            padding: 1.5rem 100px 2rem;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent) transparent;
+            cursor: grab;
+        }
+
+        .card-track:active {
+            cursor: grabbing;
+        }
+
+        .card-track::-webkit-scrollbar {
+            height: 4px;
+        }
+        .card-track::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .card-track::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        /* ── CARD BUTTON ───────────────────────────────────────── */
+        .card {
+            flex: 0 0 240px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            user-select: none;
+        }
+
+        .card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 16px 48px var(--glow), 0 4px 16px rgba(0,0,0,0.5);
+            border-color: var(--accent);
+        }
+
+        .card:hover .card-img-placeholder {
+            opacity: 0.85;
+        }
+
+        /* accent stripe at top */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card-img-placeholder {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            background: linear-gradient(135deg, #0d1120 0%, #1a1f3a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            transition: opacity 0.25s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-img-placeholder::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 80%, rgba(139,92,246,0.08) 0%, transparent 70%);
+        }
+
+        .card-img-icon {
+            font-size: 2.4rem;
+            opacity: 0.35;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-img-label {
+            font-size: 0.68rem;
+            font-weight: 500;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-body {
+            padding: 1.1rem 1.2rem 1.3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            flex: 1;
+        }
+
+        .card-label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .card-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.2;
+        }
+
+        .card-desc {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+            margin-top: 0.2rem;
+        }
+
+        /* gold variant */
+        .card.gold {
+            border-color: var(--border-gold);
+        }
+        .card.gold:hover {
+            box-shadow: 0 16px 48px var(--glow-gold), 0 4px 16px rgba(0,0,0,0.5);
+            border-color: var(--gold);
+        }
+        .card.gold::before {
+            background: linear-gradient(90deg, var(--gold), var(--accent));
+        }
+        .card.gold .card-label {
+            color: var(--gold);
+        }
+
+        /* pink variant */
+        .card.pink .card-label {
+            color: var(--accent2);
+        }
+        .card.pink:hover {
+            box-shadow: 0 16px 48px rgba(236,72,153,0.3), 0 4px 16px rgba(0,0,0,0.5);
+            border-color: var(--accent2);
+        }
+        .card.pink::before {
+            background: linear-gradient(90deg, var(--accent2), var(--accent));
+        }
+
+        /* ── FOOTER ────────────────────────────────────────────── */
+        footer {
+            position: relative;
+            z-index: 10;
+            padding: 1.5rem 2rem;
+            text-align: center;
+            border-top: 1px solid rgba(139,92,246,0.1);
+        }
+
+        footer p {
+            font-size: 0.78rem;
+            color: var(--text-faint);
+            letter-spacing: 0.12em;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── HEADER ──────────────────────────────────────────────── -->
+    <header>
+        <h1 class="site-name">boop</h1>
+        <p class="site-tagline">maker &nbsp;·&nbsp; gamer &nbsp;·&nbsp; chaotic good</p>
+        <div class="header-divider"></div>
+    </header>
+
+    <!-- ── SCROLLABLE BUTTON CARDS ─────────────────────────────── -->
+    <section class="scroll-section">
+        <p class="scroll-hint"><span>← scroll to explore →</span></p>
+
+        <div class="card-track-wrapper">
+            <div class="card-track" id="cardTrack">
+
+                <!-- 1 -->
+                <a class="card gold" href="#" tabindex="0">
+                    <div class="card-img-placeholder">
+                        <div class="card-img-icon">🧙</div>
+                        <div class="card-img-label">image coming soon</div>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-label">Tabletop</span>
+                        <h2 class="card-title">The Fractured Sky</h2>
+                        <p class="card-desc">Our homebrew campaign and the VTT I built to run it.</p>
+                    </div>
+                </a>
+
+                <!-- 2 -->
+                <a class="card" href="#" tabindex="0">
+                    <div class="card-img-placeholder">
+                        <div class="card-img-icon">🎮</div>
+                        <div class="card-img-label">image coming soon</div>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-label">Gaming</span>
+                        <h2 class="card-title">Currently Playing</h2>
+                        <p class="card-desc">What's in the rotation and what I think about it.</p>
+                    </div>
+                </a>
+
+                <!-- 3 -->
+                <a class="card pink" href="#" tabindex="0">
+                    <div class="card-img-placeholder">
+                        <div class="card-img-icon">🎨</div>
+                        <div class="card-img-label">image coming soon</div>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-label">Art</span>
+                        <h2 class="card-title">Gallery</h2>
+                        <p class="card-desc">Digital art, character illustrations, and assorted chaos.</p>
+                    </div>
+                </a>
+
+                <!-- 4 -->
+                <a class="card" href="#" tabindex="0">
+                    <div class="card-img-placeholder">
+                        <div class="card-img-icon">💻</div>
+                        <div class="card-img-label">image coming soon</div>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-label">Projects</span>
+                        <h2 class="card-title">Code &amp; Tools</h2>
+                        <p class="card-desc">Things I've built that are actually usable by other humans.</p>
+                    </div>
+                </a>
+
+                <!-- 5 -->
+                <a class="card gold" href="#" tabindex="0">
+                    <div class="card-img-placeholder">
+                        <div class="card-img-icon">📖</div>
+                        <div class="card-img-label">image coming soon</div>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-label">Writing</span>
+                        <h2 class="card-title">Lore &amp; Worldbuilding</h2>
+                        <p class="card-desc">Campaign notes, short fiction, and way too much backstory.</p>
+                    </div>
+                </a>
+
+                <!-- 6 -->
+                <a class="card pink" href="#" tabindex="0">
+                    <div class="card-img-placeholder">
+                        <div class="card-img-icon">🎵</div>
+                        <div class="card-img-label">image coming soon</div>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-label">Music</span>
+                        <h2 class="card-title">Playlist Dump</h2>
+                        <p class="card-desc">Whatever's been living rent-free in my ears lately.</p>
+                    </div>
+                </a>
+
+                <!-- 7 -->
+                <a class="card" href="#" tabindex="0">
+                    <div class="card-img-placeholder">
+                        <div class="card-img-icon">🐾</div>
+                        <div class="card-img-label">image coming soon</div>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-label">IRL</span>
+                        <h2 class="card-title">The Menagerie</h2>
+                        <p class="card-desc">My pets, my chaos, my blorbos.</p>
+                    </div>
+                </a>
+
+                <!-- 8 -->
+                <a class="card gold" href="#" tabindex="0">
+                    <div class="card-img-placeholder">
+                        <div class="card-img-icon">🍵</div>
+                        <div class="card-img-label">image coming soon</div>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-label">Lifestyle</span>
+                        <h2 class="card-title">Cozy Corner</h2>
+                        <p class="card-desc">Reviews, recs, and rituals for staying sane.</p>
+                    </div>
+                </a>
+
+                <!-- 9 -->
+                <a class="card pink" href="#" tabindex="0">
+                    <div class="card-img-placeholder">
+                        <div class="card-img-icon">✨</div>
+                        <div class="card-img-label">image coming soon</div>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-label">Misc</span>
+                        <h2 class="card-title">Curiosity Cabinet</h2>
+                        <p class="card-desc">Odds and ends that didn't fit anywhere else.</p>
+                    </div>
+                </a>
+
+                <!-- 10 -->
+                <a class="card" href="#" tabindex="0">
+                    <div class="card-img-placeholder">
+                        <div class="card-img-icon">📬</div>
+                        <div class="card-img-label">image coming soon</div>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-label">Connect</span>
+                        <h2 class="card-title">Find Me Online</h2>
+                        <p class="card-desc">Links to my socials, handles, and lurking spots.</p>
+                    </div>
+                </a>
+
+                <!-- 11 -->
+                <a class="card gold" href="#" tabindex="0">
+                    <div class="card-img-placeholder">
+                        <div class="card-img-icon">🗺️</div>
+                        <div class="card-img-label">image coming soon</div>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-label">Maps</span>
+                        <h2 class="card-title">World Atlas</h2>
+                        <p class="card-desc">Handcrafted maps for campaigns and settings.</p>
+                    </div>
+                </a>
+
+                <!-- 12 -->
+                <a class="card" href="#" tabindex="0">
+                    <div class="card-img-placeholder">
+                        <div class="card-img-icon">🎲</div>
+                        <div class="card-img-label">image coming soon</div>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-label">Resources</span>
+                        <h2 class="card-title">DM Toolkit</h2>
+                        <p class="card-desc">Tables, generators, and templates I actually use.</p>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ── FOOTER ───────────────────────────────────────────────── -->
+    <footer>
+        <p>made with &nbsp;💜&nbsp; and too much caffeine</p>
+    </footer>
+
+    <script>
+        // ── drag-to-scroll ────────────────────────────────────────
+        const track = document.getElementById('cardTrack');
+        let isDown = false, startX, scrollLeft;
+
+        track.addEventListener('mousedown', e => {
+            isDown = true;
+            startX = e.pageX - track.offsetLeft;
+            scrollLeft = track.scrollLeft;
+        });
+        document.addEventListener('mouseup', () => { isDown = false; });
+        track.addEventListener('mouseleave', () => { isDown = false; });
+        track.addEventListener('mousemove', e => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - track.offsetLeft;
+            const walk = (x - startX) * 1.4;
+            track.scrollLeft = scrollLeft - walk;
+        });
+
+        // ── keyboard arrow scroll ─────────────────────────────────
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight') track.scrollBy({ left: 260, behavior: 'smooth' });
+            if (e.key === 'ArrowLeft')  track.scrollBy({ left: -260, behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html>
