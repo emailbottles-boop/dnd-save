@@ -2786,13 +2786,27 @@
             // Track the peer ID we most recently tried so we don't open
             // duplicate connections when the Firebase watcher fires multiple times.
             let lastAttemptedPeerId = null;
+            // The latest peer ID we know about (from Firebase or savedRoom).
+            // Used by scheduleRetry so we keep knocking on the same door while
+            // waiting for the DM to come back online.
+            let currentBestPeerId = null;
             // ONE shared timeout handle — always cancelled before starting a new
             // connect attempt, so a stale timeout from attempt N can never reset
             // lastAttemptedPeerId while attempt N+1 is already in flight.
             let activeConnTimeout = null;
 
+            // After a failed attempt, retry with the best-known peer ID after 15 s.
+            // This handles the case where the DM comes back with the SAME peer ID
+            // (the Firebase watcher won't fire again if the value didn't change).
+            function scheduleRetry() {
+                setTimeout(() => {
+                    if (lastAttemptedPeerId === null) doConnect(currentBestPeerId || savedRoom);
+                }, 15000);
+            }
+
             function doConnect(targetPeerId) {
                 if (targetPeerId === lastAttemptedPeerId) return; // already trying
+                currentBestPeerId = targetPeerId;
                 lastAttemptedPeerId = targetPeerId;
 
                 // Cancel any timeout from the previous attempt before we destroy
@@ -2808,8 +2822,9 @@
 
                     activeConnTimeout = setTimeout(() => {
                         activeConnTimeout = null;
-                        lastAttemptedPeerId = null; // allow retry with same/new ID
-                        updateConnectionStatus('Could not reach DM — watching for update...', false);
+                        lastAttemptedPeerId = null;
+                        updateConnectionStatus('Waiting for DM...', false);
+                        scheduleRetry(); // keep trying every 15 s while DM is offline
                     }, 12000);
 
                     conn.on('open', () => {
@@ -2820,12 +2835,12 @@
                     conn.on('error', () => {
                         clearTimeout(activeConnTimeout); activeConnTimeout = null;
                         lastAttemptedPeerId = null;
-                        updateConnectionStatus('Reconnect failed — watching for update...', false);
+                        updateConnectionStatus('Waiting for DM...', false);
+                        scheduleRetry(); // keep trying every 15 s while DM is offline
                     });
                 });
                 peer.on('error', () => {
                     lastAttemptedPeerId = null;
-                    // Back-off then retry from scratch (watcher may have new ID by then)
                     setTimeout(playerAutoReconnect, 5000);
                 });
             }
@@ -3129,9 +3144,12 @@
                     // Host DM receives a change from a co-DM, applies it and re-broadcasts
                     if (isDM && !isCoDM) {
                         handleIncomingChange(data.payload);
-                        // Re-broadcast to all approved players (not co-DMs)
-                        connections.forEach(({ conn: c, approved, role }) => {
-                            if (approved && role !== 'co-dm') sendToPeer(c, data.payload);
+                        // Re-broadcast to every approved client EXCEPT the originating
+                        // co-DM — this includes players AND other co-DMs so they all
+                        // stay in sync when multiple co-DMs are connected.
+                        const originPeer = conn.peer;
+                        connections.forEach(({ conn: c, approved }) => {
+                            if (approved && c.peer !== originPeer) sendToPeer(c, data.payload);
                         });
                     }
                     break;
