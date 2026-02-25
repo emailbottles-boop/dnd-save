@@ -9,10 +9,6 @@
     <title>The Fractured Sky VTT v4.0 - FINAL BUILD</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -1121,8 +1117,7 @@
         <div class="title">⚔️ THE FRACTURED SKY</div>
         <div class="campaign-badge" id="campaignBadge" style="display: none;">Campaign Name</div>
         <div class="header-actions">
-            <span id="firebaseStatus" style="font-size: 0.75rem; color: var(--text-dim); display: none;"></span>
-            <button class="btn" id="dmControlsBtn" onclick="toggleDMPanel()" style="display: none;">🎭 DM Controls</button>
+<button class="btn" id="dmControlsBtn" onclick="toggleDMPanel()" style="display: none;">🎭 DM Controls</button>
         </div>
     </div>
 
@@ -1153,15 +1148,7 @@
                     <span id="statusText">Disconnected</span>
                 </div>
             </div>
-            <div class="connection-section" id="firebaseSection" style="display: none;">
-                <h3>☁️ Cloud Sync</h3>
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; background: var(--bg-dark); border-radius: 6px; margin-bottom: 0.5rem;">
-                    <span id="firebaseStatusPanel" style="font-size: 0.85rem; color: var(--text-dim);">Not connected</span>
-                </div>
-                <button class="btn btn-primary" onclick="saveToFirebase()" style="width: 100%; margin-bottom: 0.25rem;">💾 Save Now</button>
-                <p style="font-size: 0.7rem; color: var(--text-dim); text-align: center;">Auto-saves 3s after changes</p>
-            </div>
-            <div class="connection-section">
+<div class="connection-section">
                 <h3>👥 Connected Users</h3>
                 <div class="user-list" id="userList">
                     <p style="font-size: 0.85rem; color: var(--text-dim);">No users</p>
@@ -1576,171 +1563,6 @@
         let connections = new Map();
         let savedPeerId = null; // For DM session persistence
 
-        // === FIREBASE ===
-        const firebaseConfig = {
-            apiKey: "AIzaSyDDl5BjZUW-RmT6MG_z9MTsfdedK75fSrc",
-            authDomain: "ddddd-f276d.firebaseapp.com",
-            projectId: "ddddd-f276d",
-            storageBucket: "ddddd-f276d.firebasestorage.app",
-            messagingSenderId: "260370337802",
-            appId: "1:260370337802:web:e7310129ef9533de4b8ff3",
-            measurementId: "G-4X38GGZZ3S"
-        };
-        firebase.initializeApp(firebaseConfig);
-        // Firestore — rules already cover vtt_rooms/{roomId} for any auth'd user
-        const fbDb = firebase.firestore();
-        let firebaseUser = null;
-        let firebaseSaveTimeout = null;
-        let firebaseRoomRef = null; // set to roomCode string once DM opens room
-
-        async function firebaseSignIn() {
-            try {
-                const result = await firebase.auth().signInAnonymously();
-                firebaseUser = result.user;
-                console.log('🔥 Firebase signed in:', firebaseUser.uid);
-            } catch (err) {
-                console.error('🔥 Firebase auth error:', err);
-                updateFirebaseStatus('⚠️ Auth failed', '#ef4444');
-            }
-        }
-
-        // Firestore has a 1MB document limit, so we split state across
-        // sibling documents — all matched by the {roomId} wildcard in your rules.
-        // Main doc:  vtt_rooms/{roomId}           → tokens, zoom, pan, lockedCells
-        // Cell docs: vtt_rooms/{roomId}__cell_X_Y → one canvas dataURL per grid cell
-        // Fog docs:  vtt_rooms/{roomId}__fog_NAME → one canvas dataURL per fog group
-        // Image doc: vtt_rooms/{roomId}__images   → placed image list
-
-        function scheduleSave() {
-            if (!isDM || !firebaseRoomRef || !firebaseUser) return;
-            clearTimeout(firebaseSaveTimeout);
-            updateFirebaseStatus('☁️ Unsaved...', '#fbbf24');
-            firebaseSaveTimeout = setTimeout(saveToFirebase, 3000);
-        }
-
-        async function saveToFirebase() {
-            if (!isDM || !firebaseRoomRef || !firebaseUser) return;
-            try {
-                updateFirebaseStatus('☁️ Saving...', '#fbbf24');
-                const col = fbDb.collection('vtt_rooms');
-                const batch = fbDb.batch();
-
-                // Main document — lightweight state
-                batch.set(col.doc(firebaseRoomRef), {
-                    tokens: [...stagingTokens, ...placedTokens],
-                    lockedCells,
-                    zoom, panX, panY,
-                    fogGroupNames: Object.keys(fogGroups),
-                    savedAt: Date.now()
-                });
-
-                // One document per grid cell
-                for (const key in gridCells) {
-                    const safeKey = key.replace(',', '_');
-                    batch.set(col.doc(firebaseRoomRef + '__cell_' + safeKey), {
-                        data: gridCells[key].toDataURL()
-                    });
-                }
-
-                // One document per fog group
-                for (const group in fogGroups) {
-                    const safeGroup = group.replace(/[^a-zA-Z0-9_-]/g, '_');
-                    batch.set(col.doc(firebaseRoomRef + '__fog_' + safeGroup), {
-                        name: group,
-                        data: fogGroups[group].canvas.toDataURL()
-                    });
-                }
-
-                // Placed images
-                const imagesData = placedImages.map(pi => ({
-                    src: pi.img.src,
-                    x: pi.x, y: pi.y,
-                    width: pi.width, height: pi.height,
-                    rotation: pi.rotation,
-                    gridX: pi.gridX, gridY: pi.gridY
-                }));
-                batch.set(col.doc(firebaseRoomRef + '__images'), { images: imagesData });
-
-                await batch.commit();
-                updateFirebaseStatus('☁️ Saved', '#10b981');
-                console.log('🔥 Saved to Firestore');
-            } catch (err) {
-                console.error('🔥 Firebase save error:', err);
-                updateFirebaseStatus('⚠️ Save failed', '#ef4444');
-            }
-        }
-
-        async function loadFromFirebase(roomId) {
-            try {
-                updateFirebaseStatus('☁️ Loading...', '#fbbf24');
-                const col = fbDb.collection('vtt_rooms');
-                const mainSnap = await col.doc(roomId).get();
-
-                if (!mainSnap.exists) {
-                    updateFirebaseStatus('☁️ New room', '#9ca3af');
-                    console.log('🔥 No saved state — starting fresh');
-                    return;
-                }
-
-                const main = mainSnap.data();
-
-                // Load all 9 possible grid cells
-                const gridData = {};
-                const cellFetches = [];
-                for (let cy = 0; cy < 3; cy++) {
-                    for (let cx = 0; cx < 3; cx++) {
-                        const key = `${cx},${cy}`;
-                        const safeKey = `${cx}_${cy}`;
-                        cellFetches.push(
-                            col.doc(roomId + '__cell_' + safeKey).get().then(snap => {
-                                if (snap.exists) gridData[key] = snap.data().data;
-                            })
-                        );
-                    }
-                }
-
-                // Load fog groups
-                const fogData = {};
-                const fogNames = main.fogGroupNames || ['everyone'];
-                const fogFetches = fogNames.map(name => {
-                    const safeGroup = name.replace(/[^a-zA-Z0-9_-]/g, '_');
-                    return col.doc(roomId + '__fog_' + safeGroup).get().then(snap => {
-                        if (snap.exists) fogData[snap.data().name] = snap.data().data;
-                    });
-                });
-
-                // Load placed images
-                const imagesSnap = await col.doc(roomId + '__images').get();
-                const imagesData = imagesSnap.exists ? imagesSnap.data().images : [];
-
-                await Promise.all([...cellFetches, ...fogFetches]);
-
-                loadGameState({
-                    tokens: main.tokens || [],
-                    lockedCells: main.lockedCells || {},
-                    zoom: main.zoom || 1,
-                    panX: main.panX || 0,
-                    panY: main.panY || 0,
-                    gridCells: gridData,
-                    fogGroups: fogData,
-                    placedImages: imagesData
-                });
-
-                updateFirebaseStatus('☁️ Loaded', '#10b981');
-                console.log('🔥 Loaded from Firestore');
-            } catch (err) {
-                console.error('🔥 Firebase load error:', err);
-                updateFirebaseStatus('⚠️ Load failed', '#ef4444');
-            }
-        }
-
-        function updateFirebaseStatus(text, color) {
-            const header = document.getElementById('firebaseStatus');
-            const panel = document.getElementById('firebaseStatusPanel');
-            if (header) { header.textContent = text; header.style.color = color; header.style.display = 'inline'; }
-            if (panel) { panel.textContent = text; panel.style.color = color; }
-        }
-
         // Game state
         let zoom = 1;
         let panX = 0;
@@ -2148,13 +1970,6 @@
                 
                 console.log('✅ createRoom complete!');
 
-                // Firebase: sign in then load persisted state for this room
-                document.getElementById('firebaseSection').style.display = 'block';
-                document.getElementById('firebaseStatus').style.display = 'inline';
-                firebaseSignIn().then(() => {
-                    firebaseRoomRef = roomCode; // used as Firestore document ID
-                    loadFromFirebase(roomCode);
-                });
             });
             
             peer.on('connection', (conn) => {
@@ -2203,12 +2018,6 @@
                                     toggleConnectionPanel();
                                 }
                             }, 5000);
-                            document.getElementById('firebaseSection').style.display = 'block';
-                            document.getElementById('firebaseStatus').style.display = 'inline';
-                            firebaseSignIn().then(() => {
-                                firebaseRoomRef = roomCode;
-                                loadFromFirebase(roomCode);
-                            });
                             // Re-attach connection listener on the new peer object
                             peer.on('connection', (conn) => {
                                 console.log('👥 Incoming connection from:', conn.peer);
@@ -2449,7 +2258,6 @@
             connections.forEach(({ conn, approved }) => {
                 if (approved) sendToPeer(conn, data);
             });
-            scheduleSave();
         }
 
         function approvePlayer(index) {
@@ -3478,7 +3286,6 @@
             }
             
             updateHistoryButtons();
-            scheduleSave();
         }
 
         function undo() {
