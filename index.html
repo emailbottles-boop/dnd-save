@@ -2755,92 +2755,87 @@
             isCoDM = false;
             myName = 'Dungeon Master';
 
-            function doPeerCreate() {
-                peer = existingId ? new Peer(existingId) : new Peer();
-            
-            peer.on('open', (id) => {
+            // Keep old room ID so we can load campaign data from Firebase
+            // even if we end up with a different peer ID
+            const fbLoadId = existingId;
+
+            // --- Shared "peer is ready" logic ---
+            function onPeerReady(id) {
                 myId = id;
                 roomCode = id;
                 savedPeerId = id;
                 localStorage.setItem('fracturedSkySessionId', id);
                 localStorage.setItem('fracturedSkyIsDM', 'true');
                 onDMReady();
-                // Firebase: sign in then load persisted state for this room
                 document.getElementById('firebaseSection').style.display = 'block';
                 document.getElementById('firebaseStatus').style.display = 'inline';
                 firebaseSignIn().then(() => {
                     firebaseRoomRef = roomCode;
-                    loadFromFirebase(roomCode);
+                    // Always load from the original room's Firebase data
+                    loadFromFirebase(fbLoadId || roomCode);
                 });
-            });
-            
-            peer.on('connection', (conn) => { setupConnection(conn); });
+            }
 
-            peer.on('error', (err) => {
+            // --- Fall back to a fresh random peer ID ---
+            function startFreshPeer() {
+                updateConnectionStatus('Getting new session...', false);
+                if (peer) { try { peer.destroy(); } catch(e) {} }
+                peer = new Peer();
+                const t = setTimeout(() => {
+                    updateConnectionStatus('Server not responding', false);
+                }, 15000);
+                peer.on('open', id => { clearTimeout(t); onPeerReady(id); });
+                peer.on('connection', conn => setupConnection(conn));
+                peer.on('error', e => {
+                    clearTimeout(t);
+                    console.error('Peer error (fresh):', e.type);
+                    updateConnectionStatus('Connection failed — refresh and try again', false);
+                });
+            }
 
-                if (err.type === 'unavailable-id') {
-                    // ID still held by PeerJS server after page refresh.
-                    // Retry claiming it — server releases it within a few seconds
-                    // once the old WebSocket closes.
-                    const targetId = existingId;
-                    let attempts = 0;
-                    const maxAttempts = 8;
-                    updateConnectionStatus('Reclaiming session...', false);
+            // --- Try to claim a specific peer ID, with up to 3 retries ---
+            function tryClaimId(idToClaim, attempt) {
+                if (peer) { try { peer.destroy(); } catch(e) {} }
+                peer = new Peer(idToClaim);
 
-                    function retryClaimId() {
-                        attempts++;
-                        if (peer) { try { peer.destroy(); } catch(e) {} }
-                        peer = new Peer(targetId);
-                        peer.on('open', (id) => {
-                            myId = id;
-                            roomCode = id;
-                            savedPeerId = id;
-                            localStorage.setItem('fracturedSkySessionId', id);
-                            onDMReady();
-                            document.getElementById('firebaseSection').style.display = 'block';
-                            document.getElementById('firebaseStatus').style.display = 'inline';
-                            firebaseSignIn().then(() => {
-                                firebaseRoomRef = roomCode;
-                                loadFromFirebase(roomCode);
-                            });
-                            peer.on('connection', (conn) => { setupConnection(conn); });
-                            peer.on('error', (e) => console.error('Peer error after reclaim:', e));
-                        });
-                        peer.on('error', (e) => {
-                            if (e.type === 'unavailable-id' && attempts < maxAttempts) {
-                                const delay = Math.min(2000 * attempts, 10000);
-                                updateConnectionStatus(`Reclaiming session... (${attempts}/${maxAttempts})`, false);
-                                setTimeout(retryClaimId, delay);
-                            } else {
-                                console.error('❌ Could not reclaim peer ID after', attempts, 'attempts');
-                                alert('⚠️ Could not reclaim your session. Starting a new one — players will need to reconnect.');
-                                createRoom();
-                            }
-                        });
+                // Hard 10-second timeout per attempt — don't wait forever for slow servers
+                const timeout = setTimeout(() => {
+                    if (!myId) {
+                        updateConnectionStatus('Server slow — switching to new session...', false);
+                        startFreshPeer();
                     }
+                }, 10000);
 
-                    setTimeout(retryClaimId, 2000);
-                } else if (err.type === 'network') {
-                    alert('⚠️ Network error. Check your internet connection.');
-                } else if (err.type === 'peer-unavailable') {
-                    alert('⚠️ Could not connect to PeerJS server. Try again.');
-                } else {
-                    alert('❌ Connection error: ' + err.type + ' - ' + err.message);
-                }
-            });
-            
-            } // end doPeerCreate
+                peer.on('open', id => {
+                    clearTimeout(timeout);
+                    onPeerReady(id);
+                });
+                peer.on('connection', conn => setupConnection(conn));
+                peer.on('error', err => {
+                    clearTimeout(timeout);
+                    if (err.type === 'unavailable-id' && attempt < 3) {
+                        const delay = attempt * 2000; // 0s, 2s, 4s
+                        updateConnectionStatus(`Reclaiming session... (${attempt}/3)`, false);
+                        setTimeout(() => tryClaimId(idToClaim, attempt + 1), delay);
+                    } else {
+                        // All retries exhausted or other error — fall back to fresh ID
+                        // Campaign data will still load from Firebase
+                        startFreshPeer();
+                    }
+                });
+            }
 
             if (existingId) {
-                // Signal any tab holding this peer ID to release it, then claim it
+                // Tell any other tab holding this peer ID to release it
                 try {
                     const bc = new BroadcastChannel('fracturedSky_dm');
                     bc.postMessage({ type: 'surrender', id: existingId });
                     bc.close();
                 } catch(e) {}
-                setTimeout(doPeerCreate, 400);
+                // Short pause for the release, then try to claim
+                setTimeout(() => tryClaimId(existingId, 1), 500);
             } else {
-                doPeerCreate();
+                startFreshPeer();
             }
         }
 
