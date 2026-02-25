@@ -2888,19 +2888,18 @@
                 document.getElementById('firebaseSection').style.display = 'block';
                 document.getElementById('firebaseStatus').style.display = 'inline';
                 firebaseSignIn().then(() => {
-                    firebaseRoomRef = roomCode;
                     const loadId = fbLoadId || roomCode;
+                    // Always save/heartbeat to the canonical room doc (loadId) so
+                    // data never splits across multiple Firestore documents when the
+                    // DM gets a new peer ID after refresh.
+                    firebaseRoomRef = loadId;
 
-                    // Publish live peer ID so players can always find this DM,
-                    // even when a new peer ID was assigned after refresh.
-                    // Write to the original room doc (fbLoadId) as well as the new one.
+                    // Publish the DM's live peer ID to the canonical room doc so
+                    // players/co-DMs watching it always learn the latest peer ID,
+                    // even when a fresh peer ID was assigned after refresh.
                     const db = firebase.firestore();
                     const stamp = { currentPeerId: id, lastSeen: Date.now() };
                     db.collection('vtt_rooms').doc(loadId).set(stamp, { merge: true }).catch(() => {});
-                    if (fbLoadId && fbLoadId !== id) {
-                        // Also write under the new room ID so saves go to the right place
-                        db.collection('vtt_rooms').doc(id).set(stamp, { merge: true }).catch(() => {});
-                    }
 
                     loadFromFirebase(loadId);
 
@@ -3165,15 +3164,19 @@
                     if (isDM) {
                         // Auto-approve players whose name was previously approved (handles restarts too)
                         if (approvedPlayerNames.has(data.name)) {
-                            const connData = connections.get(conn.peer);
-                            if (connData) {
-                                connData.approved = true;
-                                connData.name = data.name;
-                                sendToPeer(conn, { type: 'playerApproved', name: data.name });
-                                sendGameState(conn);
-                                updateUserList();
-                                console.log('✅ Auto-approved reconnecting player:', data.name);
+                            // Connection entry may not exist yet if the data message
+                            // arrived before PeerJS fired conn.on('open') (race condition).
+                            let connData = connections.get(conn.peer);
+                            if (!connData) {
+                                connData = { conn, name: data.name, role: 'player', approved: false };
+                                connections.set(conn.peer, connData);
                             }
+                            connData.approved = true;
+                            connData.name = data.name;
+                            sendToPeer(conn, { type: 'playerApproved', name: data.name });
+                            sendGameState(conn);
+                            updateUserList();
+                            console.log('✅ Auto-approved reconnecting player:', data.name);
                         } else {
                             pendingRequests.push({
                                 peerId: conn.peer,
@@ -3361,21 +3364,26 @@
         function approvePlayer(index) {
             const request = pendingRequests[index];
             if (!request || request.type === 'token') return;
-            
-            const connData = connections.get(request.peerId);
-            if (connData) {
-                connData.approved = true;
-                connData.name = request.name;
-                approvedPlayerNames.add(request.name);
-                localStorage.setItem('fracturedSkyApprovedNames', JSON.stringify([...approvedPlayerNames]));
-                
-                sendToPeer(request.conn, {
-                    type: 'playerApproved',
-                    name: request.name
-                });
-                
-                sendGameState(request.conn);
+
+            // Ensure the connection entry exists — it may not if the data message
+            // (playerJoinRequest) arrived before PeerJS fired conn.on('open') on
+            // the DM side (a known PeerJS race condition).
+            let connData = connections.get(request.peerId);
+            if (!connData) {
+                connData = { conn: request.conn, name: request.name, role: 'player', approved: false };
+                connections.set(request.peerId, connData);
             }
+            connData.approved = true;
+            connData.name = request.name;
+            approvedPlayerNames.add(request.name);
+            localStorage.setItem('fracturedSkyApprovedNames', JSON.stringify([...approvedPlayerNames]));
+
+            sendToPeer(request.conn, {
+                type: 'playerApproved',
+                name: request.name
+            });
+
+            sendGameState(request.conn);
             
             pendingRequests.splice(index, 1);
             renderPendingRequests();
