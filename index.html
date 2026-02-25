@@ -2262,6 +2262,13 @@
         let isCoDM = false;      // true when this instance joined as a co-DM
         let hostDMConn = null;   // co-DM's connection to the host DM
         let coDMs = new Map();   // host DM's map of approved co-DM connections
+        let coDMOriginalCode = null;  // room code stored for co-DM reconnects
+        let coDMOriginalName = null;  // co-DM display name for reconnects
+        let coDMReconnectTimer = null;
+
+        // === CONNECTION RESILIENCE STATE ===
+        let playerFirebaseWatcher = null; // Firestore onSnapshot unsubscribe fn
+        let dmHeartbeatTimer = null;      // setInterval handle for DM Firebase keepalive
 
         // === FIREBASE ===
         const firebaseConfig = {
@@ -2289,6 +2296,53 @@
                 console.error('🔥 Firebase auth error:', err);
                 updateFirebaseStatus('⚠️ Auth failed', '#ef4444');
             }
+        }
+
+        // Watch Firestore for DM peer ID changes; fires callback immediately with the
+        // current value then on every future change. Stores the unsubscribe fn in
+        // playerFirebaseWatcher so the watcher can be torn down cleanly.
+        function startFirebaseWatch(roomId, callback) {
+            stopFirebaseWatch();
+            if (!roomId || typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) return;
+            firebaseSignIn().then(() => {
+                const unsub = firebase.firestore()
+                    .collection('vtt_rooms').doc(roomId)
+                    .onSnapshot(doc => {
+                        const peerId = doc.exists && doc.data() && doc.data().currentPeerId;
+                        if (peerId) callback(peerId);
+                    }, err => console.error('🔥 Watch error:', err));
+                playerFirebaseWatcher = unsub;
+            }).catch(err => console.error('🔥 Watch sign-in error:', err));
+        }
+
+        function stopFirebaseWatch() {
+            if (typeof playerFirebaseWatcher === 'function') {
+                try { playerFirebaseWatcher(); } catch(e) {}
+            }
+            playerFirebaseWatcher = null;
+        }
+
+        // DM refreshes currentPeerId + lastSeen in Firebase every 20 s so that
+        // onSnapshot watchers on players/co-DMs wake up if the first write was missed.
+        function startDMHeartbeat() {
+            stopDMHeartbeat();
+            dmHeartbeatTimer = setInterval(() => {
+                if (!isDM || isCoDM || !firebaseRoomRef || !firebaseUser) return;
+                firebase.firestore().collection('vtt_rooms').doc(firebaseRoomRef)
+                    .set({ currentPeerId: myId, lastSeen: Date.now() }, { merge: true })
+                    .catch(e => console.error('🔥 Heartbeat error:', e));
+            }, 20000);
+        }
+
+        function stopDMHeartbeat() {
+            if (dmHeartbeatTimer) { clearInterval(dmHeartbeatTimer); dmHeartbeatTimer = null; }
+        }
+
+        // Re-connect a co-DM to the host using the latest Firebase peer ID.
+        function coDMAutoReconnect() {
+            if (!isCoDM || !coDMOriginalCode) return;
+            clearTimeout(coDMReconnectTimer);
+            joinAsCoDM(coDMOriginalName || myName || 'Co-DM', coDMOriginalCode);
         }
 
         // Firestore has a 1MB document limit, so we split state across
@@ -2729,10 +2783,14 @@
             myName = savedName;
             roomCode = savedRoom;
 
-            // Look up the DM's current live peer ID from Firebase first.
-            // The DM writes this when they connect, so even if they got a new
-            // peer ID after a refresh, players can still find them.
+            // Track the peer ID we most recently tried so we don't open
+            // duplicate connections when the Firebase watcher fires multiple times.
+            let lastAttemptedPeerId = null;
+
             function doConnect(targetPeerId) {
+                if (targetPeerId === lastAttemptedPeerId) return; // already trying
+                lastAttemptedPeerId = targetPeerId;
+
                 if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
                 peer = new Peer();
                 peer.on('open', (id) => {
@@ -2740,10 +2798,13 @@
                     const conn = peer.connect(targetPeerId);
                     setupConnection(conn, true);
 
+                    // Give the connection up to 12 s — longer tolerance so slow
+                    // signalling servers (the user said up to 25 s is fine) don't
+                    // cause unnecessary retries.
                     const connTimeout = setTimeout(() => {
-                        updateConnectionStatus('Could not reach DM — retrying...', false);
-                        setTimeout(playerAutoReconnect, 5000);
-                    }, 8000);
+                        lastAttemptedPeerId = null; // allow retry with same/new ID
+                        updateConnectionStatus('Could not reach DM — watching for update...', false);
+                    }, 12000);
 
                     conn.on('open', () => {
                         clearTimeout(connTimeout);
@@ -2752,27 +2813,25 @@
                     });
                     conn.on('error', () => {
                         clearTimeout(connTimeout);
-                        updateConnectionStatus('Reconnect failed — retrying...', false);
-                        setTimeout(playerAutoReconnect, 5000);
+                        lastAttemptedPeerId = null;
+                        updateConnectionStatus('Reconnect failed — watching for update...', false);
                     });
                 });
-                peer.on('error', () => setTimeout(playerAutoReconnect, 5000));
+                peer.on('error', () => {
+                    lastAttemptedPeerId = null;
+                    // Back-off then retry from scratch (watcher may have new ID by then)
+                    setTimeout(playerAutoReconnect, 5000);
+                });
             }
 
             updateConnectionStatus('Looking up room...', false);
 
-            // Try Firebase first to get the DM's current peer ID
+            // Prefer Firebase onSnapshot: fires immediately with current value
+            // AND fires again whenever the DM publishes a new peer ID after refresh.
             if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
-                firebaseSignIn().then(() => {
-                    return firebase.firestore().collection('vtt_rooms').doc(savedRoom).get();
-                }).then(doc => {
-                    const livePeerId = doc.exists && doc.data() && doc.data().currentPeerId;
-                    doConnect(livePeerId || savedRoom);
-                }).catch(() => {
-                    // Firebase unavailable — fall back to saved peer ID
-                    doConnect(savedRoom);
-                });
+                startFirebaseWatch(savedRoom, (peerId) => doConnect(peerId));
             } else {
+                // No Firebase — connect directly to the saved peer ID
                 doConnect(savedRoom);
             }
         }
@@ -2813,6 +2872,11 @@
                     }
 
                     loadFromFirebase(loadId);
+
+                    // Keep Firebase updated every 20 s so onSnapshot watchers on
+                    // players and co-DMs receive a timely wake-up call even if
+                    // they missed the first write.
+                    startDMHeartbeat();
                 });
             }
 
@@ -2926,23 +2990,57 @@
             isCoDM = true;
             myName = name;
             roomCode = code;
-            if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
-            peer = new Peer();
-            peer.on('open', (id) => {
-                myId = id;
-                hostDMConn = peer.connect(code);
-                setupConnection(hostDMConn, false); // treat host as "player" side for conn mgmt
-                hostDMConn.on('open', () => {
-                    sendToPeer(hostDMConn, { type: 'coDMJoinRequest', name, peerId: myId });
-                    document.getElementById('welcomeScreen').classList.add('hidden');
-                    document.getElementById('connectionTabContainer').style.display = 'block';
-                    updateConnectionStatus('Connecting as Co-DM...', false);
+            // Remember for automatic reconnects
+            coDMOriginalCode = code;
+            coDMOriginalName = name;
+            clearTimeout(coDMReconnectTimer);
+
+            function doConnect(targetPeerId) {
+                if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
+                peer = new Peer();
+                peer.on('open', (id) => {
+                    myId = id;
+                    hostDMConn = peer.connect(targetPeerId);
+                    setupConnection(hostDMConn, false); // isPlayer=false → DM-side connection
+
+                    // Give the host up to 12 s to answer; schedule reconnect if it doesn't.
+                    const connTimeout = setTimeout(() => {
+                        updateConnectionStatus('Host not reachable — retrying...', false);
+                        coDMReconnectTimer = setTimeout(coDMAutoReconnect, 5000);
+                    }, 12000);
+
+                    hostDMConn.on('open', () => {
+                        clearTimeout(connTimeout);
+                        sendToPeer(hostDMConn, { type: 'coDMJoinRequest', name, peerId: myId });
+                        document.getElementById('welcomeScreen').classList.add('hidden');
+                        document.getElementById('connectionTabContainer').style.display = 'block';
+                        updateConnectionStatus('Connecting as Co-DM...', false);
+                    });
+                    hostDMConn.on('error', () => {
+                        clearTimeout(connTimeout);
+                        updateConnectionStatus('Co-DM connection failed — retrying...', false);
+                        coDMReconnectTimer = setTimeout(coDMAutoReconnect, 5000);
+                    });
                 });
-                hostDMConn.on('error', () => {
-                    updateConnectionStatus('Co-DM connection failed', false);
+                peer.on('error', () => {
+                    updateConnectionStatus('Peer error — retrying...', false);
+                    coDMReconnectTimer = setTimeout(coDMAutoReconnect, 5000);
                 });
-            });
-            peer.on('error', () => updateConnectionStatus('Peer error', false));
+            }
+
+            // Look up the host DM's current live peer ID from Firebase first,
+            // in case they refreshed and got a new peer ID since we last connected.
+            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+                updateConnectionStatus('Co-DM: Looking up host...', false);
+                firebaseSignIn().then(() => {
+                    return firebase.firestore().collection('vtt_rooms').doc(code).get();
+                }).then(doc => {
+                    const livePeerId = doc.exists && doc.data() && doc.data().currentPeerId;
+                    doConnect(livePeerId || code);
+                }).catch(() => doConnect(code));
+            } else {
+                doConnect(code);
+            }
         }
 
         function setupConnection(conn, isPlayer = false) {
@@ -2969,9 +3067,15 @@
             conn.on('close', () => {
                 connections.delete(conn.peer);
                 updateUserList();
-                // Players auto-reconnect when the DM connection drops
-                if (isPlayer) {
+                if (isCoDM && conn === hostDMConn) {
+                    // Co-DM lost its connection to the host DM — reconnect via Firebase
+                    updateConnectionStatus('Host DM disconnected — reconnecting...', false);
+                    clearTimeout(coDMReconnectTimer);
+                    coDMReconnectTimer = setTimeout(coDMAutoReconnect, 3000);
+                } else if (isPlayer) {
+                    // Regular player lost connection to DM
                     updateConnectionStatus('Disconnected — reconnecting...', false);
+                    stopFirebaseWatch(); // will be restarted inside playerAutoReconnect
                     setTimeout(playerAutoReconnect, 3000);
                 }
             });
@@ -3046,6 +3150,8 @@
                     break;
                     
                 case 'playerApproved':
+                    // Successfully joined — stop watching Firebase for peer ID changes.
+                    stopFirebaseWatch();
                     myName = data.name;
                     // Update stored room code to the DM's actual current peer ID,
                     // so future reconnects go to the right place if the ID changed.
