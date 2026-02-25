@@ -2598,6 +2598,9 @@
                 if (saved) JSON.parse(saved).forEach(n => approvedPlayerNames.add(n));
             } catch(e) {}
             const savedDMSession = localStorage.getItem('fracturedSkySessionId');
+            // Hide welcome screen & show connection tab immediately so user sees feedback
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('connectionTabContainer').style.display = 'block';
             updateConnectionStatus('Reconnecting...', false);
             createRoom(savedDMSession);
         }
@@ -2613,7 +2616,7 @@
             roomCode = savedPlayerRoom;
             document.getElementById('welcomeScreen').classList.add('hidden');
             document.getElementById('connectionTabContainer').style.display = 'block';
-            updateConnectionStatus('Reconnecting...', false);
+            updateConnectionStatus('Reconnecting as ' + savedPlayerName + '...', false);
             playerAutoReconnect();
         }
         function clearPlayerSession() {
@@ -2854,11 +2857,12 @@
             updateUserList();
             loadSavedCloudLink();
             initMusicPanel();
-            toggleConnectionPanel();
+            // Open the panel to show room code (use direct open, not toggle, so
+            // we don't accidentally close it if it was already open during resume)
+            const panel = document.getElementById('connectionPanel');
+            if (!panel.classList.contains('open')) toggleConnectionPanel();
             setTimeout(() => {
-                if (document.getElementById('connectionPanel').classList.contains('open')) {
-                    toggleConnectionPanel();
-                }
+                if (panel.classList.contains('open')) toggleConnectionPanel();
             }, 5000);
         }
 
