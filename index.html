@@ -1794,6 +1794,7 @@
 
         // Player requests
         let pendingRequests = [];
+        let approvedPlayerNames = new Set(); // tracks names of ever-approved players for auto-reapprove
 
         // Minimap
         let minimapDocked = false;
@@ -1832,6 +1833,17 @@
             window.addEventListener('beforeunload', () => {
                 if (peer && !peer.destroyed) peer.destroy();
             });
+
+            // Listen for another tab taking over as DM — surrender peer immediately
+            try {
+                const dmChannel = new BroadcastChannel('fracturedSky_dm');
+                dmChannel.onmessage = (e) => {
+                    if (e.data.type === 'surrender' && peer && !peer.destroyed && roomCode === e.data.id) {
+                        console.log('📡 Surrendering peer ID to new tab:', e.data.id);
+                        peer.destroy();
+                    }
+                };
+            } catch(e) {}
             
             mapCtx.fillStyle = '#f5f5dc';
             mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
@@ -1969,13 +1981,17 @@
             localStorage.removeItem('fracturedSkyIsDM');
             localStorage.removeItem('fracturedSkySessionId');
             
+            roomCode = code;
+            localStorage.setItem('fracturedSkyPlayerRoom', code);
+            localStorage.setItem('fracturedSkyPlayerName', myName);
+
             peer = new Peer();
             peer.on('open', (id) => {
                 myId = id;
                 const conn = peer.connect(code);
-                
+
                 setupConnection(conn, true);
-                
+
                 conn.on('open', () => {
                     // Send join request
                     sendToPeer(conn, {
@@ -2001,20 +2017,48 @@
             });
         }
 
+        function playerAutoReconnect() {
+            const savedRoom = localStorage.getItem('fracturedSkyPlayerRoom');
+            const savedName = localStorage.getItem('fracturedSkyPlayerName');
+            if (!savedRoom || !savedName || isDM) return;
+            console.log('🔄 Player auto-reconnecting to:', savedRoom);
+            myName = savedName;
+            roomCode = savedRoom;
+            if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
+            peer = new Peer();
+            peer.on('open', (id) => {
+                myId = id;
+                const conn = peer.connect(savedRoom);
+                setupConnection(conn, true);
+                conn.on('open', () => {
+                    sendToPeer(conn, { type: 'playerJoinRequest', name: myName, peerId: myId, isReconnect: true });
+                    updateConnectionStatus('Reconnecting...', false);
+                });
+                conn.on('error', () => {
+                    updateConnectionStatus('Reconnect failed — retrying...', false);
+                    setTimeout(playerAutoReconnect, 5000);
+                });
+            });
+            peer.on('error', () => {
+                setTimeout(playerAutoReconnect, 5000);
+            });
+        }
+
         // === MULTIPLAYER ===
         function createRoom(existingId = null) {
             console.log('🎭 createRoom called with existingId:', existingId);
             isDM = true;
             myName = 'Dungeon Master';
-            
-            // Use existing peer ID if provided
-            if (existingId) {
-                console.log('Creating peer with existing ID:', existingId);
-                peer = new Peer(existingId);
-            } else {
-                console.log('Creating peer with new ID');
-                peer = new Peer();
-            }
+
+            function doPeerCreate() {
+                // Use existing peer ID if provided
+                if (existingId) {
+                    console.log('Creating peer with existing ID:', existingId);
+                    peer = new Peer(existingId);
+                } else {
+                    console.log('Creating peer with new ID');
+                    peer = new Peer();
+                }
             
             console.log('Peer object created:', peer);
             
@@ -2149,7 +2193,20 @@
                 }
             });
             
-            console.log('Peer event listeners set up');
+                console.log('Peer event listeners set up');
+            } // end doPeerCreate
+
+            if (existingId) {
+                // Signal any tab holding this peer ID to release it, then claim it
+                try {
+                    const bc = new BroadcastChannel('fracturedSky_dm');
+                    bc.postMessage({ type: 'surrender', id: existingId });
+                    bc.close();
+                } catch(e) {}
+                setTimeout(doPeerCreate, 400);
+            } else {
+                doPeerCreate();
+            }
         }
 
         function setupConnection(conn, isPlayer = false) {
@@ -2176,6 +2233,11 @@
             conn.on('close', () => {
                 connections.delete(conn.peer);
                 updateUserList();
+                // Players auto-reconnect when the DM connection drops
+                if (isPlayer) {
+                    updateConnectionStatus('Disconnected — reconnecting...', false);
+                    setTimeout(playerAutoReconnect, 3000);
+                }
             });
         }
 
@@ -2185,12 +2247,25 @@
             switch (data.type) {
                 case 'playerJoinRequest':
                     if (isDM) {
-                        pendingRequests.push({
-                            peerId: conn.peer,
-                            name: data.name,
-                            conn: conn
-                        });
-                        renderPendingRequests();
+                        // Auto-approve players who were previously approved in this session
+                        if (data.isReconnect && approvedPlayerNames.has(data.name)) {
+                            const connData = connections.get(conn.peer);
+                            if (connData) {
+                                connData.approved = true;
+                                connData.name = data.name;
+                                sendToPeer(conn, { type: 'playerApproved', name: data.name });
+                                sendGameState(conn);
+                                updateUserList();
+                                console.log('✅ Auto-approved reconnecting player:', data.name);
+                            }
+                        } else {
+                            pendingRequests.push({
+                                peerId: conn.peer,
+                                name: data.name,
+                                conn: conn
+                            });
+                            renderPendingRequests();
+                        }
                     }
                     break;
                     
@@ -2336,6 +2411,7 @@
             if (connData) {
                 connData.approved = true;
                 connData.name = request.name;
+                approvedPlayerNames.add(request.name);
                 
                 sendToPeer(request.conn, {
                     type: 'playerApproved',
