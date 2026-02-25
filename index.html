@@ -989,9 +989,16 @@
         <div class="welcome-content">
             <div class="welcome-title">⚔️ THE FRACTURED SKY</div>
             <div class="welcome-subtitle">Ultimate Virtual Tabletop v4.0 FINAL</div>
-            <div class="welcome-buttons">
+            <div class="welcome-buttons" id="welcomeButtons">
                 <button class="welcome-btn welcome-btn-primary" onclick="showDMLogin()">🎭 Create Room (DM)</button>
                 <button class="welcome-btn welcome-btn-secondary" onclick="showPlayerLogin()">👤 Join Room (Player)</button>
+            </div>
+            <div id="welcomeReconnect" style="display:none; text-align:center;">
+                <p id="welcomeReconnectMsg" style="color:var(--text-dim); margin-bottom:1rem; font-size:0.95rem;"></p>
+                <div style="display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap;">
+                    <button class="welcome-btn welcome-btn-primary" onclick="doAutoReconnect()">🔄 Resume Session</button>
+                    <button class="welcome-btn welcome-btn-secondary" onclick="cancelAutoReconnect()">✕ Start Fresh</button>
+                </div>
             </div>
             <p style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-size: 0.75rem; color: var(--text-dim);">
                 v4.0 Final Build • Click a button above
@@ -1864,24 +1871,39 @@
 
             console.log('✅ VTT Ready!');
 
-            // Auto-reconnect DM if they had an active session before refresh
+            // Check for saved sessions and offer to resume rather than auto-joining
+            const savedDMSession = localStorage.getItem('fracturedSkySessionId');
+            const wasDM = localStorage.getItem('fracturedSkyIsDM') === 'true';
+            const savedPlayerRoom = localStorage.getItem('fracturedSkyPlayerRoom');
+            const savedPlayerName = localStorage.getItem('fracturedSkyPlayerName');
+
+            if (wasDM && savedDMSession) {
+                document.getElementById('welcomeButtons').style.display = 'none';
+                document.getElementById('welcomeReconnect').style.display = 'block';
+                document.getElementById('welcomeReconnectMsg').textContent = '👑 Resume your DM session?';
+            } else if (savedPlayerRoom && savedPlayerName) {
+                document.getElementById('welcomeButtons').style.display = 'none';
+                document.getElementById('welcomeReconnect').style.display = 'block';
+                document.getElementById('welcomeReconnectMsg').textContent = `👤 Resume as "${savedPlayerName}"?`;
+            }
+        }
+
+        function doAutoReconnect() {
+            document.getElementById('welcomeReconnect').style.display = 'none';
+            document.getElementById('welcomeButtons').style.display = 'flex';
             const savedDMSession = localStorage.getItem('fracturedSkySessionId');
             const wasDM = localStorage.getItem('fracturedSkyIsDM') === 'true';
             if (wasDM && savedDMSession) {
-                // Restore previously approved player names so rejoiners get auto-approved
                 try {
                     const saved = localStorage.getItem('fracturedSkyApprovedNames');
                     if (saved) JSON.parse(saved).forEach(n => approvedPlayerNames.add(n));
                 } catch(e) {}
-                console.log('🔄 Auto-reconnecting DM session:', savedDMSession);
                 updateConnectionStatus('Reconnecting...', false);
                 createRoom(savedDMSession);
             } else {
-                // Auto-reconnect player if they have a saved room
                 const savedPlayerRoom = localStorage.getItem('fracturedSkyPlayerRoom');
                 const savedPlayerName = localStorage.getItem('fracturedSkyPlayerName');
                 if (savedPlayerRoom && savedPlayerName) {
-                    console.log('🔄 Auto-reconnecting player to room:', savedPlayerRoom);
                     myName = savedPlayerName;
                     roomCode = savedPlayerRoom;
                     document.getElementById('welcomeScreen').classList.add('hidden');
@@ -1890,6 +1912,15 @@
                     playerAutoReconnect();
                 }
             }
+        }
+
+        function cancelAutoReconnect() {
+            localStorage.removeItem('fracturedSkyIsDM');
+            localStorage.removeItem('fracturedSkySessionId');
+            localStorage.removeItem('fracturedSkyPlayerRoom');
+            localStorage.removeItem('fracturedSkyPlayerName');
+            document.getElementById('welcomeReconnect').style.display = 'none';
+            document.getElementById('welcomeButtons').style.display = 'flex';
         }
 
         function resizeCanvas() {
