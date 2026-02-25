@@ -981,20 +981,443 @@
         .hidden {
             display: none !important;
         }
+
+        /* RESUME PROMPT */
+        .resume-prompt {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        .resume-prompt-title {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .resume-prompt-name {
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            color: var(--gold);
+            margin-bottom: 0.75rem;
+        }
+        .resume-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .resume-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+        }
+        .resume-btn-yes {
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            color: white;
+        }
+        .resume-btn-no {
+            background: var(--bg-hover);
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+        .resume-btn:hover { transform: translateY(-1px); }
+        .welcome-divider {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            margin: 1rem 0;
+            position: relative;
+        }
+        .welcome-divider::before, .welcome-divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 80px;
+            height: 1px;
+            background: var(--border);
+        }
+        .welcome-divider::before { right: calc(50% + 1.5rem); }
+        .welcome-divider::after { left: calc(50% + 1.5rem); }
+
+        /* CHARACTER SHEET OVERLAY */
+        .char-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a1f3a 100%);
+            z-index: 20000;
+            display: none;
+            overflow-y: auto;
+        }
+        .char-overlay.active { display: block; }
+        .char-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .char-header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, var(--gold), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .char-body {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+        .char-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .char-section h3 {
+            font-family: 'Cinzel', serif;
+            color: var(--gold);
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+        .char-grid-6 {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 0.75rem;
+        }
+        .char-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+        .char-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+        .ability-block {
+            background: var(--bg-hover);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 0.75rem;
+            text-align: center;
+            transition: border-color 0.2s;
+        }
+        .ability-block:hover { border-color: var(--accent); }
+        .ability-name {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 600;
+        }
+        .ability-score {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.2;
+        }
+        .ability-score input {
+            width: 100%;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text);
+            background: transparent;
+            border: none;
+            text-align: center;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+        }
+        .ability-mod {
+            font-size: 1.1rem;
+            color: var(--accent);
+            font-weight: 700;
+        }
+        .stat-block {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .stat-block label {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+        .stat-block input {
+            width: 100%;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text);
+            background: transparent;
+            border: none;
+            text-align: center;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+        }
+        .char-input {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .char-input:focus { outline: none; border-color: var(--accent); }
+        .char-label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-bottom: 0.35rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .skill-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+        }
+        .skill-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem;
+            border-radius: 5px;
+            transition: background 0.15s;
+        }
+        .skill-item:hover { background: var(--bg-hover); }
+        .skill-item input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; }
+        .skill-item .skill-mod {
+            font-size: 0.75rem;
+            color: var(--accent);
+            font-weight: 700;
+            min-width: 28px;
+        }
+        .skill-item .skill-name { font-size: 0.8rem; color: var(--text); }
+        .skill-item .skill-attr { font-size: 0.7rem; color: var(--text-dim); }
+        .hp-track {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .hp-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--bg-hover);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+        .hp-btn:hover { background: var(--accent); border-color: var(--accent); }
+        .char-list-panel {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .char-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 0.75rem;
+            background: var(--bg-dark);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .char-list-item:hover { border-color: var(--accent); }
+        .char-list-item.active { border-color: var(--gold); background: rgba(251,191,36,0.05); }
+        .char-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.75rem;
+        }
+        .char-tab {
+            padding: 0.4rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            color: var(--text-dim);
+        }
+        .char-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .char-tab-content { display: none; }
+        .char-tab-content.active { display: block; }
+        .death-saves {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .death-save-pip {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .death-save-pip.success.filled { background: var(--success); border-color: var(--success); }
+        .death-save-pip.failure.filled { background: var(--danger); border-color: var(--danger); }
+        .notes-textarea {
+            width: 100%;
+            min-height: 120px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            padding: 0.75rem;
+            resize: vertical;
+        }
+        .notes-textarea:focus { outline: none; border-color: var(--accent); }
+
+        /* MUSIC PLAYER */
+        .music-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 220px;
+            width: 300px;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            z-index: 600;
+            display: none;
+            cursor: move;
+            user-select: none;
+        }
+        .music-panel.visible { display: block; }
+        .music-header {
+            padding: 0.75rem 1rem;
+            background: var(--bg-hover);
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .music-header-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--gold);
+        }
+        .music-now-playing {
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+            min-height: 28px;
+        }
+        .music-now-playing .track-name { color: var(--accent); font-weight: 600; }
+        .music-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            padding: 0.75rem;
+        }
+        .music-btn {
+            padding: 0.6rem 0.5rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text);
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .music-btn:hover { border-color: var(--accent); background: rgba(139,92,246,0.1); }
+        .music-btn.playing { background: var(--accent); border-color: var(--accent); color: white; animation: pulse-glow 2s infinite; }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(139,92,246,0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(139,92,246,0); }
+        }
+        .music-btn .music-emoji { font-size: 1.2rem; display: block; margin-bottom: 0.25rem; }
+        .music-controls {
+            padding: 0.5rem 0.75rem 0.75rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .music-vol {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            accent-color: var(--accent);
+        }
+        .music-stop-btn {
+            padding: 0.35rem 0.75rem;
+            background: var(--danger);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: opacity 0.2s;
+        }
+        .music-stop-btn:hover { opacity: 0.8; }
+
+        /* CO-DM BADGE */
+        .user-role.co-dm { background: #f97316; }
     </style>
 </head>
 <body>
     <!-- WELCOME SCREEN -->
     <div class="welcome-screen" id="welcomeScreen">
-        <div class="welcome-content">
+        <div class="welcome-content" style="max-width: 520px; width: 90%;">
             <div class="welcome-title">⚔️ THE FRACTURED SKY</div>
-            <div class="welcome-subtitle">Ultimate Virtual Tabletop v4.0 FINAL</div>
-            <div class="welcome-buttons">
+            <div class="welcome-subtitle">Virtual Tabletop • Multi-DM Edition</div>
+
+            <!-- Resume prompts injected here by JS -->
+            <div id="resumeArea"></div>
+
+            <div class="welcome-buttons" id="welcomeButtons" style="flex-wrap: wrap; gap: 0.75rem; justify-content: center;">
                 <button class="welcome-btn welcome-btn-primary" onclick="showDMLogin()">🎭 Create Room (DM)</button>
+                <button class="welcome-btn" style="background:linear-gradient(135deg,#f97316,#ea580c);color:white;border:none;" onclick="showCoDMLogin()">🧙 Join as Co-DM</button>
                 <button class="welcome-btn welcome-btn-secondary" onclick="showPlayerLogin()">👤 Join Room (Player)</button>
+                <button class="welcome-btn welcome-btn-secondary" onclick="showCharSheet()">📜 My Characters</button>
             </div>
-            <p style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-size: 0.75rem; color: var(--text-dim);">
-                v4.0 Final Build • Click a button above
+            <p style="margin-top:1.5rem; font-size:0.75rem; color:var(--text-dim);">
+                Multi-DM • Character Sheets • Ambient Music
             </p>
         </div>
     </div>
@@ -1109,12 +1532,44 @@
         </div>
     </div>
 
+    <!-- CO-DM LOGIN MODAL -->
+    <div class="modal" id="coDMModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">🧙</div>
+                <div class="modal-title">Join as Co-DM</div>
+            </div>
+            <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:1rem;text-align:center;">
+                Co-DMs can edit the map, move tokens, and paint fog alongside the host DM.
+            </p>
+            <form onsubmit="coDMLogin(event)">
+                <div class="form-group">
+                    <label>YOUR NAME</label>
+                    <input type="text" id="coDMName" placeholder="Second DM" required>
+                </div>
+                <div class="form-group">
+                    <label>ROOM CODE</label>
+                    <input type="text" id="coDMRoomCode" placeholder="Paste host DM's room code" required>
+                </div>
+                <div class="form-group">
+                    <label>DM PASSWORD</label>
+                    <input type="password" id="coDMPass" placeholder="FracturedSky2025!" required>
+                </div>
+                <div class="error" id="coDMError">Invalid password or connection failed</div>
+                <button type="submit" class="btn btn-primary" style="width:100%;">JOIN AS CO-DM</button>
+                <button type="button" class="btn" onclick="closeCoDMModal()" style="width:100%;margin-top:0.5rem;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
     <!-- HEADER -->
     <div class="header">
         <div class="title">⚔️ THE FRACTURED SKY</div>
         <div class="campaign-badge" id="campaignBadge" style="display: none;">Campaign Name</div>
         <div class="header-actions">
             <span id="firebaseStatus" style="font-size: 0.75rem; color: var(--text-dim); display: none;"></span>
+            <button class="btn" id="musicToggleBtn" onclick="toggleMusicPanel()" style="display:none;" title="Jukebox">🎵 Music</button>
+            <button class="btn" id="charSheetBtn" onclick="showCharSheet()" title="Character Sheet">📜 Characters</button>
             <button class="btn" id="dmControlsBtn" onclick="toggleDMPanel()" style="display: none;">🎭 DM Controls</button>
         </div>
     </div>
@@ -1552,6 +2007,240 @@
         </div>
     </div>
 
+    <!-- MUSIC PLAYER PANEL -->
+    <div class="music-panel" id="musicPanel">
+        <div class="music-header">
+            <span class="music-header-title">🎵 Jukebox</span>
+            <div style="display:flex;gap:0.25rem;align-items:center;">
+                <span id="musicBroadcastIcon" title="Broadcasting to players" style="font-size:0.8rem;display:none;">📡</span>
+                <div class="minimap-btn" onclick="toggleMusicPanel()" title="Close">✕</div>
+            </div>
+        </div>
+        <div class="music-now-playing" id="musicNowPlaying">Nothing playing</div>
+        <div class="music-grid" id="musicGrid">
+            <!-- filled by JS -->
+        </div>
+        <div class="music-controls">
+            <span style="font-size:0.75rem;color:var(--text-dim);">Vol</span>
+            <input type="range" class="music-vol" id="musicVolume" min="0" max="100" value="70" oninput="setMusicVolume(this.value)">
+            <label style="font-size:0.7rem;color:var(--text-dim);display:flex;align-items:center;gap:0.25rem;">
+                <input type="checkbox" id="musicBroadcast" checked style="accent-color:var(--accent);"> Broadcast
+            </label>
+            <button class="music-stop-btn" onclick="stopMusic()">■ Stop</button>
+        </div>
+        <audio id="musicAudio" loop></audio>
+    </div>
+
+    <!-- CHARACTER SHEET OVERLAY -->
+    <div class="char-overlay" id="charOverlay">
+        <div class="char-header">
+            <h1>📜 Characters</h1>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+                <button class="btn btn-primary btn-small" onclick="saveCharacter()">💾 Save</button>
+                <button class="btn btn-small" onclick="newCharacter()">+ New</button>
+                <button class="btn btn-small" onclick="closeCharSheet()">✕ Close</button>
+            </div>
+        </div>
+        <div class="char-body">
+            <!-- Character List -->
+            <div class="char-list-panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+                    <span style="font-size:0.85rem;color:var(--gold);font-weight:600;">Your Characters</span>
+                    <button class="btn btn-small btn-danger" onclick="deleteCharacter()" id="deleteCharBtn" style="display:none;">🗑 Delete</button>
+                </div>
+                <div id="charListEl"><p style="font-size:0.85rem;color:var(--text-dim);">No characters yet. Click "+ New" to create one.</p></div>
+            </div>
+
+            <!-- Character Editor -->
+            <div id="charEditor" style="display:none;">
+                <!-- TABS -->
+                <div class="char-tabs">
+                    <div class="char-tab active" onclick="switchCharTab('basics')">⚔️ Basics</div>
+                    <div class="char-tab" onclick="switchCharTab('abilities')">💪 Abilities</div>
+                    <div class="char-tab" onclick="switchCharTab('combat')">🛡️ Combat</div>
+                    <div class="char-tab" onclick="switchCharTab('skills')">🎲 Skills</div>
+                    <div class="char-tab" onclick="switchCharTab('notes')">📝 Notes</div>
+                </div>
+
+                <!-- BASICS TAB -->
+                <div class="char-tab-content active" id="tabBasics">
+                    <div class="char-section">
+                        <h3>Identity</h3>
+                        <div class="char-grid-2" style="margin-bottom:0.75rem;">
+                            <div><label class="char-label">Character Name</label><input class="char-input" id="cName" placeholder="Thorin Oakenshield"></div>
+                            <div><label class="char-label">Player Name</label><input class="char-input" id="cPlayer" placeholder="Your name"></div>
+                        </div>
+                        <div class="char-grid-3">
+                            <div><label class="char-label">Class</label>
+                                <select class="char-input" id="cClass" onchange="updateProfBonus()">
+                                    <option>Barbarian</option><option>Bard</option><option>Cleric</option>
+                                    <option>Druid</option><option>Fighter</option><option>Monk</option>
+                                    <option>Paladin</option><option>Ranger</option><option>Rogue</option>
+                                    <option>Sorcerer</option><option>Warlock</option><option>Wizard</option>
+                                </select>
+                            </div>
+                            <div><label class="char-label">Level</label><input class="char-input" id="cLevel" type="number" min="1" max="20" value="1" oninput="updateProfBonus()"></div>
+                            <div><label class="char-label">Proficiency Bonus</label><input class="char-input" id="cProfBonus" readonly style="background:var(--bg-card);color:var(--accent);font-weight:700;"></div>
+                        </div>
+                        <div class="char-grid-3" style="margin-top:0.75rem;">
+                            <div><label class="char-label">Race</label><input class="char-input" id="cRace" placeholder="Dwarf"></div>
+                            <div><label class="char-label">Background</label><input class="char-input" id="cBackground" placeholder="Folk Hero"></div>
+                            <div><label class="char-label">Alignment</label>
+                                <select class="char-input" id="cAlignment">
+                                    <option>Lawful Good</option><option>Neutral Good</option><option>Chaotic Good</option>
+                                    <option>Lawful Neutral</option><option>True Neutral</option><option>Chaotic Neutral</option>
+                                    <option>Lawful Evil</option><option>Neutral Evil</option><option>Chaotic Evil</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="char-section">
+                        <h3>Personality</h3>
+                        <div class="char-grid-2">
+                            <div><label class="char-label">Personality Trait</label><textarea class="notes-textarea" id="cPersonality" style="min-height:70px;" placeholder="I always tell the truth..."></textarea></div>
+                            <div><label class="char-label">Ideal</label><textarea class="notes-textarea" id="cIdeal" style="min-height:70px;" placeholder="Greater Good..."></textarea></div>
+                            <div><label class="char-label">Bond</label><textarea class="notes-textarea" id="cBond" style="min-height:70px;" placeholder="I would die for my village..."></textarea></div>
+                            <div><label class="char-label">Flaw</label><textarea class="notes-textarea" id="cFlaw" style="min-height:70px;" placeholder="I'm too proud..."></textarea></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABILITIES TAB -->
+                <div class="char-tab-content" id="tabAbilities">
+                    <div class="char-section">
+                        <h3>Ability Scores</h3>
+                        <div class="char-grid-6">
+                            <div class="ability-block">
+                                <div class="ability-name">STR</div>
+                                <div class="ability-score"><input type="number" id="aSTR" value="10" min="1" max="30" oninput="updateAbilityMod('STR')"></div>
+                                <div class="ability-mod" id="mSTR">+0</div>
+                            </div>
+                            <div class="ability-block">
+                                <div class="ability-name">DEX</div>
+                                <div class="ability-score"><input type="number" id="aDEX" value="10" min="1" max="30" oninput="updateAbilityMod('DEX')"></div>
+                                <div class="ability-mod" id="mDEX">+0</div>
+                            </div>
+                            <div class="ability-block">
+                                <div class="ability-name">CON</div>
+                                <div class="ability-score"><input type="number" id="aCON" value="10" min="1" max="30" oninput="updateAbilityMod('CON')"></div>
+                                <div class="ability-mod" id="mCON">+0</div>
+                            </div>
+                            <div class="ability-block">
+                                <div class="ability-name">INT</div>
+                                <div class="ability-score"><input type="number" id="aINT" value="10" min="1" max="30" oninput="updateAbilityMod('INT')"></div>
+                                <div class="ability-mod" id="mINT">+0</div>
+                            </div>
+                            <div class="ability-block">
+                                <div class="ability-name">WIS</div>
+                                <div class="ability-score"><input type="number" id="aWIS" value="10" min="1" max="30" oninput="updateAbilityMod('WIS')"></div>
+                                <div class="ability-mod" id="mWIS">+0</div>
+                            </div>
+                            <div class="ability-block">
+                                <div class="ability-name">CHA</div>
+                                <div class="ability-score"><input type="number" id="aCHA" value="10" min="1" max="30" oninput="updateAbilityMod('CHA')"></div>
+                                <div class="ability-mod" id="mCHA">+0</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="char-section">
+                        <h3>Saving Throws</h3>
+                        <div class="skill-list" id="savingThrowList"></div>
+                    </div>
+                </div>
+
+                <!-- COMBAT TAB -->
+                <div class="char-tab-content" id="tabCombat">
+                    <div class="char-section">
+                        <h3>Hit Points</h3>
+                        <div class="char-grid-3" style="margin-bottom:1rem;">
+                            <div class="stat-block">
+                                <label>Max HP</label>
+                                <input type="number" id="cHPMax" value="10" min="0">
+                            </div>
+                            <div class="stat-block" style="border-color:var(--danger);">
+                                <label style="color:var(--danger);">Current HP</label>
+                                <div class="hp-track">
+                                    <button class="hp-btn" onclick="changeHP(-1)">−</button>
+                                    <input type="number" id="cHP" value="10" min="0" style="flex:1;">
+                                    <button class="hp-btn" onclick="changeHP(1)">+</button>
+                                </div>
+                            </div>
+                            <div class="stat-block">
+                                <label>Temp HP</label>
+                                <input type="number" id="cTempHP" value="0" min="0">
+                            </div>
+                        </div>
+                        <div style="margin-bottom:0.75rem;">
+                            <label class="char-label">Death Saves</label>
+                            <div style="display:flex;gap:1rem;margin-top:0.5rem;">
+                                <div>
+                                    <span style="font-size:0.75rem;color:var(--success);margin-right:0.5rem;">Successes</span>
+                                    <div class="death-saves">
+                                        <div class="death-save-pip success" onclick="toggleDeathSave(this)" data-index="0"></div>
+                                        <div class="death-save-pip success" onclick="toggleDeathSave(this)" data-index="1"></div>
+                                        <div class="death-save-pip success" onclick="toggleDeathSave(this)" data-index="2"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span style="font-size:0.75rem;color:var(--danger);margin-right:0.5rem;">Failures</span>
+                                    <div class="death-saves">
+                                        <div class="death-save-pip failure" onclick="toggleDeathSave(this)" data-index="0"></div>
+                                        <div class="death-save-pip failure" onclick="toggleDeathSave(this)" data-index="1"></div>
+                                        <div class="death-save-pip failure" onclick="toggleDeathSave(this)" data-index="2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="char-section">
+                        <h3>Combat Stats</h3>
+                        <div class="char-grid-3">
+                            <div class="stat-block"><label>Armor Class</label><input type="number" id="cAC" value="10" min="0"></div>
+                            <div class="stat-block"><label>Initiative</label><input type="number" id="cInit" value="0" readonly style="color:var(--accent);" title="Equals DEX modifier"></div>
+                            <div class="stat-block"><label>Speed (ft)</label><input type="number" id="cSpeed" value="30" min="0"></div>
+                        </div>
+                        <div class="char-grid-2" style="margin-top:0.75rem;">
+                            <div><label class="char-label">Hit Dice</label><input class="char-input" id="cHitDice" placeholder="1d10" title="e.g. 1d10 for Fighter"></div>
+                            <div><label class="char-label">Passive Perception</label><input class="char-input" id="cPassivePerception" readonly style="background:var(--bg-card);color:var(--accent);font-weight:700;"></div>
+                        </div>
+                    </div>
+                    <div class="char-section">
+                        <h3>Equipment & Inventory</h3>
+                        <textarea class="notes-textarea" id="cInventory" placeholder="List weapons, armor, and items here..."></textarea>
+                    </div>
+                </div>
+
+                <!-- SKILLS TAB -->
+                <div class="char-tab-content" id="tabSkills">
+                    <div class="char-section">
+                        <h3>Skills</h3>
+                        <div class="skill-list" id="skillListEl"></div>
+                    </div>
+                </div>
+
+                <!-- NOTES TAB -->
+                <div class="char-tab-content" id="tabNotes">
+                    <div class="char-section">
+                        <h3>Spells</h3>
+                        <textarea class="notes-textarea" id="cSpells" placeholder="List your spells, cantrips, and spell slots here..."></textarea>
+                    </div>
+                    <div class="char-section">
+                        <h3>Features & Traits</h3>
+                        <textarea class="notes-textarea" id="cFeatures" placeholder="Class features, racial traits, feats..."></textarea>
+                    </div>
+                    <div class="char-section">
+                        <h3>Campaign Notes</h3>
+                        <textarea class="notes-textarea" id="cNotes" placeholder="Session notes, plot hooks, NPCs met..."></textarea>
+                    </div>
+                    <div class="char-section">
+                        <h3>Backstory</h3>
+                        <textarea class="notes-textarea" id="cBackstory" placeholder="Your character's backstory..."></textarea>
+                    </div>
+                </div>
+            </div><!-- end charEditor -->
+        </div>
+    </div>
+
     <script>
         console.clear();
         console.log('%c🎮 THE FRACTURED SKY VTT v4.0 FINAL', 'font-size: 24px; font-weight: bold; color: #8b5cf6; background: #1a1f2e; padding: 10px;');
@@ -1568,6 +2257,11 @@
         let roomCode = null;
         let connections = new Map();
         let savedPeerId = null; // For DM session persistence
+
+        // === CO-DM STATE ===
+        let isCoDM = false;      // true when this instance joined as a co-DM
+        let hostDMConn = null;   // co-DM's connection to the host DM
+        let coDMs = new Map();   // host DM's map of approved co-DM connections
 
         // === FIREBASE ===
         const firebaseConfig = {
@@ -1862,130 +2556,120 @@
                 }
             });
 
-            console.log('✅ VTT Ready!');
-
-            // Auto-reconnect DM if they had an active session before refresh
+            // Show resume prompts if saved sessions exist
             const savedDMSession = localStorage.getItem('fracturedSkySessionId');
             const wasDM = localStorage.getItem('fracturedSkyIsDM') === 'true';
+            const savedPlayerRoom = localStorage.getItem('fracturedSkyPlayerRoom');
+            const savedPlayerName = localStorage.getItem('fracturedSkyPlayerName');
+
+            const resumeArea = document.getElementById('resumeArea');
+            let resumeHTML = '';
+
             if (wasDM && savedDMSession) {
-                // Restore previously approved player names so rejoiners get auto-approved
-                try {
-                    const saved = localStorage.getItem('fracturedSkyApprovedNames');
-                    if (saved) JSON.parse(saved).forEach(n => approvedPlayerNames.add(n));
-                } catch(e) {}
-                console.log('🔄 Auto-reconnecting DM session:', savedDMSession);
-                updateConnectionStatus('Reconnecting...', false);
-                createRoom(savedDMSession);
-            } else {
-                // Auto-reconnect player if they have a saved room
-                const savedPlayerRoom = localStorage.getItem('fracturedSkyPlayerRoom');
-                const savedPlayerName = localStorage.getItem('fracturedSkyPlayerName');
-                if (savedPlayerRoom && savedPlayerName) {
-                    console.log('🔄 Auto-reconnecting player to room:', savedPlayerRoom);
-                    myName = savedPlayerName;
-                    roomCode = savedPlayerRoom;
-                    document.getElementById('welcomeScreen').classList.add('hidden');
-                    document.getElementById('connectionTabContainer').style.display = 'block';
-                    updateConnectionStatus('Reconnecting...', false);
-                    playerAutoReconnect();
-                }
+                resumeHTML += `
+                    <div class="resume-prompt">
+                        <div class="resume-prompt-title">Previous DM Session Found</div>
+                        <div class="resume-prompt-name">🎭 ${savedDMSession.substring(0,16)}...</div>
+                        <div class="resume-buttons">
+                            <button class="resume-btn resume-btn-yes" onclick="resumeDMSession()">▶️ Resume Session</button>
+                            <button class="resume-btn resume-btn-no" onclick="clearDMSession()">🆕 Start Fresh</button>
+                        </div>
+                    </div>`;
             }
+            if (savedPlayerRoom && savedPlayerName && !wasDM) {
+                resumeHTML += `
+                    <div class="resume-prompt">
+                        <div class="resume-prompt-title">Previous Player Session Found</div>
+                        <div class="resume-prompt-name">👤 ${savedPlayerName}</div>
+                        <div class="resume-buttons">
+                            <button class="resume-btn resume-btn-yes" onclick="resumePlayerSession()">▶️ Rejoin Room</button>
+                            <button class="resume-btn resume-btn-no" onclick="clearPlayerSession()">🆕 Start Fresh</button>
+                        </div>
+                    </div>`;
+            }
+            if (resumeHTML) {
+                resumeArea.innerHTML = resumeHTML;
+            }
+        }
+
+        function resumeDMSession() {
+            try {
+                const saved = localStorage.getItem('fracturedSkyApprovedNames');
+                if (saved) JSON.parse(saved).forEach(n => approvedPlayerNames.add(n));
+            } catch(e) {}
+            const savedDMSession = localStorage.getItem('fracturedSkySessionId');
+            updateConnectionStatus('Reconnecting...', false);
+            createRoom(savedDMSession);
+        }
+        function clearDMSession() {
+            localStorage.removeItem('fracturedSkySessionId');
+            localStorage.removeItem('fracturedSkyIsDM');
+            document.getElementById('resumeArea').innerHTML = '';
+        }
+        function resumePlayerSession() {
+            const savedPlayerRoom = localStorage.getItem('fracturedSkyPlayerRoom');
+            const savedPlayerName = localStorage.getItem('fracturedSkyPlayerName');
+            myName = savedPlayerName;
+            roomCode = savedPlayerRoom;
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('connectionTabContainer').style.display = 'block';
+            updateConnectionStatus('Reconnecting...', false);
+            playerAutoReconnect();
+        }
+        function clearPlayerSession() {
+            localStorage.removeItem('fracturedSkyPlayerRoom');
+            localStorage.removeItem('fracturedSkyPlayerName');
+            document.getElementById('resumeArea').innerHTML = '';
         }
 
         function resizeCanvas() {
             const container = document.querySelector('.canvas-container');
+            const prevW = canvas.width;
+            const prevH = canvas.height;
             canvas.width = container.offsetWidth;
             canvas.height = container.offsetHeight;
-            panX = (canvas.width - GRID_SIZE * 3) / 2;
-            panY = (canvas.height - GRID_SIZE * 3) / 2;
+            // Only center on first load (prevW === 0), not on every resize
+            if (prevW === 0) {
+                panX = (canvas.width - GRID_SIZE * 3) / 2;
+                panY = (canvas.height - GRID_SIZE * 3) / 2;
+            }
             draw();
         }
 
         // === AUTHENTICATION ===
         function showDMLogin() {
-            console.log('🎭 showDMLogin called');
-            // Pre-fill session ID from localStorage if available
             const savedSession = localStorage.getItem('fracturedSkySessionId');
             if (savedSession) {
                 document.getElementById('sessionId').value = savedSession;
             }
-            const modal = document.getElementById('dmModal');
-            console.log('DM Modal element:', modal);
-            
-            // Force display with both class and inline styles
-            modal.classList.add('active');
-            modal.style.display = 'flex';
-            modal.style.opacity = '1';
-            modal.style.visibility = 'visible';
-            modal.style.pointerEvents = 'all';
-            
-            console.log('DM Modal classes:', modal.className);
-            console.log('DM Modal display:', modal.style.display);
-            
-            // Debug computed styles
-            setTimeout(() => {
-                const computed = window.getComputedStyle(modal);
-                console.log('Modal computed opacity:', computed.opacity);
-                console.log('Modal computed visibility:', computed.visibility);
-                console.log('Modal computed z-index:', computed.zIndex);
-                console.log('Modal computed display:', computed.display);
-                console.log('Modal computed pointer-events:', computed.pointerEvents);
-            }, 100);
+            document.getElementById('dmModal').classList.add('active');
         }
 
         function closeDMModal() {
-            console.log('closeDMModal called');
-            const modal = document.getElementById('dmModal');
-            modal.classList.remove('active');
-            modal.style.display = 'none';
+            document.getElementById('dmModal').classList.remove('active');
             document.getElementById('dmError').classList.remove('show');
             document.getElementById('dmInfo').style.display = 'none';
         }
 
         function dmLogin(e) {
             e.preventDefault();
-            console.log('dmLogin called');
             const user = document.getElementById('dmUser').value;
             const pass = document.getElementById('dmPass').value;
             const sessionId = document.getElementById('sessionId').value.trim();
-            
-            // Changed password to avoid security warnings
             if (user === 'Wizard' && pass === 'FracturedSky2025!') {
                 closeDMModal();
-                
-                if (sessionId) {
-                    // Rejoin existing session
-                    savedPeerId = sessionId;
-                    createRoom(sessionId);
-                } else {
-                    // Create new session
-                    createRoom();
-                }
+                createRoom(sessionId || null);
             } else {
                 document.getElementById('dmError').classList.add('show');
             }
         }
 
         function showPlayerLogin() {
-            console.log('👤 showPlayerLogin called');
-            const modal = document.getElementById('playerModal');
-            console.log('Player Modal element:', modal);
-            
-            // Force display with both class and inline styles
-            modal.classList.add('active');
-            modal.style.display = 'flex';
-            modal.style.opacity = '1';
-            modal.style.visibility = 'visible';
-            modal.style.pointerEvents = 'all';
-            
-            console.log('Player Modal classes:', modal.className);
-            console.log('Player Modal display:', modal.style.display);
+            document.getElementById('playerModal').classList.add('active');
         }
 
         function closePlayerModal() {
-            const modal = document.getElementById('playerModal');
-            modal.classList.remove('active');
-            modal.style.display = 'none';
+            document.getElementById('playerModal').classList.remove('active');
             document.getElementById('playerError').classList.remove('show');
             document.getElementById('playerSuccess').classList.remove('show');
         }
@@ -2064,77 +2748,32 @@
 
         // === MULTIPLAYER ===
         function createRoom(existingId = null) {
-            console.log('🎭 createRoom called with existingId:', existingId);
             isDM = true;
+            isCoDM = false;
             myName = 'Dungeon Master';
 
             function doPeerCreate() {
-                // Use existing peer ID if provided
-                if (existingId) {
-                    console.log('Creating peer with existing ID:', existingId);
-                    peer = new Peer(existingId);
-                } else {
-                    console.log('Creating peer with new ID');
-                    peer = new Peer();
-                }
-            
-            console.log('Peer object created:', peer);
+                peer = existingId ? new Peer(existingId) : new Peer();
             
             peer.on('open', (id) => {
-                console.log('✅ Peer connection opened! ID:', id);
                 myId = id;
                 roomCode = id;
                 savedPeerId = id;
-                
-                // Save to localStorage for easy recovery
                 localStorage.setItem('fracturedSkySessionId', id);
                 localStorage.setItem('fracturedSkyIsDM', 'true');
-                console.log('💾 Saved session ID to localStorage');
-                
-                document.getElementById('welcomeScreen').classList.add('hidden');
-                document.getElementById('connectionTabContainer').style.display = 'block';
-                document.getElementById('roomCodeSection').style.display = 'block';
-                document.getElementById('roomCode').textContent = roomCode;
-                document.getElementById('dmControlsBtn').style.display = 'block';
-                document.getElementById('stagingZone').style.display = 'flex';
-                
-                console.log('UI updated, calling updateConnectionStatus');
-                updateConnectionStatus('Connected as DM', true);
-                updateUserList();
-                loadSavedCloudLink();
-                
-                // Show success if rejoining
-                if (existingId) {
-                    alert('✅ Rejoined session: ' + id.substring(0, 12) + '...');
-                }
-                
-                toggleConnectionPanel();
-                setTimeout(() => {
-                    if (document.getElementById('connectionPanel').classList.contains('open')) {
-                        toggleConnectionPanel();
-                    }
-                }, 5000);
-                
-                console.log('✅ createRoom complete!');
-
+                onDMReady();
                 // Firebase: sign in then load persisted state for this room
                 document.getElementById('firebaseSection').style.display = 'block';
                 document.getElementById('firebaseStatus').style.display = 'inline';
                 firebaseSignIn().then(() => {
-                    firebaseRoomRef = roomCode; // used as Firestore document ID
+                    firebaseRoomRef = roomCode;
                     loadFromFirebase(roomCode);
                 });
             });
             
-            peer.on('connection', (conn) => {
-                console.log('👥 Incoming connection from:', conn.peer);
-                setupConnection(conn);
-            });
-            
+            peer.on('connection', (conn) => { setupConnection(conn); });
+
             peer.on('error', (err) => {
-                console.error('❌ Peer error:', err);
-                console.error('Error type:', err.type);
-                console.error('Error message:', err.message);
 
                 if (err.type === 'unavailable-id') {
                     // ID still held by PeerJS server after page refresh.
@@ -2147,49 +2786,27 @@
 
                     function retryClaimId() {
                         attempts++;
-                        console.log(`🔄 Retrying peer ID claim (${attempts}/${maxAttempts})...`);
                         if (peer) { try { peer.destroy(); } catch(e) {} }
-
                         peer = new Peer(targetId);
                         peer.on('open', (id) => {
-                            console.log('✅ Reclaimed peer ID:', id);
                             myId = id;
                             roomCode = id;
                             savedPeerId = id;
                             localStorage.setItem('fracturedSkySessionId', id);
-                            document.getElementById('welcomeScreen').classList.add('hidden');
-                            document.getElementById('connectionTabContainer').style.display = 'block';
-                            document.getElementById('roomCodeSection').style.display = 'block';
-                            document.getElementById('roomCode').textContent = roomCode;
-                            document.getElementById('dmControlsBtn').style.display = 'block';
-                            document.getElementById('stagingZone').style.display = 'flex';
-                            updateConnectionStatus('Reconnected as DM', true);
-                            updateUserList();
-                            loadSavedCloudLink();
-                            toggleConnectionPanel();
-                            setTimeout(() => {
-                                if (document.getElementById('connectionPanel').classList.contains('open')) {
-                                    toggleConnectionPanel();
-                                }
-                            }, 5000);
+                            onDMReady();
                             document.getElementById('firebaseSection').style.display = 'block';
                             document.getElementById('firebaseStatus').style.display = 'inline';
                             firebaseSignIn().then(() => {
                                 firebaseRoomRef = roomCode;
                                 loadFromFirebase(roomCode);
                             });
-                            // Re-attach connection listener on the new peer object
-                            peer.on('connection', (conn) => {
-                                console.log('👥 Incoming connection from:', conn.peer);
-                                setupConnection(conn);
-                            });
+                            peer.on('connection', (conn) => { setupConnection(conn); });
                             peer.on('error', (e) => console.error('Peer error after reclaim:', e));
                         });
                         peer.on('error', (e) => {
                             if (e.type === 'unavailable-id' && attempts < maxAttempts) {
                                 const delay = Math.min(2000 * attempts, 10000);
-                                console.log(`⏳ Still unavailable, retrying in ${delay}ms...`);
-                                updateConnectionStatus(`Reclaiming... (${attempts}/${maxAttempts})`, false);
+                                updateConnectionStatus(`Reclaiming session... (${attempts}/${maxAttempts})`, false);
                                 setTimeout(retryClaimId, delay);
                             } else {
                                 console.error('❌ Could not reclaim peer ID after', attempts, 'attempts');
@@ -2199,9 +2816,7 @@
                         });
                     }
 
-                    const initialDelay = 2000;
-                    console.log(`⏳ Waiting ${initialDelay}ms before first retry...`);
-                    setTimeout(retryClaimId, initialDelay);
+                    setTimeout(retryClaimId, 2000);
                 } else if (err.type === 'network') {
                     alert('⚠️ Network error. Check your internet connection.');
                 } else if (err.type === 'peer-unavailable') {
@@ -2211,7 +2826,6 @@
                 }
             });
             
-                console.log('Peer event listeners set up');
             } // end doPeerCreate
 
             if (existingId) {
@@ -2225,6 +2839,71 @@
             } else {
                 doPeerCreate();
             }
+        }
+
+        // Called whenever this tab successfully claims the DM role
+        function onDMReady() {
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('connectionTabContainer').style.display = 'block';
+            document.getElementById('roomCodeSection').style.display = 'block';
+            document.getElementById('roomCode').textContent = roomCode;
+            document.getElementById('dmControlsBtn').style.display = 'block';
+            document.getElementById('musicToggleBtn').style.display = 'block';
+            document.getElementById('stagingZone').style.display = 'flex';
+            updateConnectionStatus('Connected as DM', true);
+            updateUserList();
+            loadSavedCloudLink();
+            initMusicPanel();
+            toggleConnectionPanel();
+            setTimeout(() => {
+                if (document.getElementById('connectionPanel').classList.contains('open')) {
+                    toggleConnectionPanel();
+                }
+            }, 5000);
+        }
+
+        // === CO-DM ===
+        function showCoDMLogin() {
+            document.getElementById('coDMModal').classList.add('active');
+        }
+        function closeCoDMModal() {
+            document.getElementById('coDMModal').classList.remove('active');
+            document.getElementById('coDMError').classList.remove('show');
+        }
+        function coDMLogin(e) {
+            e.preventDefault();
+            const name = document.getElementById('coDMName').value.trim();
+            const code = document.getElementById('coDMRoomCode').value.trim();
+            const pass = document.getElementById('coDMPass').value;
+            if (pass !== 'FracturedSky2025!') {
+                document.getElementById('coDMError').classList.add('show');
+                return;
+            }
+            closeCoDMModal();
+            joinAsCoDM(name, code);
+        }
+        function joinAsCoDM(name, code) {
+            isDM = true;
+            isCoDM = true;
+            myName = name;
+            roomCode = code;
+            if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
+            peer = new Peer();
+            peer.on('open', (id) => {
+                myId = id;
+                hostDMConn = peer.connect(code);
+                setupConnection(hostDMConn, false); // treat host as "player" side for conn mgmt
+                hostDMConn.on('open', () => {
+                    sendToPeer(hostDMConn, { type: 'coDMJoinRequest', name, peerId: myId });
+                    document.getElementById('welcomeScreen').classList.add('hidden');
+                    document.getElementById('connectionTabContainer').style.display = 'block';
+                    updateConnectionStatus('Connecting as Co-DM...', false);
+                });
+                hostDMConn.on('error', () => {
+                    updateConnectionStatus('Co-DM connection failed', false);
+                });
+            });
+            peer.on('error', () => updateConnectionStatus('Peer error', false));
         }
 
         function setupConnection(conn, isPlayer = false) {
@@ -2260,9 +2939,49 @@
         }
 
         function handleMessage(conn, data) {
-            console.log('Message received:', data.type);
-            
             switch (data.type) {
+                // --- Co-DM handshake ---
+                case 'coDMJoinRequest':
+                    if (isDM && !isCoDM) {
+                        // Accept co-DM: give them full game state + co-DM role
+                        const connData = connections.get(conn.peer);
+                        if (connData) {
+                            connData.name = data.name + ' (Co-DM)';
+                            connData.role = 'co-dm';
+                            connData.approved = true;
+                        }
+                        coDMs.set(conn.peer, conn);
+                        sendToPeer(conn, { type: 'coDMApproved', name: data.name, roomCode });
+                        sendGameState(conn);
+                        updateUserList();
+                    }
+                    break;
+
+                case 'coDMApproved':
+                    // We are the co-DM, host approved us
+                    myName = data.name + ' (Co-DM)';
+                    roomCode = data.roomCode;
+                    document.getElementById('roomCodeSection').style.display = 'block';
+                    document.getElementById('roomCode').textContent = roomCode;
+                    document.getElementById('dmControlsBtn').style.display = 'block';
+                    document.getElementById('musicToggleBtn').style.display = 'block';
+                    document.getElementById('stagingZone').style.display = 'flex';
+                    updateConnectionStatus('Connected as Co-DM', true);
+                    updateUserList();
+                    initMusicPanel();
+                    break;
+
+                case 'coDMBroadcast':
+                    // Host DM receives a change from a co-DM, applies it and re-broadcasts
+                    if (isDM && !isCoDM) {
+                        handleIncomingChange(data.payload);
+                        // Re-broadcast to all approved players (not co-DMs)
+                        connections.forEach(({ conn: c, approved, role }) => {
+                            if (approved && role !== 'co-dm') sendToPeer(c, data.payload);
+                        });
+                    }
+                    break;
+
                 case 'playerJoinRequest':
                     if (isDM) {
                         // Auto-approve players whose name was previously approved (handles restarts too)
@@ -2369,7 +3088,6 @@
                     break;
                     
                 case 'imagesUpdate':
-                    // Load images from network
                     placedImages = [];
                     data.images.forEach(imgData => {
                         const img = new Image();
@@ -2388,6 +3106,25 @@
                         };
                         img.src = imgData.src;
                     });
+                    break;
+
+                case 'musicCue':
+                    if (!isDM) {
+                        const track = MUSIC_TRACKS.find(t => t.id === data.trackId);
+                        const audio = document.getElementById('musicAudio');
+                        if (track) {
+                            audio.src = track.file;
+                            audio.volume = 0.6;
+                            audio.play().catch(() => {});
+                            const notice = document.createElement('div');
+                            notice.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--accent);padding:0.5rem 1rem;border-radius:8px;font-size:0.8rem;z-index:9999;pointer-events:none;';
+                            notice.textContent = `${track.emoji} DM playing: ${track.label}`;
+                            document.body.appendChild(notice);
+                            setTimeout(() => notice.remove(), 4500);
+                        } else {
+                            audio.pause();
+                        }
+                    }
                     break;
             }
         }
@@ -2415,10 +3152,41 @@
         }
 
         function broadcast(data) {
-            connections.forEach(({ conn, approved }) => {
-                if (approved) sendToPeer(conn, data);
-            });
+            if (isCoDM && hostDMConn) {
+                // Co-DM: route through host DM who will re-broadcast to players
+                sendToPeer(hostDMConn, { type: 'coDMBroadcast', payload: data });
+            } else {
+                // Host DM: broadcast directly to approved players and co-DMs
+                connections.forEach(({ conn, approved }) => {
+                    if (approved) sendToPeer(conn, data);
+                });
+            }
             scheduleSave();
+        }
+
+        // Apply an incoming state change from a co-DM without re-broadcasting
+        function handleIncomingChange(data) {
+            switch (data.type) {
+                case 'gridUpdate':     updateGridFromNetwork(data); updateMinimap(); break;
+                case 'tokenUpdate':
+                    stagingTokens = [];
+                    placedTokens = [];
+                    (data.tokens || []).forEach(t => {
+                        if (t.x !== undefined) placedTokens.push(t);
+                        else stagingTokens.push(t);
+                    });
+                    renderStagingTokens(); draw();
+                    break;
+                case 'fogUpdate':      updateFogFromNetwork(data); break;
+                case 'imagesUpdate':
+                    placedImages = [];
+                    (data.images || []).forEach(imgData => {
+                        const img = new Image();
+                        img.onload = () => { placedImages.push({ img, x:imgData.x, y:imgData.y, width:imgData.width, height:imgData.height, rotation:imgData.rotation, gridX:imgData.gridX, gridY:imgData.gridY }); draw(); };
+                        img.src = imgData.src;
+                    });
+                    break;
+            }
         }
 
         function approvePlayer(index) {
@@ -2722,24 +3490,21 @@
         function updateUserList() {
             const container = document.getElementById('userList');
             const users = [];
-            
-            if (isDM) users.push({ name: myName, role: 'DM' });
-            
+            if (isDM) users.push({ name: myName, role: isCoDM ? 'Co-DM' : 'DM' });
             connections.forEach(({ name, role, approved }) => {
                 if (approved) {
-                    users.push({ name, role: role === 'dm' ? 'DM' : 'Player' });
+                    const label = role === 'co-dm' ? 'Co-DM' : role === 'dm' ? 'DM' : 'Player';
+                    users.push({ name, role: label });
                 }
             });
-            
             if (users.length === 0) {
-                container.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-dim);">No users</p>';
+                container.innerHTML = '<p style="font-size:0.85rem;color:var(--text-dim);">No users</p>';
                 return;
             }
-            
             container.innerHTML = users.map(u => `
                 <div class="user-item">
                     <span>${u.name}</span>
-                    <span class="user-role">${u.role}</span>
+                    <span class="user-role ${u.role === 'Co-DM' ? 'co-dm' : ''}">${u.role}</span>
                 </div>
             `).join('');
         }
@@ -4498,13 +5263,428 @@
             return false;
         };
 
-        // Wrap init in try-catch
+        // =============================================
+        // === MUSIC PLAYER ===
+        // =============================================
+        const MUSIC_TRACKS = [
+            { id: 'combat',      label: 'Combat',      emoji: '⚔️',  file: 'music/combat.mp3' },
+            { id: 'boss',        label: 'Boss Battle', emoji: '💀',  file: 'music/boss.mp3' },
+            { id: 'exploration', label: 'Exploration', emoji: '🗺️', file: 'music/exploration.mp3' },
+            { id: 'dungeon',     label: 'Dungeon',     emoji: '🕯️', file: 'music/dungeon.mp3' },
+            { id: 'tavern',      label: 'Tavern',      emoji: '🍺',  file: 'music/tavern.mp3' },
+            { id: 'town',        label: 'Town',        emoji: '🏘️', file: 'music/town.mp3' },
+            { id: 'rest',        label: 'Rest',        emoji: '🌙',  file: 'music/rest.mp3' },
+            { id: 'mystery',     label: 'Mystery',     emoji: '🔮',  file: 'music/mystery.mp3' },
+        ];
+        let currentTrack = null;
+        let musicPanelDragOffset = null;
+
+        function initMusicPanel() {
+            const grid = document.getElementById('musicGrid');
+            grid.innerHTML = MUSIC_TRACKS.map(t => `
+                <button class="music-btn" id="mBtn_${t.id}" onclick="playMusic('${t.id}')">
+                    <span class="music-emoji">${t.emoji}</span>${t.label}
+                </button>
+            `).join('');
+        }
+
+        function toggleMusicPanel() {
+            const panel = document.getElementById('musicPanel');
+            panel.classList.toggle('visible');
+            if (panel.classList.contains('visible') && !document.getElementById('musicGrid').innerHTML) {
+                initMusicPanel();
+            }
+        }
+
+        function playMusic(trackId) {
+            const track = MUSIC_TRACKS.find(t => t.id === trackId);
+            if (!track) return;
+            const audio = document.getElementById('musicAudio');
+            // Toggle off if same track playing
+            if (currentTrack === trackId && !audio.paused) { stopMusic(); return; }
+            // Update UI buttons
+            document.querySelectorAll('.music-btn').forEach(b => b.classList.remove('playing'));
+            const btn = document.getElementById('mBtn_' + trackId);
+            if (btn) btn.classList.add('playing');
+            // Play audio
+            audio.src = track.file;
+            audio.volume = document.getElementById('musicVolume').value / 100;
+            audio.play().catch(() => {
+                document.getElementById('musicNowPlaying').innerHTML =
+                    `<span style="color:var(--danger)">⚠ No MP3 file yet for "${track.label}" — add music/${track.id}.mp3</span>`;
+            });
+            currentTrack = trackId;
+            document.getElementById('musicNowPlaying').innerHTML =
+                `Now Playing: <span class="track-name">${track.emoji} ${track.label}</span>`;
+            // Optionally broadcast music cue to players
+            if (document.getElementById('musicBroadcast').checked) {
+                broadcast({ type: 'musicCue', trackId, trackLabel: track.label, emoji: track.emoji });
+            }
+        }
+
+        function stopMusic() {
+            const audio = document.getElementById('musicAudio');
+            audio.pause();
+            audio.src = '';
+            currentTrack = null;
+            document.querySelectorAll('.music-btn').forEach(b => b.classList.remove('playing'));
+            document.getElementById('musicNowPlaying').textContent = 'Nothing playing';
+            if (document.getElementById('musicBroadcast').checked) {
+                broadcast({ type: 'musicCue', trackId: null });
+            }
+        }
+
+        function setMusicVolume(val) {
+            const audio = document.getElementById('musicAudio');
+            audio.volume = val / 100;
+        }
+
+
+        // Music panel dragging
+        const musicPanel = document.getElementById('musicPanel');
+        musicPanel.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.music-btn') || e.target.closest('.minimap-btn') ||
+                e.target.closest('input') || e.target.closest('button')) return;
+            musicPanelDragOffset = { x: e.clientX - musicPanel.offsetLeft, y: e.clientY - musicPanel.offsetTop };
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!musicPanelDragOffset) return;
+            musicPanel.style.right = 'auto';
+            musicPanel.style.bottom = 'auto';
+            musicPanel.style.left = (e.clientX - musicPanelDragOffset.x) + 'px';
+            musicPanel.style.top = (e.clientY - musicPanelDragOffset.y) + 'px';
+        });
+        document.addEventListener('mouseup', () => { musicPanelDragOffset = null; });
+
+        // =============================================
+        // === CHARACTER SHEET ===
+        // =============================================
+        const SKILLS_DEF = [
+            { name: 'Acrobatics',     attr: 'DEX' }, { name: 'Animal Handling', attr: 'WIS' },
+            { name: 'Arcana',         attr: 'INT' }, { name: 'Athletics',       attr: 'STR' },
+            { name: 'Deception',      attr: 'CHA' }, { name: 'History',         attr: 'INT' },
+            { name: 'Insight',        attr: 'WIS' }, { name: 'Intimidation',    attr: 'CHA' },
+            { name: 'Investigation',  attr: 'INT' }, { name: 'Medicine',        attr: 'WIS' },
+            { name: 'Nature',         attr: 'INT' }, { name: 'Perception',      attr: 'WIS' },
+            { name: 'Performance',    attr: 'CHA' }, { name: 'Persuasion',      attr: 'CHA' },
+            { name: 'Religion',       attr: 'INT' }, { name: 'Sleight of Hand', attr: 'DEX' },
+            { name: 'Stealth',        attr: 'DEX' }, { name: 'Survival',        attr: 'WIS' },
+        ];
+        const SAVES_DEF = ['STR','DEX','CON','INT','WIS','CHA'];
+        let characters = [];     // array of character objects
+        let activeCharIdx = -1;  // index into characters[]
+
+        function showCharSheet() {
+            loadCharactersFromStorage();
+            renderCharList();
+            buildSkillList();
+            buildSavingThrows();
+            document.getElementById('charOverlay').classList.add('active');
+            updateAllAbilityMods();
+            updateProfBonus();
+        }
+
+        function closeCharSheet() {
+            document.getElementById('charOverlay').classList.remove('active');
+        }
+
+        function loadCharactersFromStorage() {
+            try {
+                const saved = localStorage.getItem('fracturedSky_characters');
+                characters = saved ? JSON.parse(saved) : [];
+            } catch(e) { characters = []; }
+        }
+
+        function saveCharactersToStorage() {
+            localStorage.setItem('fracturedSky_characters', JSON.stringify(characters));
+        }
+
+        function renderCharList() {
+            const el = document.getElementById('charListEl');
+            if (characters.length === 0) {
+                el.innerHTML = '<p style="font-size:0.85rem;color:var(--text-dim);">No characters yet. Click "+ New" to create one.</p>';
+                document.getElementById('charEditor').style.display = 'none';
+                document.getElementById('deleteCharBtn').style.display = 'none';
+                return;
+            }
+            el.innerHTML = characters.map((c, i) => `
+                <div class="char-list-item ${i === activeCharIdx ? 'active' : ''}" onclick="loadCharacter(${i})">
+                    <div>
+                        <div style="font-weight:600;">${c.name || 'Unnamed'}</div>
+                        <div style="font-size:0.75rem;color:var(--text-dim);">${c.class || '?'} ${c.level || 1} • ${c.race || '?'}</div>
+                    </div>
+                    <div style="text-align:right;font-size:0.8rem;">
+                        <div style="color:var(--danger);">❤️ ${c.hp || 0}/${c.hpMax || 0}</div>
+                        <div style="color:var(--text-dim);">🛡️ AC ${c.ac || 10}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function newCharacter() {
+            const char = {
+                name:'', player: myName || '', class:'Fighter', level:1, race:'', background:'', alignment:'True Neutral',
+                str:10, dex:10, con:10, int:10, wis:10, cha:10,
+                hp:10, hpMax:10, tempHp:0, ac:10, speed:30, hitDice:'1d10',
+                skillProfs:{}, saveProfs:{},
+                personality:'', ideal:'', bond:'', flaw:'',
+                inventory:'', spells:'', features:'', notes:'', backstory:'',
+                deathSuccesses:[false,false,false], deathFailures:[false,false,false]
+            };
+            characters.push(char);
+            activeCharIdx = characters.length - 1;
+            saveCharactersToStorage();
+            renderCharList();
+            populateCharEditor(char);
+            document.getElementById('charEditor').style.display = 'block';
+            document.getElementById('deleteCharBtn').style.display = 'inline-block';
+        }
+
+        function loadCharacter(idx) {
+            activeCharIdx = idx;
+            const char = characters[idx];
+            populateCharEditor(char);
+            document.getElementById('charEditor').style.display = 'block';
+            document.getElementById('deleteCharBtn').style.display = 'inline-block';
+            renderCharList();
+        }
+
+        function deleteCharacter() {
+            if (activeCharIdx < 0) return;
+            if (!confirm('Delete this character? This cannot be undone.')) return;
+            characters.splice(activeCharIdx, 1);
+            activeCharIdx = -1;
+            saveCharactersToStorage();
+            renderCharList();
+            document.getElementById('charEditor').style.display = 'none';
+            document.getElementById('deleteCharBtn').style.display = 'none';
+        }
+
+        function populateCharEditor(c) {
+            document.getElementById('cName').value = c.name || '';
+            document.getElementById('cPlayer').value = c.player || '';
+            document.getElementById('cClass').value = c.class || 'Fighter';
+            document.getElementById('cLevel').value = c.level || 1;
+            document.getElementById('cRace').value = c.race || '';
+            document.getElementById('cBackground').value = c.background || '';
+            document.getElementById('cAlignment').value = c.alignment || 'True Neutral';
+            document.getElementById('aSTR').value = c.str || 10;
+            document.getElementById('aDEX').value = c.dex || 10;
+            document.getElementById('aCON').value = c.con || 10;
+            document.getElementById('aINT').value = c.int || 10;
+            document.getElementById('aWIS').value = c.wis || 10;
+            document.getElementById('aCHA').value = c.cha || 10;
+            document.getElementById('cHP').value = c.hp || 10;
+            document.getElementById('cHPMax').value = c.hpMax || 10;
+            document.getElementById('cTempHP').value = c.tempHp || 0;
+            document.getElementById('cAC').value = c.ac || 10;
+            document.getElementById('cSpeed').value = c.speed || 30;
+            document.getElementById('cHitDice').value = c.hitDice || '1d10';
+            document.getElementById('cPersonality').value = c.personality || '';
+            document.getElementById('cIdeal').value = c.ideal || '';
+            document.getElementById('cBond').value = c.bond || '';
+            document.getElementById('cFlaw').value = c.flaw || '';
+            document.getElementById('cInventory').value = c.inventory || '';
+            document.getElementById('cSpells').value = c.spells || '';
+            document.getElementById('cFeatures').value = c.features || '';
+            document.getElementById('cNotes').value = c.notes || '';
+            document.getElementById('cBackstory').value = c.backstory || '';
+            // Skill profs
+            document.querySelectorAll('.skill-prof-check').forEach(cb => {
+                cb.checked = !!(c.skillProfs && c.skillProfs[cb.dataset.skill]);
+            });
+            // Save profs
+            document.querySelectorAll('.save-prof-check').forEach(cb => {
+                cb.checked = !!(c.saveProfs && c.saveProfs[cb.dataset.save]);
+            });
+            // Death saves
+            ['deathSuccesses','deathFailures'].forEach(key => {
+                const type = key === 'deathSuccesses' ? 'success' : 'failure';
+                document.querySelectorAll(`.death-save-pip.${type}`).forEach((pip, i) => {
+                    const filled = c[key] && c[key][i];
+                    pip.classList.toggle('filled', !!filled);
+                });
+            });
+            updateAllAbilityMods();
+            updateProfBonus();
+        }
+
+        function saveCharacter() {
+            if (activeCharIdx < 0) { alert('No character selected. Click "+ New" first.'); return; }
+            const c = characters[activeCharIdx];
+            c.name = document.getElementById('cName').value;
+            c.player = document.getElementById('cPlayer').value;
+            c.class = document.getElementById('cClass').value;
+            c.level = parseInt(document.getElementById('cLevel').value) || 1;
+            c.race = document.getElementById('cRace').value;
+            c.background = document.getElementById('cBackground').value;
+            c.alignment = document.getElementById('cAlignment').value;
+            c.str = parseInt(document.getElementById('aSTR').value) || 10;
+            c.dex = parseInt(document.getElementById('aDEX').value) || 10;
+            c.con = parseInt(document.getElementById('aCON').value) || 10;
+            c.int = parseInt(document.getElementById('aINT').value) || 10;
+            c.wis = parseInt(document.getElementById('aWIS').value) || 10;
+            c.cha = parseInt(document.getElementById('aCHA').value) || 10;
+            c.hp = parseInt(document.getElementById('cHP').value) || 0;
+            c.hpMax = parseInt(document.getElementById('cHPMax').value) || 10;
+            c.tempHp = parseInt(document.getElementById('cTempHP').value) || 0;
+            c.ac = parseInt(document.getElementById('cAC').value) || 10;
+            c.speed = parseInt(document.getElementById('cSpeed').value) || 30;
+            c.hitDice = document.getElementById('cHitDice').value;
+            c.personality = document.getElementById('cPersonality').value;
+            c.ideal = document.getElementById('cIdeal').value;
+            c.bond = document.getElementById('cBond').value;
+            c.flaw = document.getElementById('cFlaw').value;
+            c.inventory = document.getElementById('cInventory').value;
+            c.spells = document.getElementById('cSpells').value;
+            c.features = document.getElementById('cFeatures').value;
+            c.notes = document.getElementById('cNotes').value;
+            c.backstory = document.getElementById('cBackstory').value;
+            // Skill profs
+            c.skillProfs = {};
+            document.querySelectorAll('.skill-prof-check').forEach(cb => {
+                if (cb.checked) c.skillProfs[cb.dataset.skill] = true;
+            });
+            // Save profs
+            c.saveProfs = {};
+            document.querySelectorAll('.save-prof-check').forEach(cb => {
+                if (cb.checked) c.saveProfs[cb.dataset.save] = true;
+            });
+            // Death saves
+            c.deathSuccesses = [false, false, false];
+            c.deathFailures = [false, false, false];
+            document.querySelectorAll('.death-save-pip.success').forEach((pip, i) => {
+                c.deathSuccesses[i] = pip.classList.contains('filled');
+            });
+            document.querySelectorAll('.death-save-pip.failure').forEach((pip, i) => {
+                c.deathFailures[i] = pip.classList.contains('filled');
+            });
+            saveCharactersToStorage();
+            renderCharList();
+            // Flash save button
+            const btn = document.querySelector('[onclick="saveCharacter()"]');
+            const orig = btn.textContent;
+            btn.textContent = '✓ Saved!';
+            btn.style.background = 'var(--success)';
+            setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1500);
+        }
+
+        function getAbilityMod(score) { return Math.floor((parseInt(score) - 10) / 2); }
+
+        function updateAbilityMod(attr) {
+            const score = document.getElementById('a' + attr).value;
+            const mod = getAbilityMod(score);
+            document.getElementById('m' + attr).textContent = (mod >= 0 ? '+' : '') + mod;
+            // Update initiative from DEX
+            if (attr === 'DEX') document.getElementById('cInit').value = (mod >= 0 ? '+' : '') + mod;
+            // Update passive perception from WIS
+            if (attr === 'WIS') updatePassivePerception();
+            updateSkillMods();
+            updateSaveMods();
+        }
+
+        function updateAllAbilityMods() {
+            ['STR','DEX','CON','INT','WIS','CHA'].forEach(a => updateAbilityMod(a));
+        }
+
+        function updateProfBonus() {
+            const level = parseInt(document.getElementById('cLevel').value) || 1;
+            const prof = Math.ceil(level / 4) + 1;
+            document.getElementById('cProfBonus').value = '+' + prof;
+            updateSkillMods();
+            updateSaveMods();
+            updatePassivePerception();
+        }
+
+        function getProfBonus() {
+            const level = parseInt(document.getElementById('cLevel').value) || 1;
+            return Math.ceil(level / 4) + 1;
+        }
+
+        function getAttrMod(attr) {
+            const score = document.getElementById('a' + attr);
+            return score ? getAbilityMod(score.value) : 0;
+        }
+
+        function updateSkillMods() {
+            const prof = getProfBonus();
+            document.querySelectorAll('.skill-mod-val').forEach(el => {
+                const skill = el.dataset.skill;
+                const attr = el.dataset.attr;
+                const profCheck = document.querySelector(`.skill-prof-check[data-skill="${skill}"]`);
+                const isProficient = profCheck && profCheck.checked;
+                const mod = getAttrMod(attr) + (isProficient ? prof : 0);
+                el.textContent = (mod >= 0 ? '+' : '') + mod;
+            });
+        }
+
+        function updateSaveMods() {
+            const prof = getProfBonus();
+            document.querySelectorAll('.save-mod-val').forEach(el => {
+                const attr = el.dataset.attr;
+                const profCheck = document.querySelector(`.save-prof-check[data-save="${attr}"]`);
+                const isProficient = profCheck && profCheck.checked;
+                const mod = getAttrMod(attr) + (isProficient ? prof : 0);
+                el.textContent = (mod >= 0 ? '+' : '') + mod;
+            });
+        }
+
+        function updatePassivePerception() {
+            const prof = getProfBonus();
+            const wisMod = getAttrMod('WIS');
+            const percCheck = document.querySelector('.skill-prof-check[data-skill="Perception"]');
+            const isProficient = percCheck && percCheck.checked;
+            const pp = 10 + wisMod + (isProficient ? prof : 0);
+            const el = document.getElementById('cPassivePerception');
+            if (el) el.value = pp;
+        }
+
+        function buildSkillList() {
+            const el = document.getElementById('skillListEl');
+            el.innerHTML = SKILLS_DEF.map(s => `
+                <div class="skill-item">
+                    <input type="checkbox" class="skill-prof-check" data-skill="${s.name}" onchange="updateSkillMods();updatePassivePerception()">
+                    <span class="skill-mod skill-mod-val" data-skill="${s.name}" data-attr="${s.attr}">+0</span>
+                    <span class="skill-name">${s.name}</span>
+                    <span class="skill-attr">(${s.attr})</span>
+                </div>
+            `).join('');
+        }
+
+        function buildSavingThrows() {
+            const el = document.getElementById('savingThrowList');
+            el.innerHTML = SAVES_DEF.map(attr => `
+                <div class="skill-item">
+                    <input type="checkbox" class="save-prof-check" data-save="${attr}" onchange="updateSaveMods()">
+                    <span class="skill-mod save-mod-val" data-attr="${attr}">+0</span>
+                    <span class="skill-name">${attr}</span>
+                </div>
+            `).join('');
+        }
+
+        function switchCharTab(tab) {
+            document.querySelectorAll('.char-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.char-tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.char-tab[onclick="switchCharTab('${tab}')"]`).classList.add('active');
+            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+        }
+
+        function changeHP(delta) {
+            const input = document.getElementById('cHP');
+            const max = parseInt(document.getElementById('cHPMax').value) || 10;
+            input.value = Math.max(0, Math.min(max, parseInt(input.value || 0) + delta));
+        }
+
+        function toggleDeathSave(pip) {
+            pip.classList.toggle('filled');
+        }
+
+
+        // =============================================
+        // BOOT
+        // =============================================
         try {
-            console.log('Calling init()...');
             init();
-            console.log('✅ Init complete, functions should be available');
-            console.log('showDMLogin type:', typeof showDMLogin);
-            console.log('showPlayerLogin type:', typeof showPlayerLogin);
         } catch (err) {
             console.error('❌ Init failed:', err);
             alert('Error loading VTT: ' + err.message);
