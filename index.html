@@ -2786,10 +2786,18 @@
             // Track the peer ID we most recently tried so we don't open
             // duplicate connections when the Firebase watcher fires multiple times.
             let lastAttemptedPeerId = null;
+            // ONE shared timeout handle — always cancelled before starting a new
+            // connect attempt, so a stale timeout from attempt N can never reset
+            // lastAttemptedPeerId while attempt N+1 is already in flight.
+            let activeConnTimeout = null;
 
             function doConnect(targetPeerId) {
                 if (targetPeerId === lastAttemptedPeerId) return; // already trying
                 lastAttemptedPeerId = targetPeerId;
+
+                // Cancel any timeout from the previous attempt before we destroy
+                // that peer — prevents the old callback from firing after we move on.
+                if (activeConnTimeout) { clearTimeout(activeConnTimeout); activeConnTimeout = null; }
 
                 if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
                 peer = new Peer();
@@ -2798,21 +2806,19 @@
                     const conn = peer.connect(targetPeerId);
                     setupConnection(conn, true);
 
-                    // Give the connection up to 12 s — longer tolerance so slow
-                    // signalling servers (the user said up to 25 s is fine) don't
-                    // cause unnecessary retries.
-                    const connTimeout = setTimeout(() => {
+                    activeConnTimeout = setTimeout(() => {
+                        activeConnTimeout = null;
                         lastAttemptedPeerId = null; // allow retry with same/new ID
                         updateConnectionStatus('Could not reach DM — watching for update...', false);
                     }, 12000);
 
                     conn.on('open', () => {
-                        clearTimeout(connTimeout);
+                        clearTimeout(activeConnTimeout); activeConnTimeout = null;
                         sendToPeer(conn, { type: 'playerJoinRequest', name: myName, peerId: myId, isReconnect: true });
                         updateConnectionStatus('Waiting for approval...', false);
                     });
                     conn.on('error', () => {
-                        clearTimeout(connTimeout);
+                        clearTimeout(activeConnTimeout); activeConnTimeout = null;
                         lastAttemptedPeerId = null;
                         updateConnectionStatus('Reconnect failed — watching for update...', false);
                     });
@@ -2830,6 +2836,9 @@
             // AND fires again whenever the DM publishes a new peer ID after refresh.
             if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
                 startFirebaseWatch(savedRoom, (peerId) => doConnect(peerId));
+                // Fallback: if Firebase doesn't deliver a peer ID within 4 s
+                // (e.g. no currentPeerId in the doc yet), try the saved room code directly.
+                setTimeout(() => { if (lastAttemptedPeerId === null) doConnect(savedRoom); }, 4000);
             } else {
                 // No Firebase — connect directly to the saved peer ID
                 doConnect(savedRoom);
@@ -2902,13 +2911,14 @@
                 if (peer) { try { peer.destroy(); } catch(e) {} }
                 peer = new Peer(idToClaim);
 
-                // 6-second timeout per attempt — don't wait forever for slow servers
+                // 4-second timeout per attempt — if the signalling server hasn't
+                // responded by then, fall through to a fresh random peer ID fast.
                 const timeout = setTimeout(() => {
                     if (!myId) {
                         updateConnectionStatus('Server slow — switching to new session...', false);
                         startFreshPeer();
                     }
-                }, 6000);
+                }, 4000);
 
                 peer.on('open', id => {
                     clearTimeout(timeout);
@@ -2918,7 +2928,8 @@
                 peer.on('error', err => {
                     clearTimeout(timeout);
                     if (err.type === 'unavailable-id' && attempt < 3) {
-                        const delay = attempt * 2000; // 0s, 2s, 4s
+                        // Short delays: 500 ms, 1 s — fast fallthrough to fresh ID
+                        const delay = attempt * 500;
                         updateConnectionStatus(`Reclaiming session... (${attempt}/3)`, false);
                         setTimeout(() => tryClaimId(idToClaim, attempt + 1), delay);
                     } else {
