@@ -3425,10 +3425,21 @@
 
         function renderPendingRequests() {
             const container = document.getElementById('pendingRequests');
-            
+
             if (pendingRequests.length === 0) {
                 container.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-dim);">No pending requests</p>';
+                const btn = document.getElementById('dmControlsBtn');
+                if (btn) btn.textContent = '🎭 DM Controls';
                 return;
+            }
+
+            // Badge the header button and auto-open the panel so the DM
+            // doesn't miss incoming join requests.
+            const btn = document.getElementById('dmControlsBtn');
+            if (btn) btn.textContent = `🎭 DM Controls (${pendingRequests.length})`;
+            const panel = document.getElementById('dmPanel');
+            if (panel && !panel.classList.contains('open')) {
+                panel.classList.add('open');
             }
             
             container.innerHTML = pendingRequests.map((req, idx) => {
