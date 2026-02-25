@@ -1868,9 +1868,27 @@
             const savedDMSession = localStorage.getItem('fracturedSkySessionId');
             const wasDM = localStorage.getItem('fracturedSkyIsDM') === 'true';
             if (wasDM && savedDMSession) {
+                // Restore previously approved player names so rejoiners get auto-approved
+                try {
+                    const saved = localStorage.getItem('fracturedSkyApprovedNames');
+                    if (saved) JSON.parse(saved).forEach(n => approvedPlayerNames.add(n));
+                } catch(e) {}
                 console.log('🔄 Auto-reconnecting DM session:', savedDMSession);
                 updateConnectionStatus('Reconnecting...', false);
                 createRoom(savedDMSession);
+            } else {
+                // Auto-reconnect player if they have a saved room
+                const savedPlayerRoom = localStorage.getItem('fracturedSkyPlayerRoom');
+                const savedPlayerName = localStorage.getItem('fracturedSkyPlayerName');
+                if (savedPlayerRoom && savedPlayerName) {
+                    console.log('🔄 Auto-reconnecting player to room:', savedPlayerRoom);
+                    myName = savedPlayerName;
+                    roomCode = savedPlayerRoom;
+                    document.getElementById('welcomeScreen').classList.add('hidden');
+                    document.getElementById('connectionTabContainer').style.display = 'block';
+                    updateConnectionStatus('Reconnecting...', false);
+                    playerAutoReconnect();
+                }
             }
         }
 
@@ -2247,8 +2265,8 @@
             switch (data.type) {
                 case 'playerJoinRequest':
                     if (isDM) {
-                        // Auto-approve players who were previously approved in this session
-                        if (data.isReconnect && approvedPlayerNames.has(data.name)) {
+                        // Auto-approve players whose name was previously approved (handles restarts too)
+                        if (approvedPlayerNames.has(data.name)) {
                             const connData = connections.get(conn.peer);
                             if (connData) {
                                 connData.approved = true;
@@ -2412,6 +2430,7 @@
                 connData.approved = true;
                 connData.name = request.name;
                 approvedPlayerNames.add(request.name);
+                localStorage.setItem('fracturedSkyApprovedNames', JSON.stringify([...approvedPlayerNames]));
                 
                 sendToPeer(request.conn, {
                     type: 'playerApproved',
