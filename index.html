@@ -1604,6 +1604,7 @@
                     <div class="connection-indicator" id="statusIndicator"></div>
                     <span id="statusText">Disconnected</span>
                 </div>
+                <button id="startFreshBtn" onclick="cancelAutoReconnect()" style="display:none; margin-top:0.6rem; width:100%; padding:0.45rem 0.75rem; background:#6b7280; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:0.85rem;">✕ Start Fresh / Change Session</button>
             </div>
             <div class="connection-section" id="firebaseStatusSection" style="display: none;">
                 <h3>🔥 Cloud Sync</h3>
@@ -2661,6 +2662,8 @@
                 document.getElementById('welcomeButtons').style.display = 'none';
                 document.getElementById('welcomeReconnect').style.display = 'block';
                 document.getElementById('welcomeReconnectMsg').textContent = '👑 Resuming your DM session...';
+                document.getElementById('connectionTabContainer').style.display = 'block';
+                document.getElementById('startFreshBtn').style.display = 'block';
                 try {
                     const saved = localStorage.getItem('fracturedSkyApprovedNames');
                     if (saved) JSON.parse(saved).forEach(n => approvedPlayerNames.add(n));
@@ -2668,13 +2671,14 @@
                 createRoom(savedDMSession);
             } else if (savedPlayerRoom && savedPlayerName) {
                 // Auto-reconnect player immediately.
+                // Keep welcome screen visible so user can cancel if stuck.
                 document.getElementById('welcomeButtons').style.display = 'none';
                 document.getElementById('welcomeReconnect').style.display = 'block';
                 document.getElementById('welcomeReconnectMsg').textContent = `👤 Reconnecting as "${savedPlayerName}"...`;
+                document.getElementById('connectionTabContainer').style.display = 'block';
+                document.getElementById('startFreshBtn').style.display = 'block';
                 myName = savedPlayerName;
                 roomCode = savedPlayerRoom;
-                document.getElementById('welcomeScreen').classList.add('hidden');
-                document.getElementById('connectionTabContainer').style.display = 'block';
                 updateConnectionStatus('Reconnecting...', false);
                 playerAutoReconnect();
             }
@@ -3050,6 +3054,9 @@
         // Called whenever this tab successfully claims the DM role
         function onDMReady() {
             document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('welcomeReconnect').style.display = 'none';
+            document.getElementById('welcomeButtons').style.display = 'flex';
+            document.getElementById('startFreshBtn').style.display = 'none';
             document.getElementById('connectionTabContainer').style.display = 'block';
             document.getElementById('roomCodeSection').style.display = 'block';
             document.getElementById('roomCode').textContent = roomCode;
@@ -3268,6 +3275,10 @@
                     localStorage.setItem('fracturedSkyPlayerName', myName);
                     updateConnectionStatus('Connected to room', true);
                     requestGameState(conn);
+                    document.getElementById('welcomeScreen').classList.add('hidden');
+                    document.getElementById('welcomeReconnect').style.display = 'none';
+                    document.getElementById('welcomeButtons').style.display = 'flex';
+                    document.getElementById('startFreshBtn').style.display = 'none';
                     document.getElementById('playerPanelContainer').style.display = 'block';
                     savePlayerState();
                     break;
