@@ -2745,6 +2745,7 @@
 
         function cancelAutoReconnect() {
             // Abort any in-flight reconnect attempt
+            stopFirebaseWatch();
             if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
             peer = null;
             isDM = false;
@@ -3282,7 +3283,7 @@
                     requestGameState(conn);
                     document.getElementById('welcomeScreen').classList.add('hidden');
                     document.getElementById('welcomeReconnect').style.display = 'none';
-                    document.getElementById('welcomeButtons').style.display = 'flex';
+                    document.getElementById('welcomeButtons').style.display = 'none';
                     document.getElementById('startFreshBtn').style.display = 'none';
                     document.getElementById('playerPanelContainer').style.display = 'block';
                     savePlayerState();
@@ -3312,6 +3313,11 @@
                     renderStagingTokens();
                     break;
                     
+                case 'requestState':
+                    // Player asking DM to send the full game state (sent right after playerApproved)
+                    if (isDM) sendGameState(conn);
+                    break;
+
                 case 'gameState':
                     loadGameState(data.state);
                     break;
@@ -3407,6 +3413,7 @@
         });
 
         function sendToPeer(conn, data) {
+            if (!conn || !conn.open) return;
             try {
                 conn.send(data);
             } catch (err) {
