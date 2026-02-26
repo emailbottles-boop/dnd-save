@@ -2881,11 +2881,13 @@
             // (the Firebase watcher won't fire again if the value didn't change).
             function scheduleRetry() {
                 setTimeout(() => {
+                    if (isDM) return; // user switched to DM — stop retrying
                     if (lastAttemptedPeerId === null) doConnect(currentBestPeerId || savedRoom);
                 }, 15000);
             }
 
             function doConnect(targetPeerId) {
+                if (isDM) return; // user switched to DM — abort
                 if (targetPeerId === lastAttemptedPeerId) return; // already trying
                 currentBestPeerId = targetPeerId;
                 lastAttemptedPeerId = targetPeerId;
@@ -2922,7 +2924,7 @@
                 });
                 peer.on('error', () => {
                     lastAttemptedPeerId = null;
-                    setTimeout(playerAutoReconnect, 5000);
+                    if (!isDM) setTimeout(playerAutoReconnect, 5000);
                 });
             }
 
@@ -2947,6 +2949,9 @@
             isDM = true;
             isCoDM = false;
             myName = 'Dungeon Master';
+            // Clear any leftover player session so stale playerAutoReconnect retries exit
+            localStorage.removeItem('fracturedSkyPlayerRoom');
+            localStorage.removeItem('fracturedSkyPlayerName');
 
             // Keep old room ID so we can load campaign data from Firebase
             // even if we end up with a different peer ID
