@@ -9,6 +9,10 @@
     <title>The Fractured Sky VTT v4.0 - FINAL BUILD</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Firebase v9 compat (matches existing firebase.X() call style) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -1566,7 +1570,9 @@
         <div class="title">⚔️ THE FRACTURED SKY</div>
         <div class="campaign-badge" id="campaignBadge" style="display: none;">Campaign Name</div>
         <div class="header-actions">
-            <span id="firebaseStatus" style="font-size: 0.75rem; color: var(--text-dim); display: none;"></span>
+            <div id="firebaseSection" style="display: none; align-items: center; gap: 0.4rem;">
+                <span id="firebaseStatus" style="font-size: 0.75rem; color: var(--text-dim);"></span>
+            </div>
             <button class="btn" id="musicToggleBtn" onclick="toggleMusicPanel()" style="display:none;" title="Jukebox">🎵 Music</button>
             <button class="btn" id="charSheetBtn" onclick="showCharSheet()" title="Character Sheet">📜 Characters</button>
             <button class="btn" id="dmControlsBtn" onclick="toggleDMPanel()" style="display: none;">🎭 DM Controls</button>
@@ -1600,7 +1606,13 @@
                     <span id="statusText">Disconnected</span>
                 </div>
             </div>
-<div class="connection-section">
+            <div class="connection-section" id="firebaseStatusSection" style="display: none;">
+                <h3>🔥 Cloud Sync</h3>
+                <div style="padding: 0.5rem; background: var(--bg-dark); border-radius: 6px;">
+                    <span id="firebaseStatusPanel" style="font-size: 0.85rem; color: var(--text-dim);">Connecting...</span>
+                </div>
+            </div>
+            <div class="connection-section">
                 <h3>👥 Connected Users</h3>
                 <div class="user-list" id="userList">
                     <p style="font-size: 0.85rem; color: var(--text-dim);">No users</p>
@@ -1608,6 +1620,8 @@
             </div>
         </div>
     </div>
+    <!-- Hidden stub so clearDMSession/clearPlayerSession never throw on missing element -->
+    <div id="resumeArea" style="display:none;"></div>
 
     <!-- MAIN CONTAINER -->
     <div class="container">
@@ -2368,7 +2382,7 @@
 
                 // One document per grid cell
                 for (const key in gridCells) {
-                    const safeKey = key.replace(',', '_');
+                    const safeKey = key.replace(/,/g, '_');
                     batch.set(col.doc(firebaseRoomRef + '__cell_' + safeKey), {
                         data: gridCells[key].toDataURL()
                     });
@@ -2469,8 +2483,10 @@
         function updateFirebaseStatus(text, color) {
             const header = document.getElementById('firebaseStatus');
             const panel = document.getElementById('firebaseStatusPanel');
-            if (header) { header.textContent = text; header.style.color = color; header.style.display = 'inline'; }
-            if (panel) { panel.textContent = text; panel.style.color = color; }
+            const section = document.getElementById('firebaseStatusSection');
+            if (header) { header.textContent = text; header.style.color = color; }
+            if (panel)  { panel.textContent = text; panel.style.color = color; }
+            if (section) section.style.display = 'block';
         }
 
         // Game state
@@ -2516,6 +2532,7 @@
         // Tokens
         let stagingTokens = [];
         let placedTokens = [];
+        const tokenImageCache = new Map(); // keyed by token id → {img, srcKey}
         let draggedToken = null;
         let draggedPlacedToken = null; // For moving tokens already on the map
         let tokenDragOffset = { x: 0, y: 0 };
@@ -2538,6 +2555,7 @@
         // Minimap
         let minimapDocked = false;
         let minimapDragOffset = null;
+        let _minimapLastState = ''; // dirty-check: skip rebuild when nothing changed
 
         const gridNames = [
             ['Top-Left', 'Top-Center', 'Top-Right'],
@@ -2563,7 +2581,17 @@
         }
 
         // === INITIALIZATION ===
+        // Cached DOM references — set once in init() to avoid repeated getElementById on hot paths
+        let _elStatusText, _elStatusIndicator, _elTabIndicator, _elCurrentCell, _elCurrentAsset, _elMinimapGrid;
+
         function init() {
+            _elStatusText      = document.getElementById('statusText');
+            _elStatusIndicator = document.getElementById('statusIndicator');
+            _elTabIndicator    = document.getElementById('tabIndicator');
+            _elCurrentCell     = document.getElementById('currentCell');
+            _elCurrentAsset    = document.getElementById('currentAsset');
+            _elMinimapGrid     = document.getElementById('minimapGrid');
+
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
 
@@ -2885,7 +2913,7 @@
                 localStorage.setItem('fracturedSkySessionId', id);
                 localStorage.setItem('fracturedSkyIsDM', 'true');
                 onDMReady();
-                document.getElementById('firebaseSection').style.display = 'block';
+                document.getElementById('firebaseSection').style.display = 'flex';
                 document.getElementById('firebaseStatus').style.display = 'inline';
                 firebaseSignIn().then(() => {
                     const loadId = fbLoadId || roomCode;
@@ -3281,7 +3309,13 @@
                     break;
 
                 case 'musicCue':
-                    if (!isDM) {
+                    if (isCoDM) {
+                        // Co-DM relays musicCue to its own approved players
+                        connections.forEach(({ conn: c, approved, role }) => {
+                            if (approved && role === 'player') sendToPeer(c, data);
+                        });
+                    } else if (!isDM) {
+                        // Player plays the cued track
                         const track = MUSIC_TRACKS.find(t => t.id === data.trackId);
                         const audio = document.getElementById('musicAudio');
                         if (track) {
@@ -3667,9 +3701,9 @@
         }
 
         function updateConnectionStatus(text, connected) {
-            document.getElementById('statusText').textContent = text;
-            const indicators = [document.getElementById('statusIndicator'), document.getElementById('tabIndicator')];
-            indicators.forEach(ind => {
+            if (_elStatusText) _elStatusText.textContent = text;
+            [_elStatusIndicator, _elTabIndicator].forEach(ind => {
+                if (!ind) return;
                 if (connected) ind.classList.add('connected');
                 else ind.classList.remove('connected');
             });
@@ -3989,15 +4023,24 @@
                 ctx.stroke();
                 
                 if (t.type === 'image' && t.imageData) {
-                    // Draw image token
-                    const img = new Image();
-                    img.src = t.imageData;
+                    // Use cached Image to avoid creating a new object every frame
+                    let cached = tokenImageCache.get(t.id);
+                    if (!cached || cached.srcKey !== t.imageData) {
+                        const img = new Image();
+                        img.src = t.imageData;
+                        img.onload = () => draw(); // redraw once loaded
+                        cached = { img, srcKey: t.imageData };
+                        tokenImageCache.set(t.id, cached);
+                    }
+                    const img = cached.img;
                     ctx.save();
                     ctx.beginPath();
                     ctx.arc(t.x, t.y, tokenSize - 1, 0, Math.PI * 2);
                     ctx.clip();
                     const imgSize = (tokenSize - 1) * 2;
-                    ctx.drawImage(img, t.x - (tokenSize - 1), t.y - (tokenSize - 1), imgSize, imgSize);
+                    if (img.complete && img.naturalWidth) {
+                        ctx.drawImage(img, t.x - (tokenSize - 1), t.y - (tokenSize - 1), imgSize, imgSize);
+                    }
                     ctx.restore();
                 } else {
                     // Draw emoji token
@@ -4051,7 +4094,7 @@
         }
 
         function updateGridDisplay() {
-            document.getElementById('currentCell').textContent = gridNames[currentCellY][currentCellX];
+            if (_elCurrentCell) _elCurrentCell.textContent = gridNames[currentCellY][currentCellX];
         }
 
         function setTool(t) {
@@ -4097,13 +4140,13 @@
                        'Everything'
             };
             currentAsset = assetNames[t] || t;
-            document.getElementById('currentAsset').textContent = currentAsset;
+            (_elCurrentAsset||{}).textContent = currentAsset;
         }
 
         function selectStamp(emoji) {
             currentStamp = emoji;
             currentAsset = 'Stamp: ' + emoji;
-            document.getElementById('currentAsset').textContent = currentAsset;
+            (_elCurrentAsset||{}).textContent = currentAsset;
             setTool('stamp'); // Ensure stamp tool is active
         }
 
@@ -4156,12 +4199,18 @@
             };
         });
 
+        let _stampRafPending = false;
         document.addEventListener('mousemove', (e) => {
             if (!stampLibraryDragOffset || stampLibraryDocked) return;
-            
-            stampLibraryContainer.style.left = (e.clientX - stampLibraryDragOffset.x) + 'px';
-            stampLibraryContainer.style.top = (e.clientY - stampLibraryDragOffset.y) + 'px';
-            stampLibraryContainer.style.bottom = 'auto';
+            if (_stampRafPending) return;
+            _stampRafPending = true;
+            requestAnimationFrame(() => {
+                _stampRafPending = false;
+                if (!stampLibraryDragOffset) return;
+                stampLibraryContainer.style.left = (e.clientX - stampLibraryDragOffset.x) + 'px';
+                stampLibraryContainer.style.top = (e.clientY - stampLibraryDragOffset.y) + 'px';
+                stampLibraryContainer.style.bottom = 'auto';
+            });
         });
 
         document.addEventListener('mouseup', () => {
@@ -4259,7 +4308,7 @@
         function setStamp(emoji) {
             currentStamp = emoji;
             currentAsset = 'Stamp: ' + emoji;
-            document.getElementById('currentAsset').textContent = currentAsset;
+            (_elCurrentAsset||{}).textContent = currentAsset;
         }
 
         function updateColor(value) {
@@ -4362,7 +4411,7 @@
                     all: 'Everything'
                 };
                 currentAsset = assetNames[mode];
-                document.getElementById('currentAsset').textContent = currentAsset;
+                (_elCurrentAsset||{}).textContent = currentAsset;
             }
         }
 
@@ -4452,7 +4501,7 @@
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             tool = null;
             currentAsset = 'None';
-            document.getElementById('currentAsset').textContent = currentAsset;
+            (_elCurrentAsset||{}).textContent = currentAsset;
         }
 
         // Map canvas drawing
@@ -4552,7 +4601,7 @@
             if (!fogMode && tool !== 'select') {
                 for (let i = placedTokens.length - 1; i >= 0; i--) {
                     const token = placedTokens[i];
-                    const tokenSize = token.size || 25;
+                    const tokenSize = token.size || 12;
                     const dist = Math.hypot(mx - token.x, my - token.y);
                     if (dist < tokenSize) {
                         // Check permissions: DM can move any token, players can only move their own
@@ -4886,7 +4935,7 @@
             
             if (fogGroups[activeFogGroup]) {
                 const ctx = fogGroups[activeFogGroup].canvas.getContext('2d');
-                ctx.fillStyle = 'rgba(0,0,0,0.9)';
+                ctx.fillStyle = 'rgba(0,0,0,1)';
                 ctx.fillRect(0, 0, fogGroups[activeFogGroup].canvas.width, fogGroups[activeFogGroup].canvas.height);
                 draw();
                 
@@ -5302,13 +5351,19 @@
             };
         });
 
+        let _playerPanelRafPending = false;
         document.addEventListener('mousemove', (e) => {
             if (!playerPanelDragOffset || playerPanelDocked) return;
-            
-            playerPanelContainer.style.left = (e.clientX - playerPanelDragOffset.x) + 'px';
-            playerPanelContainer.style.top = (e.clientY - playerPanelDragOffset.y) + 'px';
-            playerPanelContainer.style.right = 'auto';
-            playerPanelContainer.style.bottom = 'auto';
+            if (_playerPanelRafPending) return;
+            _playerPanelRafPending = true;
+            requestAnimationFrame(() => {
+                _playerPanelRafPending = false;
+                if (!playerPanelDragOffset) return;
+                playerPanelContainer.style.left = (e.clientX - playerPanelDragOffset.x) + 'px';
+                playerPanelContainer.style.top = (e.clientY - playerPanelDragOffset.y) + 'px';
+                playerPanelContainer.style.right = 'auto';
+                playerPanelContainer.style.bottom = 'auto';
+            });
         });
 
         document.addEventListener('mouseup', () => {
@@ -5350,9 +5405,19 @@
 
         // === MINIMAP ===
         function updateMinimap() {
-            const grid = document.getElementById('minimapGrid');
-            let html = '';
-            
+            // Build a compact state string; only rebuild the DOM when something changed
+            let stateKey = `${currentCellX},${currentCellY}`;
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    const key = `${col},${row}`;
+                    stateKey += (gridCells[key] ? '1' : '0') + (lockedCells[key] ? 'L' : '.');
+                }
+            }
+            if (stateKey === _minimapLastState) return;
+            _minimapLastState = stateKey;
+
+            const grid = _elMinimapGrid || document.getElementById('minimapGrid');
+            const cells = [];
             for (let row = 0; row < 3; row++) {
                 for (let col = 0; col < 3; col++) {
                     const key = `${col},${row}`;
@@ -5360,12 +5425,10 @@
                     if (gridCells[key]) classes.push('has-content');
                     if (lockedCells[key]) classes.push('locked');
                     if (col === currentCellX && row === currentCellY) classes.push('current');
-                    
-                    html += `<div class="${classes.join(' ')}" onclick="minimapNavigate(${col}, ${row})"></div>`;
+                    cells.push(`<div class="${classes.join(' ')}" onclick="minimapNavigate(${col}, ${row})"></div>`);
                 }
             }
-            
-            grid.innerHTML = html;
+            grid.innerHTML = cells.join('');
         }
 
         function minimapNavigate(col, row) {
@@ -5425,12 +5488,18 @@
             };
         });
 
+        let _minimapRafPending = false;
         document.addEventListener('mousemove', (e) => {
             if (!minimapDragOffset || minimapDocked) return;
-            
-            minimapContainer.style.left = (e.clientX - minimapDragOffset.x) + 'px';
-            minimapContainer.style.top = (e.clientY - minimapDragOffset.y) + 'px';
-            minimapContainer.style.bottom = 'auto';
+            if (_minimapRafPending) return;
+            _minimapRafPending = true;
+            requestAnimationFrame(() => {
+                _minimapRafPending = false;
+                if (!minimapDragOffset) return;
+                minimapContainer.style.left = (e.clientX - minimapDragOffset.x) + 'px';
+                minimapContainer.style.top = (e.clientY - minimapDragOffset.y) + 'px';
+                minimapContainer.style.bottom = 'auto';
+            });
         });
 
         document.addEventListener('mouseup', () => {
@@ -5534,12 +5603,19 @@
                 e.target.closest('input') || e.target.closest('button')) return;
             musicPanelDragOffset = { x: e.clientX - musicPanel.offsetLeft, y: e.clientY - musicPanel.offsetTop };
         });
+        let _musicRafPending = false;
         document.addEventListener('mousemove', (e) => {
             if (!musicPanelDragOffset) return;
-            musicPanel.style.right = 'auto';
-            musicPanel.style.bottom = 'auto';
-            musicPanel.style.left = (e.clientX - musicPanelDragOffset.x) + 'px';
-            musicPanel.style.top = (e.clientY - musicPanelDragOffset.y) + 'px';
+            if (_musicRafPending) return;
+            _musicRafPending = true;
+            requestAnimationFrame(() => {
+                _musicRafPending = false;
+                if (!musicPanelDragOffset) return;
+                musicPanel.style.right = 'auto';
+                musicPanel.style.bottom = 'auto';
+                musicPanel.style.left = (e.clientX - musicPanelDragOffset.x) + 'px';
+                musicPanel.style.top = (e.clientY - musicPanelDragOffset.y) + 'px';
+            });
         });
         document.addEventListener('mouseup', () => { musicPanelDragOffset = null; });
 
