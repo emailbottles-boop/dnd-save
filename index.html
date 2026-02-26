@@ -9,6 +9,10 @@
     <title>The Fractured Sky VTT v4.0 - FINAL BUILD</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Firebase v9 compat (matches existing firebase.X() call style) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -1566,7 +1570,9 @@
         <div class="title">⚔️ THE FRACTURED SKY</div>
         <div class="campaign-badge" id="campaignBadge" style="display: none;">Campaign Name</div>
         <div class="header-actions">
-            <span id="firebaseStatus" style="font-size: 0.75rem; color: var(--text-dim); display: none;"></span>
+            <div id="firebaseSection" style="display: none; align-items: center; gap: 0.4rem;">
+                <span id="firebaseStatus" style="font-size: 0.75rem; color: var(--text-dim);"></span>
+            </div>
             <button class="btn" id="musicToggleBtn" onclick="toggleMusicPanel()" style="display:none;" title="Jukebox">🎵 Music</button>
             <button class="btn" id="charSheetBtn" onclick="showCharSheet()" title="Character Sheet">📜 Characters</button>
             <button class="btn" id="dmControlsBtn" onclick="toggleDMPanel()" style="display: none;">🎭 DM Controls</button>
@@ -1600,7 +1606,13 @@
                     <span id="statusText">Disconnected</span>
                 </div>
             </div>
-<div class="connection-section">
+            <div class="connection-section" id="firebaseStatusSection" style="display: none;">
+                <h3>🔥 Cloud Sync</h3>
+                <div style="padding: 0.5rem; background: var(--bg-dark); border-radius: 6px;">
+                    <span id="firebaseStatusPanel" style="font-size: 0.85rem; color: var(--text-dim);">Connecting...</span>
+                </div>
+            </div>
+            <div class="connection-section">
                 <h3>👥 Connected Users</h3>
                 <div class="user-list" id="userList">
                     <p style="font-size: 0.85rem; color: var(--text-dim);">No users</p>
@@ -1608,6 +1620,8 @@
             </div>
         </div>
     </div>
+    <!-- Hidden stub so clearDMSession/clearPlayerSession never throw on missing element -->
+    <div id="resumeArea" style="display:none;"></div>
 
     <!-- MAIN CONTAINER -->
     <div class="container">
@@ -2368,7 +2382,7 @@
 
                 // One document per grid cell
                 for (const key in gridCells) {
-                    const safeKey = key.replace(',', '_');
+                    const safeKey = key.replace(/,/g, '_');
                     batch.set(col.doc(firebaseRoomRef + '__cell_' + safeKey), {
                         data: gridCells[key].toDataURL()
                     });
@@ -2469,8 +2483,10 @@
         function updateFirebaseStatus(text, color) {
             const header = document.getElementById('firebaseStatus');
             const panel = document.getElementById('firebaseStatusPanel');
-            if (header) { header.textContent = text; header.style.color = color; header.style.display = 'inline'; }
-            if (panel) { panel.textContent = text; panel.style.color = color; }
+            const section = document.getElementById('firebaseStatusSection');
+            if (header) { header.textContent = text; header.style.color = color; }
+            if (panel)  { panel.textContent = text; panel.style.color = color; }
+            if (section) section.style.display = 'block';
         }
 
         // Game state
@@ -2897,7 +2913,7 @@
                 localStorage.setItem('fracturedSkySessionId', id);
                 localStorage.setItem('fracturedSkyIsDM', 'true');
                 onDMReady();
-                document.getElementById('firebaseSection').style.display = 'block';
+                document.getElementById('firebaseSection').style.display = 'flex';
                 document.getElementById('firebaseStatus').style.display = 'inline';
                 firebaseSignIn().then(() => {
                     const loadId = fbLoadId || roomCode;
@@ -3293,7 +3309,13 @@
                     break;
 
                 case 'musicCue':
-                    if (!isDM) {
+                    if (isCoDM) {
+                        // Co-DM relays musicCue to its own approved players
+                        connections.forEach(({ conn: c, approved, role }) => {
+                            if (approved && role === 'player') sendToPeer(c, data);
+                        });
+                    } else if (!isDM) {
+                        // Player plays the cued track
                         const track = MUSIC_TRACKS.find(t => t.id === data.trackId);
                         const audio = document.getElementById('musicAudio');
                         if (track) {
@@ -4579,7 +4601,7 @@
             if (!fogMode && tool !== 'select') {
                 for (let i = placedTokens.length - 1; i >= 0; i--) {
                     const token = placedTokens[i];
-                    const tokenSize = token.size || 25;
+                    const tokenSize = token.size || 12;
                     const dist = Math.hypot(mx - token.x, my - token.y);
                     if (dist < tokenSize) {
                         // Check permissions: DM can move any token, players can only move their own
@@ -4913,7 +4935,7 @@
             
             if (fogGroups[activeFogGroup]) {
                 const ctx = fogGroups[activeFogGroup].canvas.getContext('2d');
-                ctx.fillStyle = 'rgba(0,0,0,0.9)';
+                ctx.fillStyle = 'rgba(0,0,0,1)';
                 ctx.fillRect(0, 0, fogGroups[activeFogGroup].canvas.width, fogGroups[activeFogGroup].canvas.height);
                 draw();
                 
