@@ -2906,6 +2906,7 @@
 
                     activeConnTimeout = setTimeout(() => {
                         activeConnTimeout = null;
+                        if (isDM) return; // user became DM — don't overwrite DM status
                         lastAttemptedPeerId = null;
                         updateConnectionStatus('Waiting for DM...', false);
                         scheduleRetry(); // keep trying every 15 s while DM is offline
@@ -2918,6 +2919,7 @@
                     });
                     conn.on('error', () => {
                         clearTimeout(activeConnTimeout); activeConnTimeout = null;
+                        if (isDM) return; // user became DM — don't overwrite DM status
                         lastAttemptedPeerId = null;
                         updateConnectionStatus('Waiting for DM...', false);
                         scheduleRetry(); // keep trying every 15 s while DM is offline
