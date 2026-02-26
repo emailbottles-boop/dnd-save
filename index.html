@@ -1654,10 +1654,18 @@
                 <button class="btn btn-small" onclick="toggleDMPanel()">✕</button>
             </div>
             <div class="dm-content">
+                <!-- PLAYER REQUESTS — always at top so DM cannot miss them -->
+                <div class="section" id="requestsSection">
+                    <h3>📬 Player Requests</h3>
+                    <div class="pending-requests" id="pendingRequests">
+                        <p style="font-size: 0.85rem; color: var(--text-dim);">No pending requests</p>
+                    </div>
+                </div>
+
                 <!-- CAMPAIGN MANAGER -->
                 <div class="section" id="campaignSection">
                     <h3>💾 Campaign Manager</h3>
-                    
+
                     <div style="margin-bottom: 1rem;">
                         <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Export/Import Campaign:</div>
                         <div class="btn-group">
@@ -1684,14 +1692,6 @@
                     <div class="success" id="importSuccess">Campaign imported!</div>
                     <div class="success" id="linkSuccess">Cloud link saved!</div>
                     <div class="error" id="importError">Import failed. Check file format.</div>
-                </div>
-
-                <!-- PLAYER REQUESTS -->
-                <div class="section" id="requestsSection">
-                    <h3>📬 Player Requests</h3>
-                    <div class="pending-requests" id="pendingRequests">
-                        <p style="font-size: 0.85rem; color: var(--text-dim);">No pending requests</p>
-                    </div>
                 </div>
 
                 <!-- MAP BUILDER -->
@@ -2285,14 +2285,21 @@
             appId: "1:260370337802:web:e7310129ef9533de4b8ff3",
             measurementId: "G-4X38GGZZ3S"
         };
-        firebase.initializeApp(firebaseConfig);
-        // Firestore — rules already cover vtt_rooms/{roomId} for any auth'd user
-        const fbDb = firebase.firestore();
+        let fbDb = null;
+        try {
+            if (typeof firebase !== 'undefined') {
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                fbDb = firebase.firestore();
+            }
+        } catch(e) {
+            console.warn('⚠️ Firebase unavailable — running without cloud persistence:', e.message);
+        }
         let firebaseUser = null;
         let firebaseSaveTimeout = null;
         let firebaseRoomRef = null; // set to roomCode string once DM opens room
 
         async function firebaseSignIn() {
+            if (typeof firebase === 'undefined' || !fbDb) return;
             try {
                 const result = await firebase.auth().signInAnonymously();
                 firebaseUser = result.user;
@@ -2308,9 +2315,9 @@
         // playerFirebaseWatcher so the watcher can be torn down cleanly.
         function startFirebaseWatch(roomId, callback) {
             stopFirebaseWatch();
-            if (!roomId || typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) return;
+            if (!roomId || !fbDb) return;
             firebaseSignIn().then(() => {
-                const unsub = firebase.firestore()
+                const unsub = fbDb
                     .collection('vtt_rooms').doc(roomId)
                     .onSnapshot(doc => {
                         const peerId = doc.exists && doc.data() && doc.data().currentPeerId;
@@ -2332,8 +2339,8 @@
         function startDMHeartbeat() {
             stopDMHeartbeat();
             dmHeartbeatTimer = setInterval(() => {
-                if (!isDM || isCoDM || !firebaseRoomRef || !firebaseUser) return;
-                firebase.firestore().collection('vtt_rooms').doc(firebaseRoomRef)
+                if (!isDM || isCoDM || !firebaseRoomRef || !firebaseUser || !fbDb) return;
+                fbDb.collection('vtt_rooms').doc(firebaseRoomRef)
                     .set({ currentPeerId: myId, lastSeen: Date.now() }, { merge: true })
                     .catch(e => console.error('🔥 Heartbeat error:', e));
             }, 20000);
@@ -2365,7 +2372,7 @@
         }
 
         async function saveToFirebase() {
-            if (!isDM || !firebaseRoomRef || !firebaseUser) return;
+            if (!isDM || !firebaseRoomRef || !firebaseUser || !fbDb) return;
             try {
                 updateFirebaseStatus('☁️ Saving...', '#fbbf24');
                 const col = fbDb.collection('vtt_rooms');
@@ -2417,6 +2424,7 @@
         }
 
         async function loadFromFirebase(roomId) {
+            if (!fbDb) return;
             try {
                 updateFirebaseStatus('☁️ Loading...', '#fbbf24');
                 const col = fbDb.collection('vtt_rooms');
@@ -2925,9 +2933,10 @@
                     // Publish the DM's live peer ID to the canonical room doc so
                     // players/co-DMs watching it always learn the latest peer ID,
                     // even when a fresh peer ID was assigned after refresh.
-                    const db = firebase.firestore();
-                    const stamp = { currentPeerId: id, lastSeen: Date.now() };
-                    db.collection('vtt_rooms').doc(loadId).set(stamp, { merge: true }).catch(() => {});
+                    if (fbDb) {
+                        const stamp = { currentPeerId: id, lastSeen: Date.now() };
+                        fbDb.collection('vtt_rooms').doc(loadId).set(stamp, { merge: true }).catch(() => {});
+                    }
 
                     loadFromFirebase(loadId);
 
@@ -3016,13 +3025,9 @@
             updateUserList();
             loadSavedCloudLink();
             initMusicPanel();
-            // Open the panel to show room code (use direct open, not toggle, so
-            // we don't accidentally close it if it was already open during resume)
+            // Open the connection panel to show the room code — stays open until DM closes it
             const panel = document.getElementById('connectionPanel');
             if (!panel.classList.contains('open')) toggleConnectionPanel();
-            setTimeout(() => {
-                if (panel.classList.contains('open')) toggleConnectionPanel();
-            }, 5000);
         }
 
         // === CO-DM ===
@@ -3090,10 +3095,10 @@
 
             // Look up the host DM's current live peer ID from Firebase first,
             // in case they refreshed and got a new peer ID since we last connected.
-            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+            if (fbDb) {
                 updateConnectionStatus('Co-DM: Looking up host...', false);
                 firebaseSignIn().then(() => {
-                    return firebase.firestore().collection('vtt_rooms').doc(code).get();
+                    return fbDb.collection('vtt_rooms').doc(code).get();
                 }).then(doc => {
                     const livePeerId = doc.exists && doc.data() && doc.data().currentPeerId;
                     doConnect(livePeerId || code);
@@ -3211,6 +3216,7 @@
                                 name: data.name,
                                 conn: conn
                             });
+                            showJoinToast(data.name);
                             renderPendingRequests();
                         }
                     }
@@ -3465,6 +3471,24 @@
             renderPendingRequests();
         }
 
+        function showJoinToast(name) {
+            // Persistent banner at top of screen — DM cannot miss it
+            const existing = document.getElementById('joinToast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'joinToast';
+            toast.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#f59e0b;color:#1a1a2e;text-align:center;padding:0.75rem 1rem;font-weight:700;font-size:1rem;z-index:99999;cursor:pointer;letter-spacing:0.05em;';
+            toast.innerHTML = `🔔 PLAYER REQUEST: <strong>${name}</strong> wants to join — click here or open DM Controls`;
+            toast.onclick = () => {
+                toast.remove();
+                const panel = document.getElementById('dmPanel');
+                if (panel && !panel.classList.contains('open')) panel.classList.add('open');
+                const dmContent = document.querySelector('.dm-content');
+                if (dmContent) dmContent.scrollTop = 0;
+            };
+            document.body.prepend(toast);
+        }
+
         function renderPendingRequests() {
             const container = document.getElementById('pendingRequests');
 
@@ -3472,17 +3496,21 @@
                 container.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-dim);">No pending requests</p>';
                 const btn = document.getElementById('dmControlsBtn');
                 if (btn) btn.textContent = '🎭 DM Controls';
+                const toast = document.getElementById('joinToast');
+                if (toast) toast.remove();
                 return;
             }
 
-            // Badge the header button and auto-open the panel so the DM
-            // doesn't miss incoming join requests.
+            // Badge the header button, force-open the DM panel, scroll to top
             const btn = document.getElementById('dmControlsBtn');
-            if (btn) btn.textContent = `🎭 DM Controls (${pendingRequests.length})`;
+            if (btn) btn.textContent = `🎭 DM Controls (${pendingRequests.length}) 🔔`;
             const panel = document.getElementById('dmPanel');
             if (panel && !panel.classList.contains('open')) {
                 panel.classList.add('open');
             }
+            // Always scroll DM panel to top so Player Requests is visible
+            const dmContent = document.querySelector('.dm-content');
+            if (dmContent) dmContent.scrollTop = 0;
             
             container.innerHTML = pendingRequests.map((req, idx) => {
                 if (req.type === 'token') {
