@@ -1415,8 +1415,7 @@
             <div id="welcomeReconnect" style="display:none; text-align:center;">
                 <p id="welcomeReconnectMsg" style="color:var(--text-dim); margin-bottom:1rem; font-size:0.95rem;"></p>
                 <div style="display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap;">
-                    <button class="welcome-btn welcome-btn-primary" onclick="doAutoReconnect()">🔄 Resume Session</button>
-                    <button class="welcome-btn welcome-btn-secondary" onclick="cancelAutoReconnect()">✕ Start Fresh</button>
+                    <button class="welcome-btn welcome-btn-secondary" onclick="cancelAutoReconnect()">✕ Start Fresh Instead</button>
                 </div>
             </div>
             <p style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-size: 0.75rem; color: var(--text-dim);">
@@ -2368,7 +2367,7 @@
             if (!isDM || !firebaseRoomRef || !firebaseUser) return;
             clearTimeout(firebaseSaveTimeout);
             updateFirebaseStatus('☁️ Unsaved...', '#fbbf24');
-            firebaseSaveTimeout = setTimeout(saveToFirebase, 3000);
+            firebaseSaveTimeout = setTimeout(saveToFirebase, 1500);
         }
 
         async function saveToFirebase() {
@@ -2603,9 +2602,22 @@
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
 
-            // Cleanly destroy the peer on page unload so PeerJS server
-            // releases the ID immediately — makes DM refresh reclaim instant.
+            // On page hide/close: flush any pending Firebase save immediately
+            // so game state is never lost on DM refresh.
+            function flushSave() {
+                if (isDM && firebaseRoomRef && firebaseUser && fbDb) {
+                    clearTimeout(firebaseSaveTimeout);
+                    firebaseSaveTimeout = null;
+                    saveToFirebase(); // best-effort async save
+                }
+            }
+            // visibilitychange fires reliably on tab switch, phone sleep, refresh
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') flushSave();
+            });
+            // beforeunload fires on browser close / navigation
             window.addEventListener('beforeunload', () => {
+                flushSave();
                 if (peer && !peer.destroyed) peer.destroy();
             });
 
@@ -2644,13 +2656,27 @@
             const savedPlayerName = localStorage.getItem('fracturedSkyPlayerName');
 
             if (wasDM && savedDMSession) {
+                // Auto-reconnect DM immediately — no click required.
+                // Show a "Start Fresh" cancel button in case they want a new session.
                 document.getElementById('welcomeButtons').style.display = 'none';
                 document.getElementById('welcomeReconnect').style.display = 'block';
-                document.getElementById('welcomeReconnectMsg').textContent = '👑 Resume your DM session?';
+                document.getElementById('welcomeReconnectMsg').textContent = '👑 Resuming your DM session...';
+                try {
+                    const saved = localStorage.getItem('fracturedSkyApprovedNames');
+                    if (saved) JSON.parse(saved).forEach(n => approvedPlayerNames.add(n));
+                } catch(e) {}
+                createRoom(savedDMSession);
             } else if (savedPlayerRoom && savedPlayerName) {
+                // Auto-reconnect player immediately.
                 document.getElementById('welcomeButtons').style.display = 'none';
                 document.getElementById('welcomeReconnect').style.display = 'block';
-                document.getElementById('welcomeReconnectMsg').textContent = `👤 Resume as "${savedPlayerName}"?`;
+                document.getElementById('welcomeReconnectMsg').textContent = `👤 Reconnecting as "${savedPlayerName}"...`;
+                myName = savedPlayerName;
+                roomCode = savedPlayerRoom;
+                document.getElementById('welcomeScreen').classList.add('hidden');
+                document.getElementById('connectionTabContainer').style.display = 'block';
+                updateConnectionStatus('Reconnecting...', false);
+                playerAutoReconnect();
             }
         }
 
@@ -2714,12 +2740,20 @@
         }
 
         function cancelAutoReconnect() {
+            // Abort any in-flight reconnect attempt
+            if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
+            peer = null;
+            isDM = false;
+            // Clear all saved session data
             localStorage.removeItem('fracturedSkyIsDM');
             localStorage.removeItem('fracturedSkySessionId');
             localStorage.removeItem('fracturedSkyPlayerRoom');
             localStorage.removeItem('fracturedSkyPlayerName');
+            // Restore welcome screen
             document.getElementById('welcomeReconnect').style.display = 'none';
             document.getElementById('welcomeButtons').style.display = 'flex';
+            document.getElementById('welcomeScreen').classList.remove('hidden');
+            document.getElementById('connectionTabContainer').style.display = 'none';
         }
 
         function resizeCanvas() {
@@ -2892,10 +2926,11 @@
 
             // Prefer Firebase onSnapshot: fires immediately with current value
             // AND fires again whenever the DM publishes a new peer ID after refresh.
-            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+            if (fbDb) {
+                // Watch Firebase for live peer ID — fires immediately if already set,
+                // and again whenever the DM publishes a new peer ID after refresh.
                 startFirebaseWatch(savedRoom, (peerId) => doConnect(peerId));
-                // Fallback: if Firebase doesn't deliver a peer ID within 4 s
-                // (e.g. no currentPeerId in the doc yet), try the saved room code directly.
+                // Fallback: if Firebase doesn't deliver within 4 s, try saved code directly.
                 setTimeout(() => { if (lastAttemptedPeerId === null) doConnect(savedRoom); }, 4000);
             } else {
                 // No Firebase — connect directly to the saved peer ID
