@@ -2965,7 +2965,13 @@
                 myId = id;
                 roomCode = id;
                 savedPeerId = id;
-                localStorage.setItem('fracturedSkySessionId', id);
+                // Only persist the session ID on first room creation (fbLoadId is null).
+                // On reconnects fbLoadId holds the *canonical* room ID — we must NOT
+                // overwrite it with the fresh peer ID or every subsequent refresh will
+                // load from the wrong Firebase doc and the room dies.
+                if (!fbLoadId) {
+                    localStorage.setItem('fracturedSkySessionId', id);
+                }
                 localStorage.setItem('fracturedSkyIsDM', 'true');
                 onDMReady();
                 document.getElementById('firebaseSection').style.display = 'flex';
@@ -2994,20 +3000,40 @@
                 });
             }
 
-            // --- Fall back to a fresh random peer ID ---
-            function startFreshPeer() {
+            // --- Fall back to a fresh random peer ID (with retry) ---
+            function startFreshPeer(attempt = 1) {
                 updateConnectionStatus('Getting new session...', false);
                 if (peer) { try { peer.destroy(); } catch(e) {} }
                 peer = new Peer();
+                let done = false;
                 const t = setTimeout(() => {
-                    updateConnectionStatus('Server not responding — try refreshing', false);
+                    if (done) return;
+                    done = true;
+                    if (attempt < 5) {
+                        startFreshPeer(attempt + 1);
+                    } else {
+                        updateConnectionStatus('Server not responding — try refreshing', false);
+                    }
                 }, 8000);
-                peer.on('open', id => { clearTimeout(t); onPeerReady(id); });
+                peer.on('open', id => {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(t);
+                    onPeerReady(id);
+                });
                 peer.on('connection', conn => setupConnection(conn));
                 peer.on('error', e => {
+                    if (done) return;
+                    done = true;
                     clearTimeout(t);
-                    console.error('Peer error (fresh):', e.type);
-                    updateConnectionStatus('Connection failed — refresh and try again', false);
+                    console.error('Peer error (fresh):', e.type, 'attempt', attempt);
+                    if (attempt < 5) {
+                        const delay = Math.min(attempt * 2000, 8000);
+                        updateConnectionStatus('Reconnecting...', false);
+                        setTimeout(() => startFreshPeer(attempt + 1), delay);
+                    } else {
+                        updateConnectionStatus('Connection failed — refresh and try again', false);
+                    }
                 });
             }
 
@@ -3015,22 +3041,28 @@
             function tryClaimId(idToClaim, attempt) {
                 if (peer) { try { peer.destroy(); } catch(e) {} }
                 peer = new Peer(idToClaim);
+                // Guard so the timeout and the error event can't both call startFreshPeer
+                let alreadyDone = false;
 
                 // 4-second timeout per attempt — if the signalling server hasn't
                 // responded by then, fall through to a fresh random peer ID fast.
                 const timeout = setTimeout(() => {
-                    if (!myId) {
-                        updateConnectionStatus('Server slow — switching to new session...', false);
-                        startFreshPeer();
-                    }
+                    if (alreadyDone) return;
+                    alreadyDone = true;
+                    updateConnectionStatus('Server slow — switching to new session...', false);
+                    startFreshPeer();
                 }, 4000);
 
                 peer.on('open', id => {
+                    if (alreadyDone) return;
+                    alreadyDone = true;
                     clearTimeout(timeout);
                     onPeerReady(id);
                 });
                 peer.on('connection', conn => setupConnection(conn));
                 peer.on('error', err => {
+                    if (alreadyDone) return;
+                    alreadyDone = true;
                     clearTimeout(timeout);
                     if (err.type === 'unavailable-id' && attempt < 3) {
                         // Short delays: 500 ms, 1 s — fast fallthrough to fresh ID
@@ -3256,7 +3288,7 @@
                             }
                             connData.approved = true;
                             connData.name = data.name;
-                            sendToPeer(conn, { type: 'playerApproved', name: data.name });
+                            sendToPeer(conn, { type: 'playerApproved', name: data.name, canonicalRoomId: firebaseRoomRef || roomCode });
                             sendGameState(conn);
                             updateUserList();
                             console.log('✅ Auto-approved reconnecting player:', data.name);
@@ -3276,10 +3308,13 @@
                     // Successfully joined — stop watching Firebase for peer ID changes.
                     stopFirebaseWatch();
                     myName = data.name;
-                    // Update stored room code to the DM's actual current peer ID,
-                    // so future reconnects go to the right place if the ID changed.
+                    // Keep roomCode as the DM's live peer ID for this session's P2P use.
                     roomCode = conn.peer;
-                    localStorage.setItem('fracturedSkyPlayerRoom', conn.peer);
+                    // But persist the *canonical* room ID (sent by the DM) so that after
+                    // future DM refreshes the player watches the same Firebase doc that
+                    // the DM always writes its new peer ID to. Saving conn.peer here
+                    // caused the watch chain to drift and the room to "die" after 2 refreshes.
+                    localStorage.setItem('fracturedSkyPlayerRoom', data.canonicalRoomId || conn.peer);
                     localStorage.setItem('fracturedSkyPlayerName', myName);
                     updateConnectionStatus('Connected to room', true);
                     requestGameState(conn);
@@ -3480,7 +3515,8 @@
 
             sendToPeer(request.conn, {
                 type: 'playerApproved',
-                name: request.name
+                name: request.name,
+                canonicalRoomId: firebaseRoomRef || roomCode
             });
 
             sendGameState(request.conn);
