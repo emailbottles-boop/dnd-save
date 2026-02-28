@@ -2626,7 +2626,7 @@
             try {
                 const dmChannel = new BroadcastChannel('fracturedSky_dm');
                 dmChannel.onmessage = (e) => {
-                    if (e.data.type === 'surrender' && peer && !peer.destroyed && roomCode === e.data.id) {
+                    if (e.data.type === 'surrender' && isDM && peer && !peer.destroyed && roomCode === e.data.id) {
                         console.log('📡 Surrendering peer ID to new tab:', e.data.id);
                         peer.destroy();
                     }
@@ -2952,9 +2952,11 @@
             isDM = true;
             isCoDM = false;
             myName = 'Dungeon Master';
-            // Clear any leftover player session so stale playerAutoReconnect retries exit
-            localStorage.removeItem('fracturedSkyPlayerRoom');
-            localStorage.removeItem('fracturedSkyPlayerName');
+            // NOTE: do NOT clear fracturedSkyPlayerRoom / fracturedSkyPlayerName here.
+            // Both tabs share localStorage; wiping those keys kills the player tab's
+            // ability to reconnect whenever the DM refreshes in the same browser.
+            // playerAutoReconnect already guards itself with `if (isDM) return`, so
+            // the DM tab is safe even without the removal.
 
             // Keep old room ID so we can load campaign data from Firebase
             // even if we end up with a different peer ID
