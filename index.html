@@ -1598,6 +1598,12 @@
                 </div>
             </div>
             <div class="form-group">
+                <label>ASSIGN TO PLAYER</label>
+                <select id="tokenOwner" style="width:100%;padding:0.5rem;background:var(--bg-dark);border:1px solid var(--border);border-radius:6px;color:var(--text);">
+                    <option value="DM">DM (unassigned)</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label>TOKEN COLOR</label>
                 <input type="color" id="tokenColor" value="#e74c3c">
             </div>
@@ -1735,7 +1741,10 @@
         <div class="main-area">
             <div class="tabletop">
                 <div class="tabletop-header">
-                    <div class="session-name">Session</div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <div class="session-name" id="sessionNameDisplay">Session</div>
+                        <button id="editCampaignBtn" onclick="editCampaignName()" style="display:none;background:none;border:none;cursor:pointer;font-size:0.85rem;opacity:0.55;padding:0.15rem 0.3rem;line-height:1;" title="Rename campaign">✏️</button>
+                    </div>
                     <div class="zoom-controls">
                         <span style="font-size: 0.9rem; color: var(--text-dim);">Zoom:</span>
                         <input type="range" class="slider" id="zoomSlider" min="25" max="200" value="100" oninput="setZoom(this.value)">
@@ -2492,12 +2501,20 @@
                 const col = fbDb.collection('vtt_rooms');
                 const batch = fbDb.batch();
 
+                // Collect connected player info
+                const playerData = [];
+                connections.forEach(({ name, role, approved }, peerId) => {
+                    if (approved) playerData.push({ name, role, peerId });
+                });
+
                 // Main document — lightweight state
                 batch.set(col.doc(firebaseRoomRef), {
                     tokens: [...stagingTokens, ...placedTokens],
                     lockedCells,
                     zoom, panX, panY,
                     fogGroupNames: Object.keys(fogGroups),
+                    campaignName,
+                    playerData,
                     savedAt: Date.now()
                 });
 
@@ -2594,6 +2611,11 @@
                     placedImages: imagesData
                 });
 
+                if (main.campaignName) {
+                    campaignName = main.campaignName;
+                    localStorage.setItem('fracturedSkyCampaignName', campaignName);
+                    updateCampaignNameDisplay();
+                }
                 updateFirebaseStatus('☁️ Loaded', '#10b981');
                 console.log('🔥 Loaded from Firestore');
             } catch (err) {
@@ -2609,6 +2631,22 @@
             if (header) { header.textContent = text; header.style.color = color; }
             if (panel)  { panel.textContent = text; panel.style.color = color; }
             if (section) section.style.display = 'block';
+        }
+
+        // Campaign name
+        let campaignName = localStorage.getItem('fracturedSkyCampaignName') || 'Session';
+        function updateCampaignNameDisplay() {
+            const el = document.getElementById('sessionNameDisplay');
+            if (el) el.textContent = campaignName;
+        }
+        function editCampaignName() {
+            const newName = prompt('Campaign name:', campaignName);
+            if (newName !== null && newName.trim()) {
+                campaignName = newName.trim();
+                localStorage.setItem('fracturedSkyCampaignName', campaignName);
+                updateCampaignNameDisplay();
+                scheduleSave();
+            }
         }
 
         // Game state
@@ -2893,6 +2931,7 @@
             document.getElementById('connectionTabContainer').style.display = 'none';
             document.getElementById('diceRollerBtn').classList.remove('visible');
             document.getElementById('diceRollLog').classList.remove('visible');
+            document.getElementById('editCampaignBtn').style.display = 'none';
         }
 
         function resizeCanvas() {
@@ -3296,6 +3335,8 @@
             document.getElementById('dmControlsBtn').style.display = 'block';
             document.getElementById('musicToggleBtn').style.display = 'block';
             document.getElementById('stagingZone').style.display = 'flex';
+            document.getElementById('editCampaignBtn').style.display = 'inline-block';
+            updateCampaignNameDisplay();
             updateConnectionStatus('Connected as DM', true);
             updateUserList();
             loadSavedCloudLink();
@@ -4131,6 +4172,17 @@
 
         // === TOKENS ===
         function showTokenModal() {
+            // Populate player dropdown
+            const sel = document.getElementById('tokenOwner');
+            sel.innerHTML = '<option value="DM">DM (unassigned)</option>';
+            connections.forEach(({ name, role, approved }) => {
+                if (approved && role !== 'dm') {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    sel.appendChild(opt);
+                }
+            });
             document.getElementById('tokenRequestModal').classList.add('active');
             setTokenType('emoji'); // Default to emoji
         }
@@ -4159,10 +4211,11 @@
 
         function createToken() {
             const color = document.getElementById('tokenColor').value;
-            
+            const owner = document.getElementById('tokenOwner').value || 'DM';
+
             if (tokenType === 'emoji') {
                 const emoji = document.getElementById('tokenEmoji').value || '⚔️';
-                
+
                 if (isDM) {
                     const token = {
                         id: Date.now(),
@@ -4170,14 +4223,14 @@
                         icon: emoji,
                         color: color,
                         size: 12, // Default size (fits in single grid square)
-                        owner: 'DM',
+                        owner: owner,
                         approved: true
                     };
-                    
+
                     stagingTokens.push(token);
                     renderStagingTokens();
                     closeTokenModal();
-                    
+
                     broadcast({
                         type: 'tokenUpdate',
                         tokens: [...stagingTokens, ...placedTokens]
@@ -4190,7 +4243,7 @@
                     alert('Please select an image file');
                     return;
                 }
-                
+
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     if (isDM) {
@@ -4200,14 +4253,14 @@
                             imageData: e.target.result,
                             color: color,
                             size: 12, // Default size (fits in single grid square)
-                            owner: 'DM',
+                            owner: owner,
                             approved: true
                         };
-                        
+
                         stagingTokens.push(token);
                         renderStagingTokens();
                         closeTokenModal();
-                        
+
                         broadcast({
                             type: 'tokenUpdate',
                             tokens: [...stagingTokens, ...placedTokens]
@@ -5409,7 +5462,7 @@
             
             const campaignData = {
                 version: '4.0',
-                name: prompt('Campaign name:', 'My Campaign') || 'Untitled Campaign',
+                name: campaignName,
                 sessionId: roomCode,
                 exported: new Date().toISOString(),
                 gridCells: gridData,
@@ -5535,6 +5588,13 @@
                         });
                     }
                     
+                    // Restore campaign name
+                    if (data.name) {
+                        campaignName = data.name;
+                        localStorage.setItem('fracturedSkyCampaignName', campaignName);
+                        updateCampaignNameDisplay();
+                    }
+
                     // Load other data
                     lockedCells = data.lockedCells || {};
                     activeFogGroup = data.activeFogGroup || 'everyone';
@@ -6577,5 +6637,7 @@
             alert('Error loading VTT: ' + err.message);
         }
     </script>
+    <!-- FOOTER -->
+    <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:0.3rem 0;background:rgba(0,0,0,0.7);color:#a855f7;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;z-index:9999;pointer-events:none;">CREATED BY ROBERT FOR WIZZY</div>
 </body>
 </html>
