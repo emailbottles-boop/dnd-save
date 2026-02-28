@@ -3583,6 +3583,7 @@
                             tokenData: data.tokenData,
                             conn: conn
                         });
+                        showJoinToast(`${data.playerName} wants a token`);
                         renderPendingRequests();
                     }
                     break;
@@ -3870,7 +3871,7 @@
                         <div class="request-item">
                             <div class="request-info">
                                 <div class="request-name">${req.name}</div>
-                                <div class="request-detail">Token: ${req.tokenData.icon}</div>
+                                <div class="request-detail">Token: ${req.tokenData.icon || '🖼️ image'}</div>
                             </div>
                             <div class="request-actions">
                                 <button class="btn btn-small btn-success" onclick="approveToken(${idx})">✓</button>
