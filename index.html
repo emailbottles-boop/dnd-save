@@ -1710,7 +1710,7 @@
                     <div class="connection-indicator" id="statusIndicator"></div>
                     <span id="statusText">Disconnected</span>
                 </div>
-                <button id="startFreshBtn" onclick="cancelAutoReconnect()" style="display:none; margin-top:0.6rem; width:100%; padding:0.45rem 0.75rem; background:#6b7280; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:0.85rem;">✕ Start Fresh / Change Session</button>
+                <button id="startFreshBtn" onclick="confirmLeaveSession()" style="display:none; margin-top:0.6rem; width:100%; padding:0.45rem 0.75rem; background:#6b7280; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:0.85rem;">✕ Start Fresh / Change Session</button>
             </div>
             <div class="connection-section" id="firebaseStatusSection" style="display: none;">
                 <h3>🔥 Cloud Sync</h3>
@@ -1725,12 +1725,30 @@
                 </div>
             </div>
             <div class="connection-section">
-                <button onclick="cancelAutoReconnect()" style="width:100%; padding:0.55rem 0.75rem; background:#dc2626; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:0.9rem; font-weight:600; letter-spacing:0.03em;">🚪 Leave Session</button>
+                <button onclick="confirmLeaveSession()" style="width:100%; padding:0.55rem 0.75rem; background:#dc2626; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:0.9rem; font-weight:600; letter-spacing:0.03em;">🚪 Leave Session</button>
             </div>
         </div>
     </div>
     <!-- Hidden stub so clearDMSession/clearPlayerSession never throw on missing element -->
     <div id="resumeArea" style="display:none;"></div>
+
+    <!-- LEAVE SESSION CONFIRM MODAL (DM only) -->
+    <div class="modal" id="leaveConfirmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">🗺️</div>
+                <div class="modal-title">Save Before Leaving?</div>
+            </div>
+            <p style="text-align:center; color:var(--text-dim); margin-bottom:1.5rem; font-size:0.95rem;">
+                Save the current map to a JSON file before leaving the session?
+            </p>
+            <div style="display:flex; flex-direction:column; gap:0.6rem;">
+                <button onclick="saveAndLeaveSession()" style="padding:0.65rem 1rem; background:#10b981; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:0.95rem; font-weight:600;">💾 Save Map &amp; Leave</button>
+                <button onclick="closeLeaveConfirmModal(); cancelAutoReconnect();" style="padding:0.65rem 1rem; background:#dc2626; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:0.95rem; font-weight:600;">🚪 Leave Without Saving</button>
+                <button onclick="closeLeaveConfirmModal()" style="padding:0.65rem 1rem; background:#4b5563; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:0.95rem;">✕ Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <!-- MAIN CONTAINER -->
     <div class="container">
@@ -2903,6 +2921,24 @@
             document.getElementById('resumeArea').innerHTML = '';
         }
 
+        function confirmLeaveSession() {
+            if (!isDM) {
+                cancelAutoReconnect();
+                return;
+            }
+            document.getElementById('leaveConfirmModal').classList.add('active');
+        }
+
+        function closeLeaveConfirmModal() {
+            document.getElementById('leaveConfirmModal').classList.remove('active');
+        }
+
+        function saveAndLeaveSession() {
+            exportCampaign();
+            closeLeaveConfirmModal();
+            cancelAutoReconnect();
+        }
+
         function cancelAutoReconnect() {
             // Abort any in-flight reconnect attempt
             stopFirebaseWatch();
@@ -2916,6 +2952,9 @@
             localStorage.removeItem('fracturedSkySessionId');
             localStorage.removeItem('fracturedSkyPlayerRoom');
             localStorage.removeItem('fracturedSkyPlayerName');
+            // Clear DM game settings so they don't bleed into a new session
+            localStorage.removeItem('fracturedSkyCampaignName');
+            localStorage.removeItem('fracturedSkyApprovedNames');
             // Restore welcome screen
             document.getElementById('welcomeReconnect').style.display = 'none';
             document.getElementById('welcomeButtons').style.display = 'flex';
