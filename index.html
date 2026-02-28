@@ -1603,10 +1603,6 @@
                     <option value="DM">DM (unassigned)</option>
                 </select>
             </div>
-            <div class="form-group">
-                <label>TOKEN COLOR</label>
-                <input type="color" id="tokenColor" value="#e74c3c">
-            </div>
             <div class="btn-group">
                 <button class="btn btn-primary" onclick="createToken()" style="flex: 1;">Create</button>
                 <button class="btn" onclick="closeTokenModal()">Cancel</button>
@@ -2115,10 +2111,6 @@
                     <input type="file" id="playerTokenImageFile" accept="image/*" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text);">
                     <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-dim);">Upload PNG, JPG, or GIF</div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>TOKEN COLOR</label>
-                <input type="color" id="playerTokenColor" value="#3b82f6">
             </div>
             <div class="info">Your token will be sent to the DM for approval</div>
             <div class="btn-group">
@@ -4211,7 +4203,7 @@
         }
 
         function createToken() {
-            const color = document.getElementById('tokenColor').value;
+            const color = '#e74c3c';
             const owner = document.getElementById('tokenOwner').value || 'DM';
 
             if (tokenType === 'emoji') {
@@ -4642,7 +4634,7 @@
         }
 
         function requestPlayerToken() {
-            const color = document.getElementById('playerTokenColor').value;
+            const color = '#3b82f6';
             
             if (playerTokenType === 'emoji') {
                 const emoji = document.getElementById('playerTokenEmoji').value || '⚔️';
