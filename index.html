@@ -2650,13 +2650,25 @@
                 }
             });
 
-            // Check for saved sessions and offer to resume
+            // Check for saved sessions and offer to resume.
+            // tabRole (sessionStorage) is per-tab and survives refresh but NOT
+            // browser restart, so it's safe to use in split-tab same-browser setups.
+            // localStorage holds the actual data (room IDs, names) that persists
+            // longer term but must never be used alone to decide which role THIS tab has.
+            const tabRole = sessionStorage.getItem('fracturedSkyTabRole');
             const savedDMSession = localStorage.getItem('fracturedSkySessionId');
-            const wasDM = localStorage.getItem('fracturedSkyIsDM') === 'true';
             const savedPlayerRoom = localStorage.getItem('fracturedSkyPlayerRoom');
             const savedPlayerName = localStorage.getItem('fracturedSkyPlayerName');
 
-            if (wasDM && savedDMSession) {
+            // Decide which role this tab should resume.
+            // Priority: sessionStorage role (refresh-safe, tab-isolated) >
+            //           localStorage isDM flag (browser-restart fallback, single-tab only).
+            const resumeAsDM = tabRole === 'dm'
+                || (tabRole === null && localStorage.getItem('fracturedSkyIsDM') === 'true');
+            const resumeAsPlayer = !resumeAsDM && (tabRole === 'player'
+                || (tabRole === null && !!(savedPlayerRoom && savedPlayerName)));
+
+            if (resumeAsDM && savedDMSession) {
                 // Auto-reconnect DM immediately — no click required.
                 // Show a "Start Fresh" cancel button in case they want a new session.
                 document.getElementById('welcomeButtons').style.display = 'none';
@@ -2669,7 +2681,7 @@
                     if (saved) JSON.parse(saved).forEach(n => approvedPlayerNames.add(n));
                 } catch(e) {}
                 createRoom(savedDMSession);
-            } else if (savedPlayerRoom && savedPlayerName) {
+            } else if (resumeAsPlayer && savedPlayerRoom && savedPlayerName) {
                 // Auto-reconnect player immediately.
                 // Keep welcome screen visible so user can cancel if stuck.
                 document.getElementById('welcomeButtons').style.display = 'none';
@@ -2694,12 +2706,14 @@
                     const saved = localStorage.getItem('fracturedSkyApprovedNames');
                     if (saved) JSON.parse(saved).forEach(n => approvedPlayerNames.add(n));
                 } catch(e) {}
+                sessionStorage.setItem('fracturedSkyTabRole', 'dm');
                 updateConnectionStatus('Reconnecting...', false);
                 createRoom(savedDMSession);
             } else {
                 const savedPlayerRoom = localStorage.getItem('fracturedSkyPlayerRoom');
                 const savedPlayerName = localStorage.getItem('fracturedSkyPlayerName');
                 if (savedPlayerRoom && savedPlayerName) {
+                    sessionStorage.setItem('fracturedSkyTabRole', 'player');
                     myName = savedPlayerName;
                     roomCode = savedPlayerRoom;
                     document.getElementById('welcomeScreen').classList.add('hidden');
@@ -2716,6 +2730,7 @@
                 if (saved) JSON.parse(saved).forEach(n => approvedPlayerNames.add(n));
             } catch(e) {}
             const savedDMSession = localStorage.getItem('fracturedSkySessionId');
+            sessionStorage.setItem('fracturedSkyTabRole', 'dm');
             // Hide welcome screen & show connection tab immediately so user sees feedback
             document.getElementById('welcomeScreen').classList.add('hidden');
             document.getElementById('connectionTabContainer').style.display = 'block';
@@ -2730,6 +2745,7 @@
         function resumePlayerSession() {
             const savedPlayerRoom = localStorage.getItem('fracturedSkyPlayerRoom');
             const savedPlayerName = localStorage.getItem('fracturedSkyPlayerName');
+            sessionStorage.setItem('fracturedSkyTabRole', 'player');
             myName = savedPlayerName;
             roomCode = savedPlayerRoom;
             document.getElementById('welcomeScreen').classList.add('hidden');
@@ -2750,6 +2766,8 @@
             peer = null;
             isDM = false;
             // Clear all saved session data
+            sessionStorage.removeItem('fracturedSkyTabRole');
+            sessionStorage.removeItem('fracturedSkyPlayerRoom');
             localStorage.removeItem('fracturedSkyIsDM');
             localStorage.removeItem('fracturedSkySessionId');
             localStorage.removeItem('fracturedSkyPlayerRoom');
@@ -2817,11 +2835,12 @@
             e.preventDefault();
             myName = document.getElementById('playerName').value;
             const code = document.getElementById('roomCodeInput').value.trim();
-            // Joining as player — clear any saved DM session so refresh
-            // doesn't auto-reconnect as DM on this browser.
-            localStorage.removeItem('fracturedSkyIsDM');
-            localStorage.removeItem('fracturedSkySessionId');
-            
+            // Mark THIS TAB as player in sessionStorage.
+            // Do NOT touch fracturedSkyIsDM / fracturedSkySessionId in localStorage —
+            // those belong to the DM tab. Wiping them here was the root cause of the
+            // DM being unable to auto-reconnect after a refresh in split-tab same-browser use.
+            sessionStorage.setItem('fracturedSkyTabRole', 'player');
+
             roomCode = code;
             localStorage.setItem('fracturedSkyPlayerRoom', code);
             localStorage.setItem('fracturedSkyPlayerName', myName);
@@ -2975,6 +2994,10 @@
                     localStorage.setItem('fracturedSkySessionId', id);
                 }
                 localStorage.setItem('fracturedSkyIsDM', 'true');
+                // Mark THIS TAB as DM in sessionStorage (tab-isolated, survives refresh).
+                // This is the canonical way to detect the role on refresh without
+                // being confused by another tab's localStorage writes.
+                sessionStorage.setItem('fracturedSkyTabRole', 'dm');
                 onDMReady();
                 document.getElementById('firebaseSection').style.display = 'flex';
                 document.getElementById('firebaseStatus').style.display = 'inline';
@@ -3318,6 +3341,9 @@
                     // caused the watch chain to drift and the room to "die" after 2 refreshes.
                     localStorage.setItem('fracturedSkyPlayerRoom', data.canonicalRoomId || conn.peer);
                     localStorage.setItem('fracturedSkyPlayerName', myName);
+                    // Keep sessionStorage in sync so refresh always uses the canonical room ID.
+                    sessionStorage.setItem('fracturedSkyTabRole', 'player');
+                    sessionStorage.setItem('fracturedSkyPlayerRoom', data.canonicalRoomId || conn.peer);
                     updateConnectionStatus('Connected to room', true);
                     requestGameState(conn);
                     document.getElementById('welcomeScreen').classList.add('hidden');
