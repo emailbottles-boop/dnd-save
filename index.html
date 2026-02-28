@@ -1045,6 +1045,74 @@
         .welcome-divider::before { right: calc(50% + 1.5rem); }
         .welcome-divider::after { left: calc(50% + 1.5rem); }
 
+        /* DICE ROLLER */
+        .dice-roller-btn {
+            position: fixed; bottom: 130px; right: 1rem;
+            width: 54px; height: 54px;
+            background: linear-gradient(135deg, #7c3aed, #4c1d95);
+            border: 2px solid #8b5cf6; border-radius: 50%;
+            cursor: pointer; font-size: 1.3rem;
+            display: none; align-items: center; justify-content: center; flex-direction: column;
+            box-shadow: 0 4px 15px rgba(139,92,246,0.4);
+            z-index: 8000; color: white; line-height: 1;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .dice-roller-btn.visible { display: flex; }
+        .dice-roller-btn:hover { transform: scale(1.12); box-shadow: 0 6px 22px rgba(139,92,246,0.65); }
+        .dice-roller-btn.rolling { animation: diceRollAnim 0.5s ease-out; }
+        @keyframes diceRollAnim {
+            0%   { transform: rotate(0deg) scale(1); }
+            25%  { transform: rotate(120deg) scale(1.2); }
+            50%  { transform: rotate(240deg) scale(0.9); }
+            75%  { transform: rotate(320deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+        .dice-roll-log {
+            position: fixed; bottom: 195px; right: 1rem;
+            width: 200px; display: none; flex-direction: column-reverse;
+            gap: 0.3rem; z-index: 7999; max-height: 220px; overflow: hidden; pointer-events: none;
+        }
+        .dice-roll-log.visible { display: flex; }
+        .dice-log-entry {
+            background: rgba(18,23,42,0.96); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.35rem 0.6rem; font-size: 0.78rem;
+            display: flex; justify-content: space-between; align-items: center;
+            animation: slideRight 0.3s ease-out;
+        }
+        @keyframes slideRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .dice-log-num { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+        .dice-log-num.nat20 { color: #fbbf24; }
+        .dice-log-num.nat1  { color: #ef4444; }
+        .dice-result-toast {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, #12172a, #1e2440);
+            border: 2px solid var(--accent); border-radius: 20px;
+            padding: 1.75rem 2.5rem; text-align: center;
+            z-index: 15000; pointer-events: none;
+            transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s;
+            opacity: 0; min-width: 190px;
+        }
+        .dice-result-toast.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        .toast-roller { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.4rem; }
+        .toast-num { font-family: 'Cinzel', serif; font-size: 4rem; font-weight: 700; color: var(--accent); line-height: 1; }
+        .toast-num.nat20 { color: #fbbf24; text-shadow: 0 0 24px rgba(251,191,36,0.7); }
+        .toast-num.nat1  { color: #ef4444; text-shadow: 0 0 24px rgba(239,68,68,0.5); }
+        .toast-label { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.3rem; letter-spacing: 0.05em; }
+
+        /* FEATURES TAB */
+        .class-intro { background: linear-gradient(135deg, var(--bg-card), var(--bg-dark)); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1rem; }
+        .class-intro-name { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); margin-bottom: 0.3rem; }
+        .class-intro-desc { font-size: 0.85rem; color: var(--text-dim); line-height: 1.5; }
+        .feature-card { background: var(--bg-dark); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; margin-bottom: 0.55rem; border-left: 3px solid var(--accent); }
+        .feature-card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap; }
+        .feature-lvl-badge { background: var(--accent); color: white; font-size: 0.62rem; padding: 0.12rem 0.4rem; border-radius: 8px; white-space: nowrap; font-weight: 700; opacity: 0.9; }
+        .feature-name { font-weight: 700; font-size: 0.9rem; flex: 1; }
+        .feature-blurb { font-size: 0.82rem; color: var(--text-dim); line-height: 1.55; }
+        .feature-choice { margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .feature-choice label { font-size: 0.75rem; color: var(--text-dim); white-space: nowrap; }
+        .feature-choice select { background: var(--bg-card); border: 1px solid var(--accent); color: var(--text); border-radius: 5px; padding: 0.2rem 0.45rem; font-size: 0.8rem; cursor: pointer; }
+
         /* CHARACTER SHEET OVERLAY */
         .char-overlay {
             position: fixed;
@@ -1431,14 +1499,18 @@
                 <div class="modal-icon">🧙</div>
                 <div class="modal-title">Dungeon Master</div>
             </div>
+            <!-- First-time setup notice -->
+            <div id="dmFirstTimeNotice" style="display:none; background:rgba(139,92,246,0.15); border:1px solid var(--accent); border-radius:8px; padding:0.65rem 0.75rem; margin-bottom:0.75rem; font-size:0.83rem; color:var(--text-dim);">
+                👋 First time? Create your DM username and password below — you'll use these every time you create a room.
+            </div>
             <form onsubmit="dmLogin(event)">
                 <div class="form-group">
                     <label>USERNAME</label>
-                    <input type="text" id="dmUser" placeholder="Wizard" required>
+                    <input type="text" id="dmUser" placeholder="Choose a username" required>
                 </div>
                 <div class="form-group">
                     <label>PASSWORD</label>
-                    <input type="password" id="dmPass" placeholder="FracturedSky2025!" required>
+                    <input type="password" id="dmPass" placeholder="Choose a password" required>
                 </div>
                 <div class="form-group">
                     <label>SESSION ID (Optional - leave blank for new session)</label>
@@ -1447,9 +1519,30 @@
                 </div>
                 <div class="error" id="dmError">Invalid credentials</div>
                 <div class="info" id="dmInfo" style="display: none;">Rejoining previous session...</div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">LOGIN & CREATE ROOM</button>
+                <button type="submit" class="btn btn-primary" style="width: 100%;" id="dmLoginBtn">LOGIN & CREATE ROOM</button>
                 <button type="button" class="btn" onclick="closeDMModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
             </form>
+            <!-- Change credentials section -->
+            <div style="margin-top:1rem; border-top:1px solid var(--border); padding-top:0.75rem;">
+                <button type="button" onclick="toggleDMSetup()" style="background:none;border:none;color:var(--text-dim);font-size:0.78rem;cursor:pointer;padding:0;text-decoration:underline;">⚙️ Change DM credentials</button>
+                <div id="dmSetupPanel" style="display:none; margin-top:0.75rem;">
+                    <div class="form-group">
+                        <label>NEW USERNAME</label>
+                        <input type="text" id="dmNewUser" placeholder="New username">
+                    </div>
+                    <div class="form-group">
+                        <label>NEW PASSWORD</label>
+                        <input type="password" id="dmNewPass" placeholder="New password">
+                    </div>
+                    <div class="form-group">
+                        <label>CONFIRM PASSWORD</label>
+                        <input type="password" id="dmNewPassConfirm" placeholder="Repeat new password">
+                    </div>
+                    <div class="error" id="dmSetupError">Passwords do not match</div>
+                    <div class="success" id="dmSetupSuccess" style="display:none; background:rgba(16,185,129,0.15); border:1px solid #10b981; border-radius:6px; padding:0.4rem 0.6rem; font-size:0.82rem; color:#10b981;">✓ Credentials saved!</div>
+                    <button type="button" class="btn btn-primary" onclick="saveDMCredentials()" style="width:100%;">Save Credentials</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1555,7 +1648,7 @@
                 </div>
                 <div class="form-group">
                     <label>DM PASSWORD</label>
-                    <input type="password" id="coDMPass" placeholder="FracturedSky2025!" required>
+                    <input type="password" id="coDMPass" placeholder="DM's password" required>
                 </div>
                 <div class="error" id="coDMError">Invalid password or connection failed</div>
                 <button type="submit" class="btn btn-primary" style="width:100%;">JOIN AS CO-DM</button>
@@ -1585,6 +1678,17 @@
             <span id="tabText">Connection</span>
             <span id="tabArrow">▼</span>
         </div>
+    </div>
+
+    <!-- DICE ROLLER -->
+    <div class="dice-roll-log" id="diceRollLog"></div>
+    <button class="dice-roller-btn" id="diceRollerBtn" onclick="rollD20()" title="Roll d20 — everyone sees it">
+        🎲<span style="font-size:0.5rem;margin-top:2px;opacity:0.85;">d20</span>
+    </button>
+    <div class="dice-result-toast" id="diceToast">
+        <div class="toast-roller" id="toastRoller"></div>
+        <div class="toast-num" id="toastNum">—</div>
+        <div class="toast-label">d20</div>
     </div>
 
     <!-- CONNECTION PANEL -->
@@ -1617,6 +1721,9 @@
                 <div class="user-list" id="userList">
                     <p style="font-size: 0.85rem; color: var(--text-dim);">No users</p>
                 </div>
+            </div>
+            <div class="connection-section">
+                <button onclick="cancelAutoReconnect()" style="width:100%; padding:0.55rem 0.75rem; background:#dc2626; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:0.9rem; font-weight:600; letter-spacing:0.03em;">🚪 Leave Session</button>
             </div>
         </div>
     </div>
@@ -2065,6 +2172,7 @@
                     <div class="char-tab" onclick="switchCharTab('combat')">🛡️ Combat</div>
                     <div class="char-tab" onclick="switchCharTab('skills')">🎲 Skills</div>
                     <div class="char-tab" onclick="switchCharTab('notes')">📝 Notes</div>
+                    <div class="char-tab" onclick="switchCharTab('features')">📖 Features</div>
                 </div>
 
                 <!-- BASICS TAB -->
@@ -2240,6 +2348,12 @@
                     <div class="char-section">
                         <h3>Backstory</h3>
                         <textarea class="notes-textarea" id="cBackstory" placeholder="Your character's backstory..."></textarea>
+                    </div>
+                </div>
+                <!-- FEATURES TAB -->
+                <div class="char-tab-content" id="tabFeatures">
+                    <div id="featuresPanel">
+                        <p style="font-size:0.85rem;color:var(--text-dim);">Select a character to view class features.</p>
                     </div>
                 </div>
             </div><!-- end charEditor -->
@@ -2777,6 +2891,8 @@
             document.getElementById('welcomeButtons').style.display = 'flex';
             document.getElementById('welcomeScreen').classList.remove('hidden');
             document.getElementById('connectionTabContainer').style.display = 'none';
+            document.getElementById('diceRollerBtn').classList.remove('visible');
+            document.getElementById('diceRollLog').classList.remove('visible');
         }
 
         function resizeCanvas() {
@@ -2796,16 +2912,57 @@
         // === AUTHENTICATION ===
         function showDMLogin() {
             const savedSession = localStorage.getItem('fracturedSkySessionId');
-            if (savedSession) {
-                document.getElementById('sessionId').value = savedSession;
-            }
+            if (savedSession) document.getElementById('sessionId').value = savedSession;
+            const creds = getDMCredentials();
+            const firstTime = !creds.user || !creds.pass;
+            document.getElementById('dmFirstTimeNotice').style.display = firstTime ? 'block' : 'none';
+            document.getElementById('dmLoginBtn').textContent = firstTime ? 'CREATE ACCOUNT & OPEN ROOM' : 'LOGIN & CREATE ROOM';
+            if (creds.user) document.getElementById('dmUser').value = creds.user;
+            document.getElementById('dmSetupPanel').style.display = 'none';
+            document.getElementById('dmError').classList.remove('show');
             document.getElementById('dmModal').classList.add('active');
+        }
+
+        function getDMCredentials() {
+            return {
+                user: localStorage.getItem('fracturedSkyDMUser') || null,
+                pass: localStorage.getItem('fracturedSkyDMPass') || null
+            };
         }
 
         function closeDMModal() {
             document.getElementById('dmModal').classList.remove('active');
             document.getElementById('dmError').classList.remove('show');
             document.getElementById('dmInfo').style.display = 'none';
+            document.getElementById('dmSetupPanel').style.display = 'none';
+        }
+
+        function toggleDMSetup() {
+            const panel = document.getElementById('dmSetupPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            document.getElementById('dmSetupError').classList.remove('show');
+            document.getElementById('dmSetupSuccess').style.display = 'none';
+        }
+
+        function saveDMCredentials() {
+            const newUser = document.getElementById('dmNewUser').value.trim();
+            const newPass = document.getElementById('dmNewPass').value;
+            const confirm = document.getElementById('dmNewPassConfirm').value;
+            const errEl = document.getElementById('dmSetupError');
+            errEl.classList.remove('show');
+            document.getElementById('dmSetupSuccess').style.display = 'none';
+            if (!newUser || !newPass) { errEl.textContent = 'Username and password are required.'; errEl.classList.add('show'); return; }
+            if (newPass !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.classList.add('show'); return; }
+            localStorage.setItem('fracturedSkyDMUser', newUser);
+            localStorage.setItem('fracturedSkyDMPass', newPass);
+            document.getElementById('dmSetupSuccess').style.display = 'block';
+            document.getElementById('dmNewUser').value = '';
+            document.getElementById('dmNewPass').value = '';
+            document.getElementById('dmNewPassConfirm').value = '';
+            // Update login field hints
+            document.getElementById('dmUser').value = newUser;
+            document.getElementById('dmFirstTimeNotice').style.display = 'none';
+            document.getElementById('dmLoginBtn').textContent = 'LOGIN & CREATE ROOM';
         }
 
         function dmLogin(e) {
@@ -2813,7 +2970,16 @@
             const user = document.getElementById('dmUser').value;
             const pass = document.getElementById('dmPass').value;
             const sessionId = document.getElementById('sessionId').value.trim();
-            if (user === 'Wizard' && pass === 'FracturedSky2025!') {
+            const creds = getDMCredentials();
+            // If no credentials saved yet, treat this submission as first-time setup
+            if (!creds.user || !creds.pass) {
+                localStorage.setItem('fracturedSkyDMUser', user);
+                localStorage.setItem('fracturedSkyDMPass', pass);
+                closeDMModal();
+                createRoom(sessionId || null);
+                return;
+            }
+            if (user === creds.user && pass === creds.pass) {
                 closeDMModal();
                 createRoom(sessionId || null);
             } else {
@@ -3123,6 +3289,8 @@
             document.getElementById('welcomeButtons').style.display = 'flex';
             document.getElementById('startFreshBtn').style.display = 'none';
             document.getElementById('connectionTabContainer').style.display = 'block';
+            document.getElementById('diceRollerBtn').classList.add('visible');
+            document.getElementById('diceRollLog').classList.add('visible');
             document.getElementById('roomCodeSection').style.display = 'block';
             document.getElementById('roomCode').textContent = roomCode;
             document.getElementById('dmControlsBtn').style.display = 'block';
@@ -3150,7 +3318,9 @@
             const name = document.getElementById('coDMName').value.trim();
             const code = document.getElementById('coDMRoomCode').value.trim();
             const pass = document.getElementById('coDMPass').value;
-            if (pass !== 'FracturedSky2025!') {
+            const dmCreds = getDMCredentials();
+            const validPass = dmCreds.pass || 'FracturedSky2025!';
+            if (pass !== validPass) {
                 document.getElementById('coDMError').classList.add('show');
                 return;
             }
@@ -3281,6 +3451,8 @@
                     document.getElementById('dmControlsBtn').style.display = 'block';
                     document.getElementById('musicToggleBtn').style.display = 'block';
                     document.getElementById('stagingZone').style.display = 'flex';
+                    document.getElementById('diceRollerBtn').classList.add('visible');
+                    document.getElementById('diceRollLog').classList.add('visible');
                     updateConnectionStatus('Connected as Co-DM', true);
                     updateUserList();
                     initMusicPanel();
@@ -3351,6 +3523,8 @@
                     document.getElementById('welcomeButtons').style.display = 'none';
                     document.getElementById('startFreshBtn').style.display = 'none';
                     document.getElementById('playerPanelContainer').style.display = 'block';
+                    document.getElementById('diceRollerBtn').classList.add('visible');
+                    document.getElementById('diceRollLog').classList.add('visible');
                     savePlayerState();
                     break;
                     
@@ -3460,6 +3634,16 @@
                         }
                     }
                     break;
+
+                case 'diceRoll':
+                    // Re-broadcast from DM to all, then display
+                    if (isDM && !isCoDM) {
+                        connections.forEach(({ conn: c, approved }) => {
+                            if (approved && c.peer !== conn.peer) sendToPeer(c, data);
+                        });
+                    }
+                    showDiceResult(data.result, data.rollerName, false);
+                    break;
             }
         }
 
@@ -3520,6 +3704,9 @@
                         img.onload = () => { placedImages.push({ img, x:imgData.x, y:imgData.y, width:imgData.width, height:imgData.height, rotation:imgData.rotation, gridX:imgData.gridX, gridY:imgData.gridY }); draw(); };
                         img.src = imgData.src;
                     });
+                    break;
+                case 'diceRoll':
+                    showDiceResult(data.result, data.rollerName, false);
                     break;
             }
         }
@@ -5844,7 +6031,8 @@
                 skillProfs:{}, saveProfs:{},
                 personality:'', ideal:'', bond:'', flaw:'',
                 inventory:'', spells:'', features:'', notes:'', backstory:'',
-                deathSuccesses:[false,false,false], deathFailures:[false,false,false]
+                deathSuccesses:[false,false,false], deathFailures:[false,false,false],
+                featureChoices:{}
             };
             characters.push(char);
             activeCharIdx = characters.length - 1;
@@ -6082,6 +6270,7 @@
             document.querySelectorAll('.char-tab-content').forEach(t => t.classList.remove('active'));
             document.querySelector(`.char-tab[onclick="switchCharTab('${tab}')"]`).classList.add('active');
             document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+            if (tab === 'features') renderFeaturesTab();
         }
 
         function changeHP(delta) {
@@ -6094,6 +6283,289 @@
             pip.classList.toggle('filled');
         }
 
+
+        // =============================================
+        // DICE ROLLER
+        // =============================================
+        let diceToastTimer = null;
+
+        function rollD20() {
+            const result = Math.floor(Math.random() * 20) + 1;
+            const btn = document.getElementById('diceRollerBtn');
+            btn.classList.add('rolling');
+            setTimeout(() => btn.classList.remove('rolling'), 500);
+            showDiceResult(result, myName || 'Anonymous', true);
+            const msg = { type: 'diceRoll', result, rollerName: myName || 'Anonymous' };
+            if (!isDM) {
+                connections.forEach(({ conn, role }) => { if (role === 'dm') sendToPeer(conn, msg); });
+            } else {
+                broadcast(msg);
+            }
+        }
+
+        function showDiceResult(result, rollerName, isOwn) {
+            const toast = document.getElementById('diceToast');
+            const numEl  = document.getElementById('toastNum');
+            const nameEl = document.getElementById('toastRoller');
+            numEl.className = 'toast-num' + (result === 20 ? ' nat20' : result === 1 ? ' nat1' : '');
+            numEl.textContent = result;
+            nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20';
+            toast.classList.add('show');
+            clearTimeout(diceToastTimer);
+            diceToastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+            const log = document.getElementById('diceRollLog');
+            const entry = document.createElement('div');
+            entry.className = 'dice-log-entry';
+            const cls = result === 20 ? ' nat20' : result === 1 ? ' nat1' : '';
+            entry.innerHTML = `<span style="color:var(--text-dim);font-size:0.75rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rollerName}</span><span class="dice-log-num${cls}">${result}</span>`;
+            log.prepend(entry);
+            while (log.children.length > 5) log.lastChild.remove();
+        }
+
+        // =============================================
+        // CLASS FEATURES
+        // =============================================
+        // Each feature: { level, name, blurb, type (optional 'choice'), choices[] (optional) }
+        const CLASS_FEATURES = {
+            Barbarian: {
+                color:'#ef4444', emoji:'🪓',
+                desc:'A fierce warrior who taps into primal rage. No heavy armor needed — your raw toughness and fury are your defense. High damage, high survivability.',
+                features:[
+                    {level:1, name:'Rage', blurb:'Bonus action to enter a rage (2 uses/long rest, more at higher levels). While raging: +2 damage on STR attacks, resistance to bludgeoning/piercing/slashing damage. Lasts 1 minute or until you stop attacking.'},
+                    {level:1, name:'Unarmored Defense', blurb:'While wearing NO armor, your AC = 10 + DEX modifier + CON modifier. You\'re naturally tough enough without armor.'},
+                    {level:2, name:'Reckless Attack', blurb:'On your first attack each turn, you can attack with advantage — but enemies also have advantage attacking you until your next turn. High risk, high reward.'},
+                    {level:2, name:'Danger Sense', blurb:'Advantage on Dexterity saving throws against things you can see (traps, spells, explosions). Your instincts are razor sharp.'},
+                    {level:3, name:'Primal Path', type:'choice', blurb:'Choose your Barbarian subclass. Each path changes how your Rage works and what you specialize in.', choices:['Berserker (frenzy — bonus attacks while raging, but exhausted after)','Totem Warrior (spirit animal powers: Bear=tanky, Eagle=mobile, Wolf=pack leader)','Zealot (divine rage, harder to kill, come back from death)','Ancestral Guardian (protect allies, haunt enemies with ancestral spirits)','Storm Herald (elemental aura around you while raging)','Beast (grow claws, armor, or a tail while raging)']},
+                    {level:4, name:'Ability Score Improvement', blurb:'+2 to one ability score, OR +1 to two different scores, OR choose a Feat (special powerful ability). Happens at levels 4, 8, 12, 16, 19.'},
+                    {level:5, name:'Extra Attack', blurb:'Attack TWICE instead of once whenever you take the Attack action on your turn.'},
+                    {level:5, name:'Fast Movement', blurb:'+10 ft to your movement speed while not wearing heavy armor.'},
+                    {level:7, name:'Feral Instinct', blurb:'Advantage on all Initiative rolls (you go first more often). If you\'re surprised but not incapacitated, you can enter Rage and act normally on your first turn.'},
+                    {level:9, name:'Brutal Critical', blurb:'When you score a critical hit, roll ONE extra weapon damage die. (Becomes 2 extra at level 13, 3 extra at level 17.)'},
+                    {level:11, name:'Relentless Rage', blurb:'If you drop to 0 HP while raging, make a DC 10 CON save (DC rises by 5 each time) — on success you stay at 1 HP instead of going down.'},
+                    {level:15, name:'Persistent Rage', blurb:'Your Rage no longer ends early from lack of attacking or damage — it only stops if you fall unconscious or choose to end it.'},
+                    {level:18, name:'Indomitable Might', blurb:'When you make a Strength check, the minimum result equals your Strength score. You can never roll badly on STR.'},
+                    {level:20, name:'Primal Champion', blurb:'Your Strength and Constitution each permanently increase by 4, and their maximums increase by 4 as well.'},
+                ]
+            },
+            Bard: {
+                color:'#ec4899', emoji:'🎵',
+                desc:'A magical performer who inspires allies and bends reality with music, words, and wit. Incredibly versatile — good at almost everything, and knows a spell for every situation.',
+                features:[
+                    {level:1, name:'Spellcasting', blurb:'You cast spells using Charisma (CHA). You know a fixed number of spells from the Bard list and can change one when you level up. Regain all slots on a long rest.'},
+                    {level:1, name:'Bardic Inspiration', blurb:'Bonus action: give an ally a special die (d6 → d12 as you level up) that they can add to ONE attack roll, ability check, or saving throw within the next 10 minutes. Uses = CHA modifier, refreshes on long rest (short rest at level 5).'},
+                    {level:2, name:'Jack of All Trades', blurb:'Add HALF your proficiency bonus to any ability check you\'re not already proficient in. You\'re surprisingly competent at everything.'},
+                    {level:2, name:'Song of Rest', blurb:'While allies rest and hear you perform, they regain extra HP when spending Hit Dice during a short rest (d6 → d12 as you level).'},
+                    {level:3, name:'Bard College', type:'choice', blurb:'Choose your Bard subclass. This defines your specialty and grants extra features at levels 3, 6, and 14.', choices:['Lore (more spells from any list, cutting words to debuff enemies)','Valor (medium armor, shields, extra attack, inspire allies defensively)','Glamour (fey magic, mass charm, inspiring presence)','Swords (extra attacks, blade flourishes with Bardic Inspiration)','Whispers (dark manipulation, steal voices, become a social assassin)','Eloquence (always minimum 10 on Persuasion/Deception, impossible-to-resist Bardic Inspiration)','Creation (create objects from thin air using Song of Creation)']},
+                    {level:3, name:'Expertise', blurb:'Double your proficiency bonus in TWO skills you choose. You\'re exceptional at those things. Pick two more at level 10.'},
+                    {level:5, name:'Font of Inspiration', blurb:'You now regain Bardic Inspiration on a SHORT rest, not just a long rest.'},
+                    {level:6, name:'Countercharm', blurb:'Use your action to start a performance. While you maintain it, allies within 30 ft have advantage on saves against being charmed or frightened.'},
+                    {level:10, name:'Magical Secrets', blurb:'Learn 2 spells from ANY class\'s spell list (Wizard, Cleric, Druid — anything). Repeat this at levels 14 and 18. This is one of the most powerful abilities in the game.'},
+                    {level:20, name:'Superior Inspiration', blurb:'When you roll Initiative with 0 Bardic Inspiration uses remaining, you immediately regain 1 use.'},
+                ]
+            },
+            Cleric: {
+                color:'#f59e0b', emoji:'✝️',
+                desc:'A divine spellcaster who channels the power of their deity. The best healer in the game, with powerful support and offensive spells. Your domain defines your specialty.',
+                features:[
+                    {level:1, name:'Spellcasting', blurb:'Cast spells using Wisdom (WIS). Each day you choose which spells to prepare from the full Cleric list (INT modifier + Cleric level spells). Regain all slots on a long rest.'},
+                    {level:1, name:'Divine Domain', type:'choice', blurb:'Choose your subclass at level 1 (earlier than most classes!). This determines your bonus spells, Channel Divinity options, and specialty.', choices:['Life (best healer — your heals heal for way more)','Light (radiant blasts, blindness, protective aura)','War (extra attacks, weapon buffs, combat spells)','Trickery (deception, illusions, duplicate self)','Knowledge (learn any skill, read minds)','Nature (animal friend, plant/animal spells, poison immunity)','Tempest (lightning/thunder damage, weather control)','Grave (prevent death, curse undead, healing the near-dead)','Arcana (wizard spells, banish elementals/fey)','Order (command allies to attack, mind control)','Peace (bonding allies together, massive healing bonus)','Twilight (protect sleeping allies, darkvision aura)']},
+                    {level:2, name:'Channel Divinity', blurb:'A powerful ability that recharges on a short rest. ALL Clerics get Turn Undead (force undead to flee). Your domain gives you a second, unique option.'},
+                    {level:5, name:'Destroy Undead', blurb:'Undead of CR 1/2 or lower that fail Turn Undead are destroyed instantly instead of just fleeing. Gets more powerful at higher levels.'},
+                    {level:10, name:'Divine Intervention', blurb:'Call upon your deity directly for miraculous help. Roll percentile dice — if you roll equal to or lower than your Cleric level, the DM decides what happens (can be almost anything). Once per long rest; at level 20 it always works.'},
+                ]
+            },
+            Druid: {
+                color:'#16a34a', emoji:'🌿',
+                desc:'A nature spellcaster who can transform into animals. Flexible, powerful, and tied to the natural world. Wild Shape alone makes you one of the most versatile classes.',
+                features:[
+                    {level:1, name:'Spellcasting', blurb:'Cast spells using Wisdom (WIS). Prepare from the full Druid list each day. Regain slots on long rest. Druids never use metal armor or shields.'},
+                    {level:1, name:'Druidic', blurb:'You know the secret Druidic language — a mix of sounds and signs. You can leave hidden messages only other Druids can read.'},
+                    {level:2, name:'Wild Shape', blurb:'Use your action (2 uses/short rest) to magically transform into a beast you\'ve seen. You keep your mental stats and class features but use the beast\'s physical stats. Duration = half Druid level in hours.'},
+                    {level:2, name:'Druid Circle', type:'choice', blurb:'Choose your Druid subclass, which changes what you specialize in and what forms you can take.', choices:['Moon (transform into powerful beasts like bears and elementals — the combat Druid)','Land (extra spells from your chosen terrain type, regain spell slots from Wild Shape)','Dreams (fey magic, teleportation, healing)','Shepherd (summon and buff animals and spirits)','Spores (fungal magic, animate the dead, spore aura)','Stars (star map powers, buff healing and spells, transform into star form)','Wildfire (fire damage, teleportation, fire elemental companion)']},
+                    {level:18, name:'Timeless Body', blurb:'You age only 1 year for every 10 that pass, and magical aging effects don\'t affect you.'},
+                    {level:18, name:'Beast Spells', blurb:'You can cast Druid spells while in Wild Shape form, as long as the spell doesn\'t require free hands.'},
+                    {level:20, name:'Archdruid', blurb:'Unlimited Wild Shape uses. Also ignore verbal, somatic, and material components for spells (as long as the material has no gold cost).'},
+                ]
+            },
+            Fighter: {
+                color:'#6366f1', emoji:'⚔️',
+                desc:'A master of weapons and armor. The most reliable and consistent martial class — more attacks, more resources, and more Ability Score Improvements than anyone else.',
+                features:[
+                    {level:1, name:'Fighting Style', type:'choice', blurb:'Choose a combat specialty that passively improves your fighting.', choices:['Archery (+2 to ranged attack rolls)','Defense (+1 AC while wearing armor)','Dueling (+2 damage when using one weapon and no other weapons)','Great Weapon Fighting (reroll 1s and 2s on damage dice for two-handed weapons)','Protection (use reaction to impose disadvantage on an attack against a nearby ally)','Two-Weapon Fighting (add ability modifier to off-hand attack damage)']},
+                    {level:1, name:'Second Wind', blurb:'Bonus action: heal yourself for 1d10 + Fighter level HP. Recharges on a short or long rest. Free emergency healing mid-fight.'},
+                    {level:2, name:'Action Surge', blurb:'Once per short or long rest (twice at level 17): take one additional action on your turn. Extra attack action = devastating burst damage.'},
+                    {level:3, name:'Martial Archetype', type:'choice', blurb:'Choose your Fighter subclass. This is where Fighters gain unique specializations.', choices:['Champion (critical hits on 19–20, then 18–20 — simple and deadly)','Battle Master (tactical maneuvers with superiority dice: trip, disarm, feint, etc.)','Eldritch Knight (learn Wizard spells, bound weapon teleports to your hand)','Arcane Archer (magical arrows with special effects: seek, bane, shadow, etc.)','Cavalier (mounted combat master, protect allies)','Samurai (fighting spirit for advantage, surge of vigor, social skills)','Rune Knight (giant-rune powers carved into your gear, grow to Large size)','Psi Warrior (telekinetic blasts, shield, movement — psychic powers)']},
+                    {level:4, name:'Ability Score Improvement', blurb:'+2 to one ability, or +1 to two, or a Feat. Fighters get this at levels 4, 6, 8, 12, 14, 16, 19 — more than any other class.'},
+                    {level:5, name:'Extra Attack', blurb:'Attack TWICE per Attack action. (3× at level 11, 4× at level 20.)'},
+                    {level:9, name:'Indomitable', blurb:'Reroll a failed saving throw, keeping the new result. Once/long rest at level 9, twice at level 13, three times at level 17.'},
+                ]
+            },
+            Monk: {
+                color:'#0ea5e9', emoji:'👊',
+                desc:'An unarmed martial artist who channels mystical Ki energy. Incredibly fast, hard to hit, and devastates enemies with rapid strikes. Needs no weapons or armor.',
+                features:[
+                    {level:1, name:'Unarmored Defense', blurb:'While wearing NO armor and no shield, your AC = 10 + DEX modifier + WIS modifier. Stay unarmored to benefit.'},
+                    {level:1, name:'Martial Arts', blurb:'Use DEX instead of STR for unarmed strikes and monk weapons. Unarmed strikes deal 1d4 (scaling up to 1d10 at level 17). After attacking, make one free unarmed strike as a bonus action.'},
+                    {level:2, name:'Ki', blurb:'Ki points (= Monk level) refresh on a SHORT rest. Spend them to: Flurry of Blows (2 bonus unarmed strikes for 1 Ki), Patient Defense (Dodge as bonus action for 1 Ki), Step of the Wind (Dash or Disengage as bonus action for 1 Ki).'},
+                    {level:2, name:'Unarmored Movement', blurb:'+10 ft speed while not in armor (grows to +30 ft at level 18). At level 9, run up walls. At level 18, run across water and vertical surfaces.'},
+                    {level:3, name:'Monastic Tradition', type:'choice', blurb:'Choose your Monk subclass — each fundamentally changes how you use Ki.', choices:['Open Hand (push/knock down/prevent reactions after hitting, perfect tranquility)','Shadow (teleport between shadows, cast darkness, silence, pass without trace)','Four Elements (elemental Ki spells — fire, water, earth, air)','Long Death (fear aura, temp HP from kills, hard to kill)','Sun Soul (ranged ki blasts, radiant nova)','Drunken Master (unpredictable movement, attacks deflect blows)','Kensei (ranged or finesse weapon becomes a monk weapon)','Mercy (healing and disease removal with Ki, mask of pain)','Astral Self (project an astral form that attacks for you)']},
+                    {level:3, name:'Deflect Missiles', blurb:'Reaction: reduce ranged weapon attack damage by 1d10 + DEX + Monk level. If reduced to 0, spend 1 Ki to throw it back as a ranged attack.'},
+                    {level:4, name:'Slow Fall', blurb:'Reaction: reduce falling damage by 5 × Monk level. Very handy with Monk\'s high mobility.'},
+                    {level:5, name:'Extra Attack', blurb:'Attack TWICE per Attack action.'},
+                    {level:5, name:'Stunning Strike', blurb:'After hitting with a melee attack, spend 1 Ki. Target makes a CON save or is stunned until end of your next turn — they lose their action and reaction, and all attacks against them have advantage.'},
+                    {level:6, name:'Ki-Empowered Strikes', blurb:'Your unarmed strikes count as magical, overcoming resistance and immunity to nonmagical damage.'},
+                    {level:7, name:'Evasion', blurb:'On a DEX save vs. a spell or effect (like Fireball): succeed = 0 damage, fail = half damage (instead of full).'},
+                    {level:10, name:'Purity of Body', blurb:'Immune to disease and poison.'},
+                    {level:14, name:'Diamond Soul', blurb:'Proficient in ALL saving throws. Also spend 1 Ki to reroll any failed save.'},
+                    {level:18, name:'Empty Body', blurb:'Spend 4 Ki: become invisible for 1 minute and gain resistance to ALL damage except force. Or spend 8 Ki to cast Astral Projection (no material cost needed).'},
+                    {level:20, name:'Perfect Self', blurb:'When you roll Initiative with 0 Ki remaining, you regain 4 Ki points immediately.'},
+                ]
+            },
+            Paladin: {
+                color:'#fbbf24', emoji:'🛡️',
+                desc:'A holy warrior who mixes martial power with divine magic. Incredibly durable with strong healing, powerful smites, and a party-wide saving throw aura that makes everyone better.',
+                features:[
+                    {level:1, name:'Divine Sense', blurb:'Action: detect the presence of celestials, fiends, and undead within 60 ft until end of your next turn. Uses = 1 + CHA modifier per long rest.'},
+                    {level:1, name:'Lay on Hands', blurb:'A healing pool of HP = 5 × Paladin level (refreshes on long rest). Touch a creature to restore any amount from the pool. Or spend 5 points to cure one disease or poison.'},
+                    {level:2, name:'Fighting Style', type:'choice', blurb:'Choose a combat specialty.', choices:['Defense (+1 AC while wearing armor)','Dueling (+2 damage one-handed)','Great Weapon Fighting (reroll 1s and 2s on two-handed weapon damage)','Protection (impose disadvantage on attacks against nearby allies)','Blessed Warrior (learn two Cleric cantrips, use CHA for them)','Blind Fighting (blindsight 10 ft)']},
+                    {level:2, name:'Spellcasting', blurb:'Cast spells using Charisma (CHA). Prepare from the Paladin list each day. Regain slots on long rest.'},
+                    {level:2, name:'Divine Smite', blurb:'When you hit with a melee attack, spend any spell slot to deal extra RADIANT damage: 2d8 for a 1st-level slot (+1d8 per slot level above 1st, max 5d8). +1d8 extra against undead and fiends. DECISION: save slots for smiting vs. spells.'},
+                    {level:3, name:'Sacred Oath', type:'choice', blurb:'Choose your Paladin subclass. Your oath grants extra spells (always prepared), a unique Channel Divinity, and powerful later features.', choices:['Devotion (classic paladin — Sacred Weapon, Holy Nimbus, immune to charm)','Ancients (protect nature and joy — Aura of Warding resists spell damage)','Vengeance (ruthless hunter — Vow of Enmity advantage, relentless pursuit)','Conquest (dominance and fear — aura paralyzes frightened enemies)','Glory (inspire greatness, protective rush, legendary champion)','Redemption (nonviolent first, Protective of others, rebuking attackers)','Watchers (protect from extraplanar threats, enhanced senses)','Oathbreaker (dark path — undead commands, aura of hate for evil damage)']},
+                    {level:5, name:'Extra Attack', blurb:'Attack TWICE per Attack action.'},
+                    {level:6, name:'Aura of Protection', blurb:'You and ALL friendly creatures within 10 ft add your CHA modifier to every saving throw. This is one of the most powerful passive abilities in the entire game. (Range expands to 30 ft at level 18.)'},
+                    {level:10, name:'Aura of Courage', blurb:'You and friendly creatures within 10 ft can\'t be frightened while you\'re conscious.'},
+                    {level:11, name:'Improved Divine Smite', blurb:'Every melee weapon hit deals an extra 1d8 radiant damage, even without spending a spell slot.'},
+                    {level:14, name:'Cleansing Touch', blurb:'Action: end one spell affecting you or a willing creature you touch. Uses = CHA modifier per long rest.'},
+                ]
+            },
+            Ranger: {
+                color:'#22c55e', emoji:'🏹',
+                desc:'A wilderness hunter skilled in tracking, archery, and survival. Excellent at controlling enemies, finding prey, and navigating dangerous terrain. Grows more powerful out in the wild.',
+                features:[
+                    {level:1, name:'Favored Enemy', type:'choice', blurb:'Choose a type of creature you\'ve studied. Advantage on Survival checks to track them and History/Nature to recall info. Some versions let you learn their language.', choices:['Aberrations','Beasts','Celestials','Constructs','Dragons','Elementals','Fey','Fiends','Giants','Monstrosities','Oozes','Plants','Undead','Two humanoid races (e.g. goblins and orcs)']},
+                    {level:1, name:'Natural Explorer', type:'choice', blurb:'Choose a favored terrain. In that terrain: your group can\'t become lost, you forage twice as much food, you move at full pace while stealthing and tracking, and difficult terrain doesn\'t slow your group.', choices:['Arctic','Coast','Desert','Forest','Grassland','Mountain','Swamp','Underdark']},
+                    {level:2, name:'Fighting Style', type:'choice', blurb:'Choose a combat specialty.', choices:['Archery (+2 to ranged attack rolls)','Defense (+1 AC in armor)','Dueling (+2 damage one-handed)','Two-Weapon Fighting (add modifier to off-hand damage)','Druidic Warrior (learn 2 Druid cantrips, use WIS)','Blind Fighting (blindsight 10 ft)']},
+                    {level:2, name:'Spellcasting', blurb:'Cast spells using Wisdom (WIS). You know a fixed number from the Ranger list (change one per level up). Regain slots on long rest.'},
+                    {level:3, name:'Ranger Archetype', type:'choice', blurb:'Choose your Ranger subclass.', choices:['Hunter (defensive/offensive techniques: colossus slayer, horde breaker, etc.)','Beast Master (bond with an animal companion that fights for you)','Gloom Stalker (ambush predator, first-round bonus attack, fear in darkness)','Horizon Walker (planar magic, teleportation, ethereal damage)','Monster Slayer (detect and counter magical creatures, spellcasters)','Fey Wanderer (charisma-boosted, charming, misty wandering)','Swarmkeeper (control a swarm to move enemies, deal extra damage)']},
+                    {level:5, name:'Extra Attack', blurb:'Attack TWICE per Attack action.'},
+                    {level:8, name:'Land\'s Stride', blurb:'Moving through nonmagical difficult terrain costs no extra movement. Advantage on saves against plants that impede movement.'},
+                    {level:10, name:'Hide in Plain Sight', blurb:'Spend 1 minute to camouflage yourself against natural surroundings. Gain +10 to Stealth while you remain still.'},
+                    {level:14, name:'Vanish', blurb:'Use the Hide action as a bonus action. Also can\'t be tracked by nonmagical means (unless you choose to leave a trail).'},
+                    {level:20, name:'Foe Slayer', blurb:'Once per turn when you hit your Favored Enemy, add your WIS modifier to the attack roll OR the damage roll.'},
+                ]
+            },
+            Rogue: {
+                color:'#71717a', emoji:'🗡️',
+                desc:'A sneaky expert who deals massive burst damage with Sneak Attack. Extraordinary skill outside combat, with Expertise making you the best in the party at chosen tasks.',
+                features:[
+                    {level:1, name:'Expertise', blurb:'Double your proficiency bonus in TWO chosen skills. You\'re truly exceptional at those. Choose two more at level 6.'},
+                    {level:1, name:'Sneak Attack', blurb:'Once per turn, deal extra damage when you have ADVANTAGE on the attack OR when an ally is within 5 ft of your target. Starts at 1d6, grows to 10d6 at level 19.'},
+                    {level:1, name:'Thieves\' Cant', blurb:'A secret mix of jargon, signs, and codes shared among criminals and rogues. You can hide messages in normal conversation only other Thieves\' Cant speakers can understand.'},
+                    {level:2, name:'Cunning Action', blurb:'Bonus action each turn to Dash, Disengage, or Hide. This lets you attack and move safely every single round.'},
+                    {level:3, name:'Roguish Archetype', type:'choice', blurb:'Choose your Rogue subclass.', choices:['Thief (faster item use, climb speed, fake magic items at level 13)','Assassin (triple damage against surprised enemies, perfect impostor)','Arcane Trickster (mix Wizard spells with Sneak Attack — Mage Hand steals)','Inquisitive (spot lies, insight attacks, unerring eye)','Mastermind (use Help as bonus action from 30 ft, mimic voices, spy network)','Scout (always first in Initiative, disengage from one enemy as reaction)','Soulknife (psionic blades, telepathy, read minds)','Swashbuckler (dual threat — deal Sneak Attack while fighting alone, add CHA to Initiative)','Phantom (whispers of the dead, steal soul fragments for power)']},
+                    {level:5, name:'Uncanny Dodge', blurb:'Reaction: when an attacker you CAN SEE hits you, halve the incoming damage.'},
+                    {level:7, name:'Evasion', blurb:'On DEX saves vs. spells like Fireball: success = 0 damage, failure = half damage.'},
+                    {level:11, name:'Reliable Talent', blurb:'When you make an ability check using a skill you\'re proficient in, treat any d20 roll of 9 or lower as a 10. You can\'t fail at your specialties.'},
+                    {level:14, name:'Blindsense', blurb:'If you can hear, you automatically know the location of any hidden or invisible creature within 10 ft of you.'},
+                    {level:15, name:'Slippery Mind', blurb:'Gain proficiency in Wisdom saving throws.'},
+                    {level:18, name:'Elusive', blurb:'No attack roll has advantage against you while you\'re not incapacitated. You\'re nearly impossible to catch off-guard.'},
+                    {level:20, name:'Stroke of Luck', blurb:'Turn a missed attack into a hit, OR turn a failed ability check into a 20. Once per short or long rest.'},
+                ]
+            },
+            Sorcerer: {
+                color:'#f97316', emoji:'🔥',
+                desc:'An innate spellcaster born with raw magical power. Fewer spells than a Wizard, but Metamagic lets you bend and twist those spells in ways nobody else can.',
+                features:[
+                    {level:1, name:'Spellcasting', blurb:'Cast spells using Charisma (CHA). You know a fixed number of spells (can\'t prepare different ones each day, but can swap one per level). Regain slots on long rest.'},
+                    {level:1, name:'Sorcerous Origin', type:'choice', blurb:'Choose the source of your innate magic power. This is your subclass, taken at level 1.', choices:['Draconic Bloodline (dragon ancestor: natural armor AC 13+DEX, damage bonus, wings at 14)','Wild Magic (random surges of wild magic — chaos that\'s surprisingly fun)','Storm Sorcery (wind walk, lightning speed, weather control)','Shadow Magic (darkness, shadow hound, resistance to death)','Aberrant Mind (telepathy, psychic/psionic spells from birth)','Clockwork Soul (order magic, cancel advantage/disadvantage, summon mechanus gear)']},
+                    {level:2, name:'Font of Magic', blurb:'Sorcery Points (= Sorcerer level, refresh on long rest). Spend 2 to make a spell slot. Or convert a slot to Sorcery Points. These also fuel Metamagic.'},
+                    {level:3, name:'Metamagic', type:'choice', blurb:'Choose 2 ways to twist your spells (more at levels 10 and 17). Spend Sorcery Points to activate.', choices:['Careful (protect allies from your own area spells)','Distant (double a spell\'s range)','Empowered (reroll some damage dice, keep higher)','Extended (double a spell\'s duration)','Heightened (give target disadvantage on first save against spell)','Quickened (cast a spell as a bonus action instead of action)','Subtle (cast with no verbal or somatic components — hard to counter or notice)','Twinned (target two creatures with a single-target spell)','Seeking (if you miss or spell fails, spend 2 to reroll once)','Transmuted (change a spell\'s damage type)']},
+                    {level:4, name:'Ability Score Improvement', blurb:'+2 to one ability, +1 to two, or a Feat. At levels 4, 8, 12, 16, 19.'},
+                    {level:20, name:'Sorcerous Restoration', blurb:'Regain 4 expended Sorcery Points when you finish a short rest.'},
+                ]
+            },
+            Warlock: {
+                color:'#7c3aed', emoji:'👁️',
+                desc:'A spellcaster who made a pact with a powerful supernatural being. Very few spell slots but they ALWAYS recharge on a SHORT rest. Powerful at-will abilities mean you\'re never truly out of tricks.',
+                features:[
+                    {level:1, name:'Otherworldly Patron', type:'choice', blurb:'Choose who (or what) you made your pact with. Your patron defines your theme, bonus spells, and unique features at levels 1, 6, 10, and 14.', choices:['Fiend (fire and necrotic power, temp HP from kills, eventually immunity to fire)','Great Old One (eldritch horror — telepathy, read minds, remote communication)','Archfey (fey charm — charm and fear, beguiling defenses)','Hexblade (make a pact with a weapon — use CHA for attacks, summon ghost warrior)','Fathomless (deep-sea patron — tentacle, underwater breathing, water teleport)','Genie (choose genie type: Dao/Djinni/Efreeti/Marid for earth/air/fire/water)','Undying (life clinging magic — age slowly, resist death, become undead-lite)','Celestial (divine Warlock — healing, sacred flame, divine fire blasts)']},
+                    {level:1, name:'Pact Magic', blurb:'Your spell slots are very limited (1 at level 1, up to 4 slots at level 11). BUT they always recharge after a SHORT rest. All your slots are the same level, which increases to 5th level at level 9.'},
+                    {level:2, name:'Eldritch Invocations', blurb:'Choose 2 special Warlock abilities (more as you level). Examples: Agonizing Blast (+CHA to Eldritch Blast damage), Devil\'s Sight (see in magical darkness 120 ft), Mask of Many Faces (Disguise Self at will), Repelling Blast (push enemies 10 ft).'},
+                    {level:3, name:'Pact Boon', type:'choice', blurb:'A special gift from your patron.', choices:['Pact of the Chain (superior familiar: imp, pseudodragon, quasit, or sprite)','Pact of the Blade (summon a magic weapon to your hand; it\'s always attuned to you)','Pact of the Tome (Book of Shadows with 3 cantrips from any class, plus ritual magic)','Pact of the Talisman (an amulet that helps you or allies with failed rolls)']},
+                    {level:11, name:'Mystic Arcanum', blurb:'Once per long rest, cast one spell of 6th level without using a slot. Gain a new level (7th, 8th, 9th) at levels 13, 15, and 17.'},
+                    {level:20, name:'Eldritch Master', blurb:'Spend 1 minute communing with your patron to regain all Pact Magic slots. Once per long rest.'},
+                ]
+            },
+            Wizard: {
+                color:'#3b82f6', emoji:'📚',
+                desc:'The ultimate spellcaster who learns magic through study. The largest and most flexible spell list in the game. Copy spells into your spellbook from scrolls and other books — you can always learn more.',
+                features:[
+                    {level:1, name:'Spellcasting', blurb:'Cast spells using Intelligence (INT). Your spellbook starts with 6 spells. Each day prepare INT modifier + Wizard level spells from your book — any spells in it are fair game. Regain slots on long rest. Copy new spells from scrolls and enemy spellbooks.'},
+                    {level:1, name:'Arcane Recovery', blurb:'Once per day after a short rest, recover spell slots whose combined level is up to HALF your Wizard level (rounded up). Can\'t recover 6th level or higher slots this way.'},
+                    {level:2, name:'Arcane Tradition', type:'choice', blurb:'Choose your school of magical specialization. You get a feature now, at level 6, and at levels 10 and 14.', choices:['Evocation (devastate with maximized damage spells, protect allies from your blasts)','Abjuration (powerful magical wards, absorb spells, resistance to spell damage)','Illusion (make your illusions real, perfect copies, malleable images)','Conjuration (teleport short distances, summon creatures and objects)','Divination (Portent: roll 2 dice each day and substitute any roll with them)','Enchantment (bend minds, share charm effects, hold enemies while charming others)','Necromancy (raise more and stronger undead, gain HP from killing)','Transmutation (transform substances, minor alchemy, grow very old or very young)','Bladesinging (mix martial and magic — AC bonus, Concentration protection, extra attack)','War Magic (arcane deflection, tactical wit bonus to Initiative, spells as reactions)','Order of Scribes (your spellbook is a magical creature, change spell damage types)']},
+                    {level:18, name:'Spell Mastery', blurb:'Choose one 1st-level and one 2nd-level spell from your spellbook. Cast each at their lowest level WITHOUT using a spell slot, as many times as you want.'},
+                    {level:20, name:'Signature Spells', blurb:'Choose two 3rd-level spells. They\'re always prepared and can be cast at 3rd level once per short rest for FREE.'},
+                ]
+            },
+        };
+
+        function renderFeaturesTab() {
+            const c = (activeCharIdx >= 0 && characters[activeCharIdx]) ? characters[activeCharIdx] : null;
+            const panel = document.getElementById('featuresPanel');
+            if (!c) { panel.innerHTML = '<p style="font-size:0.85rem;color:var(--text-dim);">No character selected. Create or select a character first.</p>'; return; }
+            const cls = c.class || 'Fighter';
+            const level = parseInt(c.level) || 1;
+            const data = CLASS_FEATURES[cls];
+            if (!data) { panel.innerHTML = `<p style="font-size:0.85rem;color:var(--text-dim);">No feature data for ${cls} yet.</p>`; return; }
+            if (!c.featureChoices) c.featureChoices = {};
+
+            const visible = data.features.filter(f => f.level <= level);
+            let html = `<div class="class-intro">
+                <div class="class-intro-name">${data.emoji} ${cls}</div>
+                <div class="class-intro-desc">${data.desc}</div>
+            </div>`;
+            if (visible.length === 0) {
+                html += '<p style="font-size:0.85rem;color:var(--text-dim);">No features yet — increase your level in the Basics tab.</p>';
+            }
+            visible.forEach(f => {
+                const choiceKey = `${cls}_${f.name}`;
+                const savedChoice = c.featureChoices[choiceKey] || '';
+                let choiceHTML = '';
+                if (f.type === 'choice' && f.choices) {
+                    const opts = f.choices.map(ch => `<option value="${ch}" ${savedChoice === ch ? 'selected' : ''}>${ch}</option>`).join('');
+                    choiceHTML = `<div class="feature-choice">
+                        <label>Your choice:</label>
+                        <select onchange="saveFeatureChoice('${choiceKey}', this.value)">
+                            <option value="">— Choose —</option>${opts}
+                        </select>
+                    </div>`;
+                }
+                html += `<div class="feature-card">
+                    <div class="feature-card-header">
+                        <span class="feature-lvl-badge">Lv ${f.level}</span>
+                        <span class="feature-name">${f.name}</span>
+                    </div>
+                    <div class="feature-blurb">${f.blurb}</div>
+                    ${choiceHTML}
+                </div>`;
+            });
+            const locked = data.features.filter(f => f.level > level);
+            if (locked.length > 0) {
+                html += `<div style="margin-top:1rem;padding:0.6rem 0.75rem;background:var(--bg-dark);border-radius:8px;border:1px dashed var(--border);">
+                    <p style="font-size:0.78rem;color:var(--text-dim);margin-bottom:0.3rem;">🔒 Coming at higher levels:</p>
+                    <p style="font-size:0.78rem;color:var(--text-dim);">${locked.map(f=>`<b>Lv ${f.level}</b> ${f.name}`).join(' · ')}</p>
+                </div>`;
+            }
+            panel.innerHTML = html;
+        }
+
+        function saveFeatureChoice(key, value) {
+            const c = (activeCharIdx >= 0 && characters[activeCharIdx]) ? characters[activeCharIdx] : null;
+            if (!c) return;
+            if (!c.featureChoices) c.featureChoices = {};
+            c.featureChoices[key] = value;
+            saveCharactersToStorage();
+        }
 
         // =============================================
         // BOOT
