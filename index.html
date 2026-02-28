@@ -1499,14 +1499,18 @@
                 <div class="modal-icon">🧙</div>
                 <div class="modal-title">Dungeon Master</div>
             </div>
+            <!-- First-time setup notice -->
+            <div id="dmFirstTimeNotice" style="display:none; background:rgba(139,92,246,0.15); border:1px solid var(--accent); border-radius:8px; padding:0.65rem 0.75rem; margin-bottom:0.75rem; font-size:0.83rem; color:var(--text-dim);">
+                👋 First time? Create your DM username and password below — you'll use these every time you create a room.
+            </div>
             <form onsubmit="dmLogin(event)">
                 <div class="form-group">
                     <label>USERNAME</label>
-                    <input type="text" id="dmUser" placeholder="Wizard" required>
+                    <input type="text" id="dmUser" placeholder="Choose a username" required>
                 </div>
                 <div class="form-group">
                     <label>PASSWORD</label>
-                    <input type="password" id="dmPass" placeholder="FracturedSky2025!" required>
+                    <input type="password" id="dmPass" placeholder="Choose a password" required>
                 </div>
                 <div class="form-group">
                     <label>SESSION ID (Optional - leave blank for new session)</label>
@@ -1515,9 +1519,30 @@
                 </div>
                 <div class="error" id="dmError">Invalid credentials</div>
                 <div class="info" id="dmInfo" style="display: none;">Rejoining previous session...</div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">LOGIN & CREATE ROOM</button>
+                <button type="submit" class="btn btn-primary" style="width: 100%;" id="dmLoginBtn">LOGIN & CREATE ROOM</button>
                 <button type="button" class="btn" onclick="closeDMModal()" style="width: 100%; margin-top: 0.5rem;">Cancel</button>
             </form>
+            <!-- Change credentials section -->
+            <div style="margin-top:1rem; border-top:1px solid var(--border); padding-top:0.75rem;">
+                <button type="button" onclick="toggleDMSetup()" style="background:none;border:none;color:var(--text-dim);font-size:0.78rem;cursor:pointer;padding:0;text-decoration:underline;">⚙️ Change DM credentials</button>
+                <div id="dmSetupPanel" style="display:none; margin-top:0.75rem;">
+                    <div class="form-group">
+                        <label>NEW USERNAME</label>
+                        <input type="text" id="dmNewUser" placeholder="New username">
+                    </div>
+                    <div class="form-group">
+                        <label>NEW PASSWORD</label>
+                        <input type="password" id="dmNewPass" placeholder="New password">
+                    </div>
+                    <div class="form-group">
+                        <label>CONFIRM PASSWORD</label>
+                        <input type="password" id="dmNewPassConfirm" placeholder="Repeat new password">
+                    </div>
+                    <div class="error" id="dmSetupError">Passwords do not match</div>
+                    <div class="success" id="dmSetupSuccess" style="display:none; background:rgba(16,185,129,0.15); border:1px solid #10b981; border-radius:6px; padding:0.4rem 0.6rem; font-size:0.82rem; color:#10b981;">✓ Credentials saved!</div>
+                    <button type="button" class="btn btn-primary" onclick="saveDMCredentials()" style="width:100%;">Save Credentials</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1623,7 +1648,7 @@
                 </div>
                 <div class="form-group">
                     <label>DM PASSWORD</label>
-                    <input type="password" id="coDMPass" placeholder="FracturedSky2025!" required>
+                    <input type="password" id="coDMPass" placeholder="DM's password" required>
                 </div>
                 <div class="error" id="coDMError">Invalid password or connection failed</div>
                 <button type="submit" class="btn btn-primary" style="width:100%;">JOIN AS CO-DM</button>
@@ -2887,16 +2912,57 @@
         // === AUTHENTICATION ===
         function showDMLogin() {
             const savedSession = localStorage.getItem('fracturedSkySessionId');
-            if (savedSession) {
-                document.getElementById('sessionId').value = savedSession;
-            }
+            if (savedSession) document.getElementById('sessionId').value = savedSession;
+            const creds = getDMCredentials();
+            const firstTime = !creds.user || !creds.pass;
+            document.getElementById('dmFirstTimeNotice').style.display = firstTime ? 'block' : 'none';
+            document.getElementById('dmLoginBtn').textContent = firstTime ? 'CREATE ACCOUNT & OPEN ROOM' : 'LOGIN & CREATE ROOM';
+            if (creds.user) document.getElementById('dmUser').value = creds.user;
+            document.getElementById('dmSetupPanel').style.display = 'none';
+            document.getElementById('dmError').classList.remove('show');
             document.getElementById('dmModal').classList.add('active');
+        }
+
+        function getDMCredentials() {
+            return {
+                user: localStorage.getItem('fracturedSkyDMUser') || null,
+                pass: localStorage.getItem('fracturedSkyDMPass') || null
+            };
         }
 
         function closeDMModal() {
             document.getElementById('dmModal').classList.remove('active');
             document.getElementById('dmError').classList.remove('show');
             document.getElementById('dmInfo').style.display = 'none';
+            document.getElementById('dmSetupPanel').style.display = 'none';
+        }
+
+        function toggleDMSetup() {
+            const panel = document.getElementById('dmSetupPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            document.getElementById('dmSetupError').classList.remove('show');
+            document.getElementById('dmSetupSuccess').style.display = 'none';
+        }
+
+        function saveDMCredentials() {
+            const newUser = document.getElementById('dmNewUser').value.trim();
+            const newPass = document.getElementById('dmNewPass').value;
+            const confirm = document.getElementById('dmNewPassConfirm').value;
+            const errEl = document.getElementById('dmSetupError');
+            errEl.classList.remove('show');
+            document.getElementById('dmSetupSuccess').style.display = 'none';
+            if (!newUser || !newPass) { errEl.textContent = 'Username and password are required.'; errEl.classList.add('show'); return; }
+            if (newPass !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.classList.add('show'); return; }
+            localStorage.setItem('fracturedSkyDMUser', newUser);
+            localStorage.setItem('fracturedSkyDMPass', newPass);
+            document.getElementById('dmSetupSuccess').style.display = 'block';
+            document.getElementById('dmNewUser').value = '';
+            document.getElementById('dmNewPass').value = '';
+            document.getElementById('dmNewPassConfirm').value = '';
+            // Update login field hints
+            document.getElementById('dmUser').value = newUser;
+            document.getElementById('dmFirstTimeNotice').style.display = 'none';
+            document.getElementById('dmLoginBtn').textContent = 'LOGIN & CREATE ROOM';
         }
 
         function dmLogin(e) {
@@ -2904,7 +2970,16 @@
             const user = document.getElementById('dmUser').value;
             const pass = document.getElementById('dmPass').value;
             const sessionId = document.getElementById('sessionId').value.trim();
-            if (user === 'Wizard' && pass === 'FracturedSky2025!') {
+            const creds = getDMCredentials();
+            // If no credentials saved yet, treat this submission as first-time setup
+            if (!creds.user || !creds.pass) {
+                localStorage.setItem('fracturedSkyDMUser', user);
+                localStorage.setItem('fracturedSkyDMPass', pass);
+                closeDMModal();
+                createRoom(sessionId || null);
+                return;
+            }
+            if (user === creds.user && pass === creds.pass) {
                 closeDMModal();
                 createRoom(sessionId || null);
             } else {
@@ -3243,7 +3318,9 @@
             const name = document.getElementById('coDMName').value.trim();
             const code = document.getElementById('coDMRoomCode').value.trim();
             const pass = document.getElementById('coDMPass').value;
-            if (pass !== 'FracturedSky2025!') {
+            const dmCreds = getDMCredentials();
+            const validPass = dmCreds.pass || 'FracturedSky2025!';
+            if (pass !== validPass) {
                 document.getElementById('coDMError').classList.add('show');
                 return;
             }
