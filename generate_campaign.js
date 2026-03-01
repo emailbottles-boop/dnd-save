@@ -126,12 +126,12 @@ function cell_0_0() {
       if (Math.abs(y - logY) < 2) { r=70; g=42; b=22; }
     }
 
-    // Edge vignette
-    const ex = Math.min(x, 399-x)/120, ey = Math.min(y, 399-y)/120;
+    // Subtle edge fade (reduced to avoid dark seams between cells)
+    const ex = Math.min(x, 399-x)/40, ey = Math.min(y, 399-y)/40;
     const ev = clamp(Math.min(ex,ey), 0, 1);
-    r = Math.round(r * (0.6 + 0.4*ev));
-    g = Math.round(g * (0.6 + 0.4*ev));
-    b = Math.round(b * (0.6 + 0.4*ev));
+    r = Math.round(r * (0.92 + 0.08*ev));
+    g = Math.round(g * (0.92 + 0.08*ev));
+    b = Math.round(b * (0.92 + 0.08*ev));
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
@@ -187,71 +187,83 @@ function cell_1_0() {
     if (Math.abs(x - 230) < 4 && y > 20 && y < 70) { r=100; g=65; b=30; }
     if (Math.abs(y - 25) < 5 && x > 215 && x < 275) { r=100; g=65; b=30; }
 
-    // Edge vignette
-    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 80, 0, 1);
-    r = Math.round(r * (0.65 + 0.35*ev));
-    g = Math.round(g * (0.65 + 0.35*ev));
-    b = Math.round(b * (0.65 + 0.35*ev));
+    // Subtle edge fade
+    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 40, 0, 1);
+    r = Math.round(r * (0.92 + 0.08*ev));
+    g = Math.round(g * (0.92 + 0.08*ev));
+    b = Math.round(b * (0.92 + 0.08*ev));
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
 }
 
-// ──── Cell 2,0 – Stormcrest Peaks ───────────────────────────────────────────
+// ──── Cell 2,0 – Stormcrest Peaks (top-down rocky high ground) ──────────────
 function cell_2_0() {
   return makePNG(400, 400, (x, y) => {
     const nx = x/100, ny = y/100;
-    const n = fbm(nx, ny, 33);
+    const n  = fbm(nx, ny, 33);
+    const n2 = fbm(nx*2+1.3, ny*2+1.3, 77, 3);
 
-    // Sky gradient (top) → rocky ground (bottom)
-    const skyT = clamp(y / 200, 0, 1);
-    let r = Math.round(lerp(55, 90, skyT));
-    let g = Math.round(lerp(65, 80, skyT));
-    let b = Math.round(lerp(85, 70, skyT));
+    // Base: grey-brown rocky ground viewed from directly above
+    let r = Math.round(lerp(90, 138, n));
+    let g = Math.round(lerp(85, 128, n));
+    let b = Math.round(lerp(80, 120, n));
 
-    // Mountain silhouettes
-    function mtn(px, py, peakX, peakY, width) {
-      const dx = px - peakX;
-      const slope = Math.abs(dx) / width;
-      return py > peakY + slope * (400 - peakY);
+    // Snow/frost patches in high areas (noise-driven, not y-based)
+    const snowN = fbm(nx*1.4+3, ny*1.4+3, 22, 3);
+    if (snowN > 0.63) {
+      const st = clamp((snowN - 0.63) / 0.37, 0, 1);
+      r = Math.round(lerp(r, 228, st));
+      g = Math.round(lerp(g, 232, st));
+      b = Math.round(lerp(b, 240, st));
     }
-    const inMtn = mtn(x, y, 120, 60,  160) ||
-                  mtn(x, y, 310, 30,  140) ||
-                  mtn(x, y, 200, 120, 110);
 
-    if (inMtn) {
-      const rockyN = fbm(nx*3+1, ny*3+1, 55, 3);
-      r = Math.round(lerp(55, 95, rockyN));
-      g = Math.round(lerp(55, 90, rockyN));
-      b = Math.round(lerp(58, 95, rockyN));
-      // Snow caps
-      const snowLine = 90 + Math.sin(x/25)*12;
-      if (y < snowLine) {
-        const snowT = clamp((snowLine - y) / 30, 0, 1);
-        r = Math.round(lerp(r, 230, snowT));
-        g = Math.round(lerp(g, 230, snowT));
-        b = Math.round(lerp(b, 240, snowT));
+    // Large boulders (dark ovals with SE drop-shadow rim)
+    const boulders = [
+      [70, 55, 28],[250, 40, 22],[355, 95, 18],
+      [130,175, 24],[305,215, 26],[55, 290, 20],
+      [195,335, 22],[360,275, 16],[175, 90, 14],
+      [320,155, 20],[90, 155, 18],[270,340, 18]
+    ];
+    for (const [bx, by, br] of boulders) {
+      const d = Math.hypot(x-bx, y-by);
+      if (d < br) {
+        const bn = fbm((x-bx)/8, (y-by)/8, 99, 2);
+        r = Math.round(lerp(50, Math.round(lerp(82, 118, bn)), d/br));
+        g = Math.round(lerp(48, Math.round(lerp(77, 110, bn)), d/br));
+        b = Math.round(lerp(45, Math.round(lerp(72, 104, bn)), d/br));
+        // Shadow on south-east rim
+        if (x > bx + br*0.3 && y > by + br*0.3 && d > br*0.6) {
+          r = Math.round(r * 0.58); g = Math.round(g * 0.58); b = Math.round(b * 0.58);
+        }
       }
     }
 
-    // Scree / gravel at bottom
-    if (y > 310) {
-      const gn = fbm(nx*4, ny*4, 77);
-      r = Math.round(lerp(r, 100, (y-310)/90));
-      g = Math.round(lerp(g, 95,  (y-310)/90));
-      b = Math.round(lerp(b, 90,  (y-310)/90));
+    // Rock fissures / cracks
+    for (const [cx, cy, ang, len] of [
+      [155, 145, 0.4, 65],[310, 305, -0.3, 55],[210, 255, 0.85, 50]
+    ]) {
+      const dx = x-cx, dy = y-cy;
+      const along = dx * Math.cos(ang) + dy * Math.sin(ang);
+      const perp  = Math.abs(-dx * Math.sin(ang) + dy * Math.cos(ang));
+      if (perp < 2 && Math.abs(along) < len) {
+        r = Math.round(r * 0.48); g = Math.round(g * 0.48); b = Math.round(b * 0.48);
+      }
     }
 
-    // Clouds
-    function cloud(cx, cy, cr) {
-      return Math.hypot(x-cx, y-cy) < cr;
+    // Left edge blends toward forest (slight green tint in left 30px)
+    if (x < 30) {
+      const gt = (30 - x) / 30;
+      r = Math.round(lerp(r, 55, gt * 0.35));
+      g = Math.round(lerp(g, 90, gt * 0.35));
+      b = Math.round(lerp(b, 42, gt * 0.35));
     }
-    if (cloud(80,80,22)||cloud(100,75,18)||cloud(65,82,16)) {
-      r=Math.round(lerp(r,220,0.7)); g=Math.round(lerp(g,225,0.7)); b=Math.round(lerp(b,230,0.7));
-    }
-    if (cloud(290,55,20)||cloud(310,50,16)||cloud(275,58,14)) {
-      r=Math.round(lerp(r,215,0.6)); g=Math.round(lerp(g,220,0.6)); b=Math.round(lerp(b,228,0.6));
-    }
+
+    // Subtle edge fade (reduced – only 8% to avoid dark seams)
+    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 40, 0, 1);
+    r = Math.round(r * (0.92 + 0.08*ev));
+    g = Math.round(g * (0.92 + 0.08*ev));
+    b = Math.round(b * (0.92 + 0.08*ev));
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
@@ -304,9 +316,9 @@ function cell_0_1() {
       }
     }
 
-    // Edge vignette
-    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 70, 0, 1);
-    r=Math.round(r*(0.65+0.35*ev)); g=Math.round(g*(0.65+0.35*ev)); b=Math.round(b*(0.65+0.35*ev));
+    // Subtle edge fade
+    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 40, 0, 1);
+    r=Math.round(r*(0.92+0.08*ev)); g=Math.round(g*(0.92+0.08*ev)); b=Math.round(b*(0.92+0.08*ev));
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
@@ -392,111 +404,149 @@ function cell_1_1() {
   });
 }
 
-// ──── Cell 2,1 – Sunken Tower ───────────────────────────────────────────────
+// ──── Cell 2,1 – Sunken Tower (top-down tower footprint) ────────────────────
 function cell_2_1() {
   return makePNG(400, 400, (x, y) => {
     const nx = x/60, ny = y/60;
     const n = fbm(nx, ny, 55);
 
-    // Base: rubble-covered ground
-    let r = Math.round(lerp(75, 120, n));
-    let g = Math.round(lerp(70, 110, n));
-    let b = Math.round(lerp(65, 105, n));
+    // Base: rubble-covered ground viewed from above
+    let r = Math.round(lerp(75, 118, n));
+    let g = Math.round(lerp(70, 108, n));
+    let b = Math.round(lerp(65, 100, n));
 
-    // Tower silhouette (left side stands, right is collapsed)
-    const towerL=80, towerR=250, towerTop=30;
-    const inTower = x > towerL && x < towerR && y > towerTop;
-    if (inTower) {
-      const tn = fbm(nx*3+1, ny*3, 21, 2);
-      r=Math.round(lerp(80, 118, tn));
-      g=Math.round(lerp(75, 110, tn));
-      b=Math.round(lerp(70, 105, tn));
-      // mortar lines
-      const brickRow = Math.floor((y-towerTop) / 22);
-      const brickCol = Math.floor((x-towerL)  / 26 + (brickRow%2)*0.5);
-      const inMortar = (y-towerTop) % 22 < 2 || (x - towerL + (brickRow%2)*13) % 26 < 2;
+    // Tower footprint: thick stone walls viewed from directly above
+    const tWall = 28;
+    const tL=70, tR=330, tT=55, tB=330;
+    const inOuter = x>tL && x<tR && y>tT && y<tB;
+    const inInner = x>tL+tWall && x<tR-tWall && y>tT+tWall && y<tB-tWall;
+    const inWall  = inOuter && !inInner;
+
+    if (inWall) {
+      const wn = fbm(nx*3+1, ny*3, 21, 2);
+      r = Math.round(lerp(88, 132, wn));
+      g = Math.round(lerp(83, 124, wn));
+      b = Math.round(lerp(78, 116, wn));
+      // Top-down stone block pattern
+      const bRow = Math.floor(y / 22);
+      const inMortar = y % 22 < 2 || (x + (bRow%2)*13) % 26 < 2;
       if (inMortar) { r=Math.round(r*0.58); g=Math.round(g*0.58); b=Math.round(b*0.58); }
-      // inner darkness (hollow tower)
-      if (x > towerL+20 && x < towerR-20 && y > towerTop+60) {
-        r=Math.round(lerp(r,20,0.6)); g=Math.round(lerp(g,15,0.6)); b=Math.round(lerp(b,12,0.6));
+      // Ivy on outer west wall
+      const ivyN = fbm(nx*4+8, ny*4+8, 17);
+      if (x < tL+20 && ivyN > 0.55) {
+        r=Math.round(lerp(r,28,0.5)); g=Math.round(lerp(g,78,0.5)); b=Math.round(lerp(b,18,0.5));
       }
     }
 
-    // Collapsed rubble pile (right side, lower)
-    const rubbleN = fbm(x/25, y/25, 33);
-    if (x > 210 && y > 150 + (x-210)*0.4) {
-      r=Math.round(lerp(r, Math.round(lerp(70,110,rubbleN)), 0.7));
-      g=Math.round(lerp(g, Math.round(lerp(65,100,rubbleN)), 0.7));
-      b=Math.round(lerp(b, Math.round(lerp(60, 95,rubbleN)), 0.7));
+    // Interior: dark hollow viewed from above, with scattered debris
+    if (inInner) {
+      const dn = fbm(nx*2+0.5, ny*2+0.5, 88, 2);
+      r = Math.round(lerp(18, 40, dn));
+      g = Math.round(lerp(14, 32, dn));
+      b = Math.round(lerp(12, 28, dn));
+      // Debris / fallen stone chunks on floor
+      if (dn > 0.62) {
+        const dt = (dn-0.62)/0.38;
+        r=Math.round(lerp(r, 65, dt*0.5)); g=Math.round(lerp(g, 60, dt*0.5)); b=Math.round(lerp(b, 55, dt*0.5));
+      }
+      // Glowing embers / brazier at center
+      const cd = Math.hypot(x-200, y-200);
+      if (cd < 45) {
+        const ct = clamp(1 - cd/45, 0, 1) ** 2;
+        r=Math.round(lerp(r, 210, ct*0.55)); g=Math.round(lerp(g, 100, ct*0.55)); b=Math.round(lerp(b, 15, ct*0.55));
+      }
+      if (cd < 7) { r=255; g=190; b=60; }
     }
 
-    // Ivy on tower wall
-    const ivyN = fbm(nx*4+8, ny*4+8, 17);
-    if (inTower && x < towerL+18 && ivyN > 0.55) {
-      r=Math.round(lerp(r,30,0.6)); g=Math.round(lerp(g,80,0.6)); b=Math.round(lerp(b,20,0.6));
+    // Collapsed NE corner (broken wall section)
+    if (x > 270 && y < 130 && !inInner) {
+      const rubN = fbm(x/20, y/20, 33);
+      r=Math.round(lerp(r, Math.round(lerp(68,108,rubN)), 0.8));
+      g=Math.round(lerp(g, Math.round(lerp(63, 98,rubN)), 0.8));
+      b=Math.round(lerp(b, Math.round(lerp(58, 92,rubN)), 0.8));
     }
 
-    // Window opening
-    const wx=170, wy=120, ww=30, wh=45;
-    if (x>wx && x<wx+ww && y>wy && y<wy+wh) { r=8; g=6; b=5; }
-
-    // Arrow slit
-    if (x>145 && x<155 && y>200 && y<240) { r=8; g=6; b=5; }
-
-    // Torch sconce glow on wall
-    const gd = Math.hypot(x-100, y-180);
-    if (gd < 30) {
-      const gt = clamp(1 - gd/30, 0, 1);
-      r=Math.round(lerp(r, 220, gt*gt*0.5));
-      g=Math.round(lerp(g, 140, gt*gt*0.5));
-      b=Math.round(lerp(b,  30, gt*gt*0.5));
+    // South doorway opening in wall
+    if (x>186 && x<214 && y>tB-tWall && y<tB+4 && inOuter) {
+      const dn2 = fbm(nx*2, ny*2, 44);
+      r=Math.round(lerp(18,38,dn2)); g=Math.round(lerp(14,30,dn2)); b=Math.round(lerp(12,26,dn2));
     }
-    if (Math.hypot(x-100, y-178) < 5) { r=255; g=200; b=80; }
+
+    // Subtle edge fade
+    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 40, 0, 1);
+    r = Math.round(r * (0.92 + 0.08*ev));
+    g = Math.round(g * (0.92 + 0.08*ev));
+    b = Math.round(b * (0.92 + 0.08*ev));
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
 }
 
-// ──── Cell 0,2 – Maw of Darkness (cave entrance) ────────────────────────────
+// ──── Cell 0,2 – Maw of Darkness (top-down cave opening) ────────────────────
 function cell_0_2() {
   return makePNG(400, 400, (x, y) => {
     const nx = x/70, ny = y/70;
     const n = fbm(nx, ny, 111);
 
-    // Rock face exterior
-    let r = Math.round(lerp(55, 95, n));
-    let g = Math.round(lerp(52, 88, n));
-    let b = Math.round(lerp(50, 85, n));
+    // Rocky ground from above – same grey-brown tones as surrounding cells
+    let r = Math.round(lerp(58, 98, n));
+    let g = Math.round(lerp(55, 90, n));
+    let b = Math.round(lerp(52, 86, n));
 
-    // Cave mouth – large dark irregular oval in center/bottom
-    const caveCX=200, caveCY=280, caveRX=130, caveRY=150;
-    const caveDist = Math.hypot((x-caveCX)/caveRX, (y-caveCY)/caveRY);
-    if (caveDist < 1) {
-      const fadeT = clamp(1 - caveDist, 0, 1);
-      r=Math.round(lerp(r, 5, fadeT * 0.95));
-      g=Math.round(lerp(g, 4, fadeT * 0.95));
-      b=Math.round(lerp(b, 4, fadeT * 0.95));
+    // Top edge blends to grass/riverbank (cell 0,1 is above)
+    if (y < 30) {
+      const bt = (30 - y) / 30;
+      r = Math.round(lerp(r, 50, bt * 0.4));
+      g = Math.round(lerp(g, 95, bt * 0.4));
+      b = Math.round(lerp(b, 38, bt * 0.4));
     }
 
-    // Stalactites hanging from cave top
-    const stals = [[120,0,18,60],[160,0,12,45],[200,0,20,70],[245,0,14,50],[280,0,10,38]];
-    for (const [sx, sy, sw, sh] of stals) {
-      if (x > sx-sw && x < sx+sw) {
-        const progress = (x-sx+sw)/(sw*2);
-        const stalH = sh * (1 - Math.abs(progress - 0.5)*2);
-        if (y < stalH) {
-          const sn = fbm((x-sx)/8, y/8, 55);
-          r=Math.round(lerp(60,100,sn)); g=Math.round(lerp(58,95,sn)); b=Math.round(lerp(55,90,sn));
+    // Large boulders ringing the pit entrance
+    const boulders = [
+      [85, 80, 26],[320, 95, 22],[155, 55, 18],[265, 48, 20],
+      [65, 200, 20],[335, 230, 18],[110, 320, 22],[295, 340, 19]
+    ];
+    for (const [bx, by, br] of boulders) {
+      const d = Math.hypot(x-bx, y-by);
+      if (d < br) {
+        r = Math.round(lerp(42, 82, d/br));
+        g = Math.round(lerp(40, 78, d/br));
+        b = Math.round(lerp(38, 74, d/br));
+        // SE shadow rim
+        if (x > bx+br*0.25 && y > by+br*0.25 && d > br*0.65) {
+          r=Math.round(r*0.6); g=Math.round(g*0.6); b=Math.round(b*0.6);
         }
       }
     }
 
-    // Creeping darkness vignette towards cave
-    const vigD = Math.hypot((x-200)/250, (y-300)/300);
-    const vig = clamp(1 - vigD, 0, 1);
-    r=Math.round(r * (1 - vig * 0.35));
-    g=Math.round(g * (1 - vig * 0.35));
-    b=Math.round(b * (1 - vig * 0.35));
+    // Cave mouth – large dark pit viewed from above
+    const caveCX=205, caveCY=230, caveRX=120, caveRY=140;
+    const caveDist = Math.hypot((x-caveCX)/caveRX, (y-caveCY)/caveRY);
+    if (caveDist < 1.15) {
+      const fadeT = clamp((1.15 - caveDist) / 1.15, 0, 1);
+      r=Math.round(lerp(r,  6, fadeT * 0.96));
+      g=Math.round(lerp(g,  5, fadeT * 0.96));
+      b=Math.round(lerp(b,  4, fadeT * 0.96));
+    }
+
+    // Mossy/wet rock around rim of cave
+    const mossN = fbm(nx*2.5+5, ny*2.5+5, 77, 3);
+    if (mossN > 0.62 && caveDist > 1.1 && caveDist < 1.6) {
+      const mt = clamp((mossN-0.62)/0.38, 0, 1);
+      r=Math.round(lerp(r, 28, mt*0.5)); g=Math.round(lerp(g, 68, mt*0.5)); b=Math.round(lerp(b, 18, mt*0.5));
+    }
+
+    // Small pebble texture
+    const pebN = fbm(nx*7+2, ny*7+2, 33, 2);
+    if (pebN > 0.74 && caveDist > 1.2) {
+      r=Math.round(r*0.72); g=Math.round(g*0.72); b=Math.round(b*0.72);
+    }
+
+    // Subtle edge fade
+    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 40, 0, 1);
+    r = Math.round(r * (0.92 + 0.08*ev));
+    g = Math.round(g * (0.92 + 0.08*ev));
+    b = Math.round(b * (0.92 + 0.08*ev));
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
@@ -636,9 +686,9 @@ function cell_2_2() {
       b=Math.round(lerp(b,180,mt*0.25));
     }
 
-    // Dark vignette
-    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 80, 0, 1);
-    r=Math.round(r*(0.6+0.4*ev)); g=Math.round(g*(0.6+0.4*ev)); b=Math.round(b*(0.6+0.4*ev));
+    // Subtle edge fade
+    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 40, 0, 1);
+    r=Math.round(r*(0.92+0.08*ev)); g=Math.round(g*(0.92+0.08*ev)); b=Math.round(b*(0.92+0.08*ev));
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
