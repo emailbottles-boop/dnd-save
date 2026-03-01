@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>The Fractured Sky VTT v4.0 - FINAL BUILD</title>
+    <title>From Sunnyville VTT v4.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- Firebase v9 compat (matches existing firebase.X() call style) -->
@@ -516,7 +516,7 @@
         /* CHAR TRAY */
         .char-tray {
             position: fixed;
-            bottom: 22px;
+            bottom: 44px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
@@ -1195,13 +1195,13 @@
 
         /* DICE ROLLER */
         .dice-roller-btn {
-            position: fixed; bottom: 130px; right: 1rem;
-            width: 54px; height: 54px;
+            position: fixed; bottom: 160px; right: calc(28% - 38px);
+            width: 76px; height: 76px;
             background: linear-gradient(135deg, #9b2335, #6b0f1a);
-            border: 2px solid #c8922a; border-radius: 3px;
-            cursor: pointer; font-size: 1.3rem;
+            border: 2px solid #c8922a; border-radius: 50%;
+            cursor: pointer; font-size: 2rem;
             display: none; align-items: center; justify-content: center; flex-direction: column;
-            box-shadow: 0 4px 15px rgba(200,146,42,0.3);
+            box-shadow: 0 4px 18px rgba(200,146,42,0.45);
             z-index: 8000; color: var(--gold); line-height: 1;
             transition: transform 0.15s, box-shadow 0.15s;
         }
@@ -1216,7 +1216,7 @@
             100% { transform: rotate(360deg) scale(1); }
         }
         .dice-roll-log {
-            position: fixed; bottom: 195px; right: 1rem;
+            position: fixed; bottom: 248px; right: calc(28% - 100px);
             width: 200px; display: none; flex-direction: column-reverse;
             gap: 0.3rem; z-index: 7999; max-height: 220px; overflow: hidden; pointer-events: none;
         }
@@ -1247,6 +1247,126 @@
         .toast-num.nat20 { color: #fbbf24; text-shadow: 0 0 24px rgba(251,191,36,0.7); }
         .toast-num.nat1  { color: #ef4444; text-shadow: 0 0 24px rgba(239,68,68,0.5); }
         .toast-label { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.3rem; letter-spacing: 0.05em; }
+        .toast-bonus { font-size: 1.1rem; color: var(--text-dim); margin-top: 0.2rem; }
+
+        /* DICE ADVANTAGE PANEL */
+        .dice-advantage-panel {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+            z-index: 7600;
+            max-width: 820px;
+            width: calc(100vw - 40px);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+            display: none;
+        }
+        .dice-advantage-panel.panel-visible { display: block; }
+        .dice-advantage-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.45rem 1rem;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .dice-advantage-header.open { border-bottom-color: var(--border); }
+        .dice-advantage-header h4 {
+            font-family: 'Cinzel', serif;
+            color: var(--gold);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .dice-advantage-body {
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.6rem 0.85rem 0.75rem;
+        }
+        .dice-advantage-body.open { display: flex; }
+        .advantage-chars-row {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .advantage-chars-label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-right: 0.25rem;
+        }
+        .advantage-char-btn {
+            padding: 0.25rem 0.65rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-family: 'Cinzel', serif;
+            transition: all 0.15s;
+        }
+        .advantage-char-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .advantage-char-btn.active {
+            background: rgba(200,146,42,0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .advantage-skills-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .advantage-skill-btn {
+            padding: 0.35rem 0.9rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            transition: all 0.15s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+            min-width: 64px;
+        }
+        .advantage-skill-btn:hover { border-color: var(--accent); background: var(--bg-hover); }
+        .advantage-skill-btn.selected {
+            background: var(--crimson);
+            border-color: #c8394e;
+            color: white;
+        }
+        .advantage-skill-btn .adv-attr { font-size: 0.6rem; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.07em; }
+        .advantage-skill-btn .adv-mod { font-size: 1rem; font-weight: 700; color: var(--accent); }
+        .advantage-skill-btn.selected .adv-mod { color: white; }
+        .advantage-clear-btn {
+            padding: 0.25rem 0.6rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.72rem;
+            transition: all 0.15s;
+            margin-left: auto;
+        }
+        .advantage-clear-btn:hover { border-color: var(--danger); color: var(--danger); }
 
         /* FEATURES TAB */
         .class-intro { background: linear-gradient(135deg, var(--bg-card), var(--bg-dark)); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1rem; }
@@ -1698,6 +1818,67 @@
 
         /* CO-DM BADGE */
         .user-role.co-dm { background: #f97316; }
+
+        /* ===== SUB-MAP / LANDMARK MODALS ===== */
+        .submap-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.88);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99998;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+        .submap-modal.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: all;
+        }
+        .submap-modal-content {
+            background: var(--bg-card);
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            padding: 1.5rem;
+            max-width: 860px;
+            width: 95%;
+            max-height: 92vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.85), 0 0 40px rgba(200,146,42,0.18);
+        }
+        .submap-toolbar {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-dark);
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+        #subMapCanvas, #subMapViewerCanvas {
+            border: 2px solid var(--border);
+            cursor: crosshair;
+            display: block;
+            max-width: 100%;
+            border-radius: 4px;
+            background: #1a1f2e;
+        }
+        #subMapViewerCanvas { cursor: default; }
+        .stamp-glow-hint {
+            display: inline-block;
+            font-size: 0.72rem;
+            color: var(--gold);
+            background: rgba(200,146,42,0.12);
+            border: 1px solid rgba(200,146,42,0.3);
+            border-radius: 4px;
+            padding: 0.15rem 0.5rem;
+            margin-top: 0.3rem;
+        }
     </style>
 </head>
 <body>
@@ -1893,7 +2074,7 @@
 
     <!-- HEADER -->
     <div class="header">
-        <div class="title">⚔️ THE FRACTURED SKY</div>
+        <div class="title">⚔️ FROM SUNNYVILLE</div>
         <div class="campaign-badge" id="campaignBadge" style="display: none;">Campaign Name</div>
         <div class="header-actions">
             <div id="firebaseSection" style="display: none; align-items: center; gap: 0.4rem;">
@@ -2777,6 +2958,27 @@
     <!-- CHARACTER TRAY (bottom of screen) -->
     <div class="char-tray" id="charTray"></div>
 
+    <!-- DICE ADVANTAGE PANEL -->
+    <div class="dice-advantage-panel" id="diceAdvantagePanel">
+        <div class="dice-advantage-header" id="diceAdvantageHeader" onclick="toggleDiceAdvantageBody()">
+            <h4>🎲 Dice Advantage</h4>
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+                <span id="advantageSelectedLabel" style="font-size:0.75rem;color:var(--accent);font-family:'Cinzel',serif;"></span>
+                <span id="diceAdvArrow" style="color:var(--text-dim);font-size:0.7rem;">▲</span>
+            </div>
+        </div>
+        <div class="dice-advantage-body" id="diceAdvantageBody">
+            <div class="advantage-chars-row" id="advantageCharsRow">
+                <span class="advantage-chars-label">Character:</span>
+                <!-- populated by JS -->
+            </div>
+            <div class="advantage-skills-row" id="advantageSkillsRow">
+                <!-- populated by JS -->
+                <button class="advantage-clear-btn" onclick="clearDiceAdvantage()">✕ Clear</button>
+            </div>
+        </div>
+    </div>
+
     <!-- CHARACTER QUICK-VIEW POPUP -->
     <div class="char-quickview" id="charQuickView">
         <div class="char-qv-header">
@@ -2994,7 +3196,19 @@
                 }));
                 batch.set(col.doc(firebaseRoomRef + '__images'), { images: imagesData });
 
+                // Placed stamps (positions only — lightweight)
+                batch.set(col.doc(firebaseRoomRef + '__stamps'), { placedStamps });
+
                 await batch.commit();
+
+                // Stamp sub-maps are large (dataURLs) — save each as its own doc outside the batch
+                for (const sid in stampSubMaps) {
+                    const safeId = sid.replace(/[^a-zA-Z0-9_-]/g, '_');
+                    await col.doc(firebaseRoomRef + '__submap_' + safeId).set({
+                        stampId: sid,
+                        imageData: stampSubMaps[sid].toDataURL()
+                    }).catch(() => {});
+                }
                 updateFirebaseStatus('☁️ Saved', '#10b981');
                 console.log('🔥 Saved to Firestore');
             } catch (err) {
@@ -3047,7 +3261,21 @@
                 const imagesSnap = await col.doc(roomId + '__images').get();
                 const imagesData = imagesSnap.exists ? imagesSnap.data().images : [];
 
+                // Load placed stamps (positions)
+                const stampsSnap = await col.doc(roomId + '__stamps').get();
+                const loadedStamps = stampsSnap.exists ? (stampsSnap.data().placedStamps || []) : [];
+
                 await Promise.all([...cellFetches, ...fogFetches]);
+
+                // Load stamp sub-maps (one doc per stamp that has an illustration)
+                const subMapsData = {};
+                const subMapFetches = loadedStamps.map(stamp => {
+                    const safeId = stamp.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+                    return col.doc(roomId + '__submap_' + safeId).get().then(snap => {
+                        if (snap.exists) subMapsData[stamp.id] = snap.data().imageData;
+                    }).catch(() => {});
+                });
+                await Promise.all(subMapFetches);
 
                 loadGameState({
                     tokens: main.tokens || [],
@@ -3057,7 +3285,9 @@
                     panY: main.panY || 0,
                     gridCells: gridData,
                     fogGroups: fogData,
-                    placedImages: imagesData
+                    placedImages: imagesData,
+                    placedStamps: loadedStamps,
+                    stampSubMaps: subMapsData
                 });
 
                 if (main.campaignName) {
@@ -3119,6 +3349,18 @@
         let lastToolBeforeEraser = 'brush'; // Track tool before eraser
         let eraserMode = 'content'; // 'content' or 'all'
         let currentStamp = '🏰';
+
+        // === LANDMARK STAMP TRACKING (sub-map feature) ===
+        let placedStamps = [];   // [{ id, emoji, worldX, worldY }]
+        let stampSubMaps = {};   // stampId -> HTMLCanvasElement (the vertical illustration)
+        let activeSubMapId = null;
+        let subMapTool = 'brush';
+        let subMapColor = '#4a7c59';
+        let subMapSize = 8;
+        let isSubMapDrawing = false;
+        let subMapLastX = 0, subMapLastY = 0;
+        let glowAnimating = false;
+
         let tokenType = 'emoji'; // 'emoji' or 'image'
         let tokenImageData = null;
         
@@ -3404,6 +3646,8 @@
             document.getElementById('connectionTabContainer').style.display = 'none';
             document.getElementById('diceRollerBtn').classList.remove('visible');
             document.getElementById('diceRollLog').classList.remove('visible');
+            const advPanel = document.getElementById('diceAdvantagePanel');
+            if (advPanel) advPanel.classList.remove('panel-visible');
             document.getElementById('editCampaignBtn').style.display = 'none';
         }
 
@@ -3804,6 +4048,7 @@
             document.getElementById('connectionTabContainer').style.display = 'block';
             document.getElementById('diceRollerBtn').classList.add('visible');
             document.getElementById('diceRollLog').classList.add('visible');
+            showDiceAdvantagePanel();
             document.getElementById('roomCodeSection').style.display = 'block';
             document.getElementById('roomCode').textContent = roomCode;
             document.getElementById('dmControlsBtn').style.display = 'block';
@@ -3968,6 +4213,7 @@
                     document.getElementById('stagingZone').style.display = 'flex';
                     document.getElementById('diceRollerBtn').classList.add('visible');
                     document.getElementById('diceRollLog').classList.add('visible');
+                    showDiceAdvantagePanel();
                     updateConnectionStatus('Connected as Co-DM', true);
                     updateUserList();
                     initMusicPanel();
@@ -4042,6 +4288,7 @@
                     document.getElementById('playerPanelContainer').style.display = 'block';
                     document.getElementById('diceRollerBtn').classList.add('visible');
                     document.getElementById('diceRollLog').classList.add('visible');
+                    showDiceAdvantagePanel();
                     savePlayerState();
                     break;
                     
@@ -4160,7 +4407,7 @@
                             if (approved && c.peer !== conn.peer) sendToPeer(c, data);
                         });
                     }
-                    showDiceResult(data.result, data.rollerName, false, data.rollId);
+                    showDiceResult(data.result, data.rollerName, false, data.rollId, data.bonus || 0, data.advLabel || null);
                     break;
             }
         }
@@ -4224,7 +4471,26 @@
                     });
                     break;
                 case 'diceRoll':
-                    showDiceResult(data.result, data.rollerName, false, data.rollId);
+                    showDiceResult(data.result, data.rollerName, false, data.rollId, data.bonus || 0, data.advLabel || null);
+                    break;
+                // --- Landmark stamps ---
+                case 'stampUpdate':
+                    placedStamps = data.placedStamps || [];
+                    draw();
+                    break;
+                case 'subMapUpdate':
+                    if (data.stampId && data.imageData) {
+                        const img = new Image();
+                        img.onload = () => {
+                            const c = document.createElement('canvas');
+                            c.width = 800; c.height = 500;
+                            c.getContext('2d').drawImage(img, 0, 0);
+                            stampSubMaps[data.stampId] = c;
+                            startGlowAnimation();
+                            draw();
+                        };
+                        img.src = data.imageData;
+                    }
                     break;
             }
         }
@@ -4395,6 +4661,12 @@
                 gridY: pi.gridY
             }));
             
+            // Serialize stamp sub-maps
+            const subMapsData = {};
+            for (const sid in stampSubMaps) {
+                subMapsData[sid] = stampSubMaps[sid].toDataURL();
+            }
+
             sendToPeer(conn, {
                 type: 'gameState',
                 state: {
@@ -4403,6 +4675,8 @@
                     fogGroups: fogData,
                     tokens: [...stagingTokens, ...placedTokens],
                     placedImages: imagesData,
+                    placedStamps,
+                    stampSubMaps: subMapsData,
                     zoom,
                     panX,
                     panY
@@ -4494,14 +4768,35 @@
                 });
             }
             
+            // Load placed stamps
+            if (state.placedStamps) {
+                placedStamps = state.placedStamps;
+            }
+
+            // Load stamp sub-maps
+            if (state.stampSubMaps) {
+                for (const sid in state.stampSubMaps) {
+                    const img = new Image();
+                    img.onload = () => {
+                        const c = document.createElement('canvas');
+                        c.width = 800; c.height = 500;
+                        c.getContext('2d').drawImage(img, 0, 0);
+                        stampSubMaps[sid] = c;
+                        startGlowAnimation();
+                        draw();
+                    };
+                    img.src = state.stampSubMaps[sid];
+                }
+            }
+
             lockedCells = state.lockedCells || {};
             zoom = state.zoom || 1;
             panX = state.panX || 0;
             panY = state.panY || 0;
-            
+
             document.getElementById('zoomSlider').value = zoom * 100;
             document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
-            
+
             draw();
             updateMinimap();
         }
@@ -4921,6 +5216,47 @@
                 }
             });
 
+            // === LANDMARK STAMP GLOWS ===
+            // Draw a golden pulsing glow around stamps that have a vertical illustration
+            if (placedStamps.length > 0) {
+                const now = Date.now();
+                placedStamps.forEach(stamp => {
+                    if (!stampSubMaps[stamp.id]) return; // No sub-map, no glow
+                    const pulse = 0.5 + 0.5 * Math.sin(now / 480);
+                    const innerR = 22;
+                    const outerR = 34 + 6 * pulse;
+
+                    // Soft radial glow
+                    const grad = ctx.createRadialGradient(stamp.worldX, stamp.worldY, innerR * 0.4, stamp.worldX, stamp.worldY, outerR);
+                    grad.addColorStop(0, `rgba(255,215,0,${0.45 + 0.2 * pulse})`);
+                    grad.addColorStop(0.5, `rgba(255,180,0,${0.22 + 0.1 * pulse})`);
+                    grad.addColorStop(1, 'rgba(255,140,0,0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(stamp.worldX, stamp.worldY, outerR, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Crisp ring border
+                    ctx.strokeStyle = `rgba(255,215,0,${0.75 + 0.25 * pulse})`;
+                    ctx.lineWidth = 2 + pulse;
+                    ctx.shadowColor = '#ffd700';
+                    ctx.shadowBlur = 8 * pulse;
+                    ctx.beginPath();
+                    ctx.arc(stamp.worldX, stamp.worldY, innerR, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+
+                    // DM hint label
+                    if (isDM) {
+                        ctx.fillStyle = 'rgba(255,215,0,0.85)';
+                        ctx.font = 'bold 9px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'top';
+                        ctx.fillText('DBL-CLICK', stamp.worldX, stamp.worldY + 26);
+                    }
+                });
+            }
+
             ctx.restore();
 
             // Fog - FULLY OPAQUE for players, semi-transparent for DM
@@ -5087,6 +5423,173 @@
                 stampLibraryDragOffset = null;
             }
         });
+
+        // ===================================================
+        // LANDMARK SUB-MAP EDITOR / VIEWER
+        // ===================================================
+
+        function startGlowAnimation() {
+            if (glowAnimating) return;
+            glowAnimating = true;
+            function frame() {
+                const hasGlow = placedStamps.some(s => stampSubMaps[s.id]);
+                if (!hasGlow) { glowAnimating = false; return; }
+                draw();
+                requestAnimationFrame(frame);
+            }
+            requestAnimationFrame(frame);
+        }
+
+        function openSubMapEditor(stampId) {
+            if (!isDM) return;
+            const stamp = placedStamps.find(s => s.id === stampId);
+            if (!stamp) return;
+            activeSubMapId = stampId;
+
+            // Update title
+            document.getElementById('subMapEditorTitle').textContent = stamp.emoji + '  Landmark Illustration';
+
+            // Paint the existing sub-map (or blank) onto the editor canvas
+            const editorCanvas = document.getElementById('subMapCanvas');
+            const editorCtx = editorCanvas.getContext('2d');
+            editorCtx.fillStyle = '#1a1f2e';
+            editorCtx.fillRect(0, 0, editorCanvas.width, editorCanvas.height);
+            if (stampSubMaps[stampId]) {
+                editorCtx.drawImage(stampSubMaps[stampId], 0, 0);
+            }
+
+            setSubMapTool('brush');
+            document.getElementById('subMapEditorModal').classList.add('active');
+        }
+
+        function closeSubMapEditor() {
+            activeSubMapId = null;
+            document.getElementById('subMapEditorModal').classList.remove('active');
+        }
+
+        function saveAndCloseSubMapEditor() {
+            if (!activeSubMapId) return;
+            const editorCanvas = document.getElementById('subMapCanvas');
+
+            // Snapshot sub-map into a persistent canvas
+            const snap = document.createElement('canvas');
+            snap.width = editorCanvas.width;
+            snap.height = editorCanvas.height;
+            snap.getContext('2d').drawImage(editorCanvas, 0, 0);
+            stampSubMaps[activeSubMapId] = snap;
+
+            broadcast({ type: 'subMapUpdate', stampId: activeSubMapId, imageData: snap.toDataURL() });
+            scheduleSave();
+            startGlowAnimation();
+            closeSubMapEditor();
+            draw();
+        }
+
+        function clearSubMap() {
+            const c = document.getElementById('subMapCanvas');
+            const cx = c.getContext('2d');
+            cx.fillStyle = '#1a1f2e';
+            cx.fillRect(0, 0, c.width, c.height);
+        }
+
+        function setSubMapTool(t) {
+            subMapTool = t;
+            ['subMapBrushBtn', 'subMapFillBtn', 'subMapEraserBtn'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('active');
+            });
+            const map = { brush: 'subMapBrushBtn', fill: 'subMapFillBtn', eraser: 'subMapEraserBtn' };
+            if (map[t]) { const el = document.getElementById(map[t]); if (el) el.classList.add('active'); }
+        }
+
+        function openSubMapViewer(stampId) {
+            const stamp = placedStamps.find(s => s.id === stampId);
+            if (!stamp || !stampSubMaps[stampId]) return;
+
+            document.getElementById('subMapViewerTitle').textContent = stamp.emoji + '  Approaching...';
+            const viewerCanvas = document.getElementById('subMapViewerCanvas');
+            const viewerCtx = viewerCanvas.getContext('2d');
+            viewerCtx.clearRect(0, 0, viewerCanvas.width, viewerCanvas.height);
+            viewerCtx.drawImage(stampSubMaps[stampId], 0, 0);
+            document.getElementById('subMapViewerModal').classList.add('active');
+        }
+
+        function closeSubMapViewer() {
+            document.getElementById('subMapViewerModal').classList.remove('active');
+        }
+
+        // ── Sub-map canvas drawing events (set up once) ──
+        (function setupSubMapCanvasEvents() {
+            const smc = document.getElementById('subMapCanvas');
+            if (!smc) return;
+            const smctx = smc.getContext('2d');
+
+            function smCoords(e) {
+                const r = smc.getBoundingClientRect();
+                return [
+                    (e.clientX - r.left) * (smc.width / r.width),
+                    (e.clientY - r.top) * (smc.height / r.height)
+                ];
+            }
+
+            smc.addEventListener('mousedown', (e) => {
+                if (!activeSubMapId) return;
+                isSubMapDrawing = true;
+                const [x, y] = smCoords(e);
+                subMapLastX = x; subMapLastY = y;
+
+                if (subMapTool === 'fill') {
+                    smctx.fillStyle = subMapColor;
+                    smctx.fillRect(0, 0, smc.width, smc.height);
+                    isSubMapDrawing = false;
+                } else if (subMapTool === 'brush') {
+                    smctx.beginPath();
+                    smctx.moveTo(x, y);
+                    smctx.strokeStyle = subMapColor;
+                    smctx.lineWidth = subMapSize;
+                    smctx.lineCap = 'round';
+                    smctx.lineJoin = 'round';
+                } else if (subMapTool === 'eraser') {
+                    smctx.save();
+                    smctx.globalCompositeOperation = 'destination-out';
+                    smctx.beginPath();
+                    smctx.moveTo(x, y);
+                    smctx.lineWidth = subMapSize * 2;
+                    smctx.lineCap = 'round';
+                    smctx.lineJoin = 'round';
+                }
+            });
+
+            smc.addEventListener('mousemove', (e) => {
+                if (!isSubMapDrawing || !activeSubMapId) return;
+                const [x, y] = smCoords(e);
+                if (subMapTool === 'brush' || subMapTool === 'eraser') {
+                    smctx.lineTo(x, y);
+                    smctx.stroke();
+                }
+                subMapLastX = x; subMapLastY = y;
+            });
+
+            smc.addEventListener('mouseup', () => {
+                if (!isSubMapDrawing) return;
+                isSubMapDrawing = false;
+                if (subMapTool === 'eraser') smctx.restore();
+            });
+
+            smc.addEventListener('mouseleave', () => {
+                if (!isSubMapDrawing) return;
+                isSubMapDrawing = false;
+                if (subMapTool === 'eraser') smctx.restore();
+            });
+
+            // Touch support for sub-map canvas
+            function toMouse(touch) {
+                return { clientX: touch.clientX, clientY: touch.clientY };
+            }
+            smc.addEventListener('touchstart', e => { e.preventDefault(); smc.dispatchEvent(new MouseEvent('mousedown', toMouse(e.touches[0]))); }, { passive: false });
+            smc.addEventListener('touchmove',  e => { e.preventDefault(); smc.dispatchEvent(new MouseEvent('mousemove', toMouse(e.touches[0]))); }, { passive: false });
+            smc.addEventListener('touchend',   e => { e.preventDefault(); smc.dispatchEvent(new MouseEvent('mouseup',   {})); }, { passive: false });
+        })();
 
         // Player token functions
         let playerTokenType = 'emoji';
@@ -5400,6 +5903,13 @@
                 mapCtx.textBaseline = 'middle';
                 mapCtx.fillText(currentStamp, x, y);
                 saveHistory();
+                // Track stamp in world space for the sub-map / landmark feature
+                const worldX = currentCellX * GRID_SIZE + x;
+                const worldY = currentCellY * GRID_SIZE + y;
+                const stampId = 'stamp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                placedStamps.push({ id: stampId, emoji: currentStamp, worldX, worldY });
+                broadcast({ type: 'stampUpdate', placedStamps });
+                scheduleSave();
                 isDrawing = false;
             } else if (tool === 'eraser') {
                 mapCtx.save();
@@ -5465,7 +5975,18 @@
             const screenY = e.clientY;
             const mx = (screenX - rect.left - panX) / zoom;
             const my = (screenY - rect.top - panY) / zoom;
-            
+
+            // === LANDMARK STAMP CLICK (players open sub-map viewer) ===
+            if (!isDM && !fogMode) {
+                for (const stamp of placedStamps) {
+                    if (!stampSubMaps[stamp.id]) continue; // only glowing stamps
+                    if (Math.hypot(mx - stamp.worldX, my - stamp.worldY) < 32) {
+                        openSubMapViewer(stamp.id);
+                        return;
+                    }
+                }
+            }
+
             // Check if clicking on a placed token (for moving it)
             if (!fogMode && tool !== 'select') {
                 for (let i = placedTokens.length - 1; i >= 0; i--) {
@@ -5676,6 +6197,22 @@
             
             isFogDrawing = false;
             isDrawing = false;
+        });
+
+        // === DM DOUBLE-CLICK → open sub-map editor for nearest stamp ===
+        canvas.addEventListener('dblclick', (e) => {
+            if (!isDM) return;
+            const rect = canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left - panX) / zoom;
+            const my = (e.clientY - rect.top - panY) / zoom;
+
+            // Find nearest placed stamp within 32px world-space radius
+            let closest = null, closestDist = 32;
+            for (const stamp of placedStamps) {
+                const d = Math.hypot(mx - stamp.worldX, my - stamp.worldY);
+                if (d < closestDist) { closest = stamp; closestDist = d; }
+            }
+            if (closest) openSubMapEditor(closest.id);
         });
 
         canvas.addEventListener('dragover', (e) => {
@@ -7157,6 +7694,9 @@
                     <div class="char-tray-hp-bar"><div class="char-tray-hp-fill" style="width:${hpPct}%"></div></div>
                 </div>`;
             }).join('');
+            // Keep advantage panel in sync with current character list
+            const advBody = document.getElementById('diceAdvantageBody');
+            if (advBody && advBody.classList.contains('open')) renderAdvantagePanel();
         }
 
         function openQuickView(idx) {
@@ -7258,6 +7798,95 @@
         }
 
         // =============================================
+        // DICE ADVANTAGE PANEL
+        // =============================================
+        let selectedAdvantageBonus = 0;
+        let selectedAdvantageLabel = null;
+        let advantageCharIdx = 0;
+
+        function showDiceAdvantagePanel() {
+            const panel = document.getElementById('diceAdvantagePanel');
+            if (panel) panel.classList.add('panel-visible');
+            renderAdvantagePanel();
+        }
+
+        function toggleDiceAdvantageBody() {
+            const body = document.getElementById('diceAdvantageBody');
+            const header = document.getElementById('diceAdvantageHeader');
+            const arrow = document.getElementById('diceAdvArrow');
+            if (!body) return;
+            const isOpen = body.classList.toggle('open');
+            header.classList.toggle('open', isOpen);
+            arrow.textContent = isOpen ? '▼' : '▲';
+            if (isOpen) renderAdvantagePanel();
+        }
+
+        function renderAdvantagePanel() {
+            loadCharactersFromStorage();
+            if (characters.length === 0) {
+                document.getElementById('advantageCharsRow').innerHTML = '<span class="advantage-chars-label">No characters — create one in the character sheet.</span>';
+                document.getElementById('advantageSkillsRow').innerHTML = '<button class="advantage-clear-btn" onclick="clearDiceAdvantage()">✕ Clear</button>';
+                return;
+            }
+            if (advantageCharIdx >= characters.length) advantageCharIdx = 0;
+
+            const charRow = document.getElementById('advantageCharsRow');
+            charRow.innerHTML = '<span class="advantage-chars-label">Character:</span>' +
+                characters.map((c, i) =>
+                    `<button class="advantage-char-btn ${i === advantageCharIdx ? 'active' : ''}" onclick="selectAdvantageChar(${i})">${c.emoji || '⚔️'} ${c.name || ('Char ' + (i+1))}</button>`
+                ).join('');
+
+            renderAdvantageSkills();
+        }
+
+        function selectAdvantageChar(idx) {
+            advantageCharIdx = idx;
+            renderAdvantagePanel();
+        }
+
+        function renderAdvantageSkills() {
+            const c = characters[advantageCharIdx];
+            if (!c) return;
+            const attrs = [
+                { key: 'STR', val: c.str || 10 },
+                { key: 'DEX', val: c.dex || 10 },
+                { key: 'CON', val: c.con || 10 },
+                { key: 'INT', val: c.int || 10 },
+                { key: 'WIS', val: c.wis || 10 },
+                { key: 'CHA', val: c.cha || 10 }
+            ];
+            const charName = c.name || ('Char ' + (advantageCharIdx + 1));
+            const skillsRow = document.getElementById('advantageSkillsRow');
+            skillsRow.innerHTML = attrs.map(({ key, val }) => {
+                const mod = Math.floor((parseInt(val) - 10) / 2);
+                const modStr = (mod >= 0 ? '+' : '') + mod;
+                const label = key + ' ' + modStr;
+                const isSelected = selectedAdvantageLabel === label && selectedAdvantageBonus === mod;
+                return `<button class="advantage-skill-btn ${isSelected ? 'selected' : ''}"
+                            onclick="selectDiceAdvantage('${key}', ${mod}, '${label}')">
+                            <span class="adv-attr">${key}</span>
+                            <span class="adv-mod">${modStr}</span>
+                        </button>`;
+            }).join('') + '<button class="advantage-clear-btn" onclick="clearDiceAdvantage()">✕ Clear</button>';
+        }
+
+        function selectDiceAdvantage(attr, bonus, label) {
+            selectedAdvantageBonus = bonus;
+            selectedAdvantageLabel = label;
+            const el = document.getElementById('advantageSelectedLabel');
+            if (el) el.textContent = label;
+            renderAdvantageSkills();
+        }
+
+        function clearDiceAdvantage() {
+            selectedAdvantageBonus = 0;
+            selectedAdvantageLabel = null;
+            const el = document.getElementById('advantageSelectedLabel');
+            if (el) el.textContent = '';
+            renderAdvantageSkills();
+        }
+
+        // =============================================
         // DICE ROLLER
         // =============================================
         let diceToastTimer = null;
@@ -7268,8 +7897,10 @@
             const btn = document.getElementById('diceRollerBtn');
             btn.classList.add('rolling');
             setTimeout(() => btn.classList.remove('rolling'), 500);
-            showDiceResult(result, myName || 'Anonymous', true, rollId);
-            const msg = { type: 'diceRoll', result, rollerName: myName || 'Anonymous', rollId };
+            const bonus = selectedAdvantageBonus || 0;
+            const advLabel = selectedAdvantageLabel || null;
+            showDiceResult(result, myName || 'Anonymous', true, rollId, bonus, advLabel);
+            const msg = { type: 'diceRoll', result, rollerName: myName || 'Anonymous', rollId, bonus, advLabel };
             if (!isDM) {
                 connections.forEach(({ conn, role }) => { if (role === 'dm') sendToPeer(conn, msg); });
             } else {
@@ -7278,17 +7909,25 @@
             saveDiceRollToFirebase(result, myName || 'Anonymous', rollId);
         }
 
-        function showDiceResult(result, rollerName, isOwn, rollId) {
+        function showDiceResult(result, rollerName, isOwn, rollId, bonus, advLabel) {
             if (rollId !== undefined) {
                 if (shownRollIds.has(rollId)) return;
                 shownRollIds.add(rollId);
             }
+            const b = bonus || 0;
+            const total = result + b;
             const toast = document.getElementById('diceToast');
             const numEl  = document.getElementById('toastNum');
             const nameEl = document.getElementById('toastRoller');
             numEl.className = 'toast-num' + (result === 20 ? ' nat20' : result === 1 ? ' nat1' : '');
-            numEl.textContent = result;
-            nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20';
+            if (b !== 0 && advLabel) {
+                const sign = b >= 0 ? '+' : '';
+                numEl.textContent = result + ' ' + sign + b + ' = ' + total;
+                nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20 (' + advLabel + ')';
+            } else {
+                numEl.textContent = result;
+                nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20';
+            }
             toast.classList.add('show');
             clearTimeout(diceToastTimer);
             diceToastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
@@ -7296,7 +7935,12 @@
             const entry = document.createElement('div');
             entry.className = 'dice-log-entry';
             const cls = result === 20 ? ' nat20' : result === 1 ? ' nat1' : '';
-            entry.innerHTML = `<span style="color:var(--text-dim);font-size:0.75rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rollerName}</span><span class="dice-log-num${cls}">${result}</span>`;
+            if (b !== 0) {
+                const sign = b >= 0 ? '+' : '';
+                entry.innerHTML = `<span style="color:var(--text-dim);font-size:0.75rem;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rollerName}</span><span class="dice-log-num${cls}">${result}${sign}${b}=${total}</span>`;
+            } else {
+                entry.innerHTML = `<span style="color:var(--text-dim);font-size:0.75rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rollerName}</span><span class="dice-log-num${cls}">${result}</span>`;
+            }
             log.prepend(entry);
             while (log.children.length > 5) log.lastChild.remove();
         }
@@ -7556,6 +8200,49 @@
             alert('Error loading VTT: ' + err.message);
         }
     </script>
+
+    <!-- ===== SUB-MAP EDITOR MODAL (DM only) ===== -->
+    <div class="submap-modal" id="subMapEditorModal">
+        <div class="submap-modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h2 id="subMapEditorTitle" style="color:var(--gold); margin:0; font-family:'Cinzel',serif; font-size:1.3rem;">🏔️ Landmark Illustration</h2>
+                <div style="display:flex; gap:0.5rem;">
+                    <button class="btn btn-primary btn-small" onclick="saveAndCloseSubMapEditor()">💾 Save View</button>
+                    <button class="btn btn-small" onclick="closeSubMapEditor()">✕ Close</button>
+                </div>
+            </div>
+            <div class="submap-toolbar">
+                <div class="tool-btn" id="subMapBrushBtn" onclick="setSubMapTool('brush')" title="Brush">🖌️ Brush</div>
+                <div class="tool-btn" id="subMapFillBtn" onclick="setSubMapTool('fill')" title="Fill">🪣 Fill</div>
+                <div class="tool-btn" id="subMapEraserBtn" onclick="setSubMapTool('eraser')" title="Eraser">⬜ Erase</div>
+                <div style="width:1px; background:var(--border); margin:0 0.25rem; self-align:stretch;"></div>
+                <label style="color:var(--text-dim); font-size:0.8rem;">Color:</label>
+                <input type="color" id="subMapColorPicker" value="#4a7c59" oninput="subMapColor=this.value" style="width:36px; height:34px; padding:2px; background:transparent; border:1px solid var(--border); border-radius:4px; cursor:pointer;">
+                <label style="color:var(--text-dim); font-size:0.8rem;">Size:</label>
+                <input type="range" id="subMapSizeSlider" min="1" max="50" value="8" oninput="subMapSize=parseInt(this.value); document.getElementById('subMapSizeDisplay').textContent=this.value+'px';" style="width:80px; accent-color:var(--accent);">
+                <span id="subMapSizeDisplay" style="color:var(--text-dim); font-size:0.8rem; min-width:28px;">8px</span>
+                <div style="width:1px; background:var(--border); margin:0 0.25rem;"></div>
+                <button class="btn btn-small btn-danger" onclick="clearSubMap()">🗑️ Clear</button>
+            </div>
+            <canvas id="subMapCanvas" width="800" height="500"></canvas>
+            <p style="color:var(--text-dim); font-size:0.78rem; margin-top:0.5rem; text-align:center;">
+                Draw the vertical illustration players see when approaching this landmark.<br>
+                Once saved, the stamp will <span class="stamp-glow-hint">✨ glow</span> — players can click it to view this scene.
+            </p>
+        </div>
+    </div>
+
+    <!-- ===== SUB-MAP VIEWER MODAL (Players & DM preview) ===== -->
+    <div class="submap-modal" id="subMapViewerModal">
+        <div class="submap-modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h2 id="subMapViewerTitle" style="color:var(--gold); margin:0; font-family:'Cinzel',serif; font-size:1.3rem;">🏔️ Approaching...</h2>
+                <button class="btn btn-small" onclick="closeSubMapViewer()">✕ Close</button>
+            </div>
+            <canvas id="subMapViewerCanvas" width="800" height="500"></canvas>
+        </div>
+    </div>
+
     <!-- FOOTER -->
     <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:0.3rem 0;background:rgba(0,0,0,0.7);color:#a855f7;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;z-index:9999;pointer-events:none;">CREATED BY ROBERT FOR WIZZY</div>
 </body>
