@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>The Fractured Sky VTT v4.0 - FINAL BUILD</title>
+    <title>From Sunnyville VTT v4.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- Firebase v9 compat (matches existing firebase.X() call style) -->
@@ -516,7 +516,7 @@
         /* CHAR TRAY */
         .char-tray {
             position: fixed;
-            bottom: 22px;
+            bottom: 44px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
@@ -1195,13 +1195,13 @@
 
         /* DICE ROLLER */
         .dice-roller-btn {
-            position: fixed; bottom: 130px; right: 1rem;
-            width: 54px; height: 54px;
+            position: fixed; bottom: 160px; right: calc(28% - 38px);
+            width: 76px; height: 76px;
             background: linear-gradient(135deg, #9b2335, #6b0f1a);
-            border: 2px solid #c8922a; border-radius: 3px;
-            cursor: pointer; font-size: 1.3rem;
+            border: 2px solid #c8922a; border-radius: 50%;
+            cursor: pointer; font-size: 2rem;
             display: none; align-items: center; justify-content: center; flex-direction: column;
-            box-shadow: 0 4px 15px rgba(200,146,42,0.3);
+            box-shadow: 0 4px 18px rgba(200,146,42,0.45);
             z-index: 8000; color: var(--gold); line-height: 1;
             transition: transform 0.15s, box-shadow 0.15s;
         }
@@ -1216,7 +1216,7 @@
             100% { transform: rotate(360deg) scale(1); }
         }
         .dice-roll-log {
-            position: fixed; bottom: 195px; right: 1rem;
+            position: fixed; bottom: 248px; right: calc(28% - 100px);
             width: 200px; display: none; flex-direction: column-reverse;
             gap: 0.3rem; z-index: 7999; max-height: 220px; overflow: hidden; pointer-events: none;
         }
@@ -1247,6 +1247,126 @@
         .toast-num.nat20 { color: #fbbf24; text-shadow: 0 0 24px rgba(251,191,36,0.7); }
         .toast-num.nat1  { color: #ef4444; text-shadow: 0 0 24px rgba(239,68,68,0.5); }
         .toast-label { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.3rem; letter-spacing: 0.05em; }
+        .toast-bonus { font-size: 1.1rem; color: var(--text-dim); margin-top: 0.2rem; }
+
+        /* DICE ADVANTAGE PANEL */
+        .dice-advantage-panel {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+            z-index: 7600;
+            max-width: 820px;
+            width: calc(100vw - 40px);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+            display: none;
+        }
+        .dice-advantage-panel.panel-visible { display: block; }
+        .dice-advantage-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.45rem 1rem;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .dice-advantage-header.open { border-bottom-color: var(--border); }
+        .dice-advantage-header h4 {
+            font-family: 'Cinzel', serif;
+            color: var(--gold);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .dice-advantage-body {
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.6rem 0.85rem 0.75rem;
+        }
+        .dice-advantage-body.open { display: flex; }
+        .advantage-chars-row {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .advantage-chars-label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-right: 0.25rem;
+        }
+        .advantage-char-btn {
+            padding: 0.25rem 0.65rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-family: 'Cinzel', serif;
+            transition: all 0.15s;
+        }
+        .advantage-char-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .advantage-char-btn.active {
+            background: rgba(200,146,42,0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .advantage-skills-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .advantage-skill-btn {
+            padding: 0.35rem 0.9rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            transition: all 0.15s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+            min-width: 64px;
+        }
+        .advantage-skill-btn:hover { border-color: var(--accent); background: var(--bg-hover); }
+        .advantage-skill-btn.selected {
+            background: var(--crimson);
+            border-color: #c8394e;
+            color: white;
+        }
+        .advantage-skill-btn .adv-attr { font-size: 0.6rem; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.07em; }
+        .advantage-skill-btn .adv-mod { font-size: 1rem; font-weight: 700; color: var(--accent); }
+        .advantage-skill-btn.selected .adv-mod { color: white; }
+        .advantage-clear-btn {
+            padding: 0.25rem 0.6rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.72rem;
+            transition: all 0.15s;
+            margin-left: auto;
+        }
+        .advantage-clear-btn:hover { border-color: var(--danger); color: var(--danger); }
 
         /* FEATURES TAB */
         .class-intro { background: linear-gradient(135deg, var(--bg-card), var(--bg-dark)); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1rem; }
@@ -1893,7 +2013,7 @@
 
     <!-- HEADER -->
     <div class="header">
-        <div class="title">⚔️ THE FRACTURED SKY</div>
+        <div class="title">⚔️ FROM SUNNYVILLE</div>
         <div class="campaign-badge" id="campaignBadge" style="display: none;">Campaign Name</div>
         <div class="header-actions">
             <div id="firebaseSection" style="display: none; align-items: center; gap: 0.4rem;">
@@ -2777,6 +2897,27 @@
     <!-- CHARACTER TRAY (bottom of screen) -->
     <div class="char-tray" id="charTray"></div>
 
+    <!-- DICE ADVANTAGE PANEL -->
+    <div class="dice-advantage-panel" id="diceAdvantagePanel">
+        <div class="dice-advantage-header" id="diceAdvantageHeader" onclick="toggleDiceAdvantageBody()">
+            <h4>🎲 Dice Advantage</h4>
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+                <span id="advantageSelectedLabel" style="font-size:0.75rem;color:var(--accent);font-family:'Cinzel',serif;"></span>
+                <span id="diceAdvArrow" style="color:var(--text-dim);font-size:0.7rem;">▲</span>
+            </div>
+        </div>
+        <div class="dice-advantage-body" id="diceAdvantageBody">
+            <div class="advantage-chars-row" id="advantageCharsRow">
+                <span class="advantage-chars-label">Character:</span>
+                <!-- populated by JS -->
+            </div>
+            <div class="advantage-skills-row" id="advantageSkillsRow">
+                <!-- populated by JS -->
+                <button class="advantage-clear-btn" onclick="clearDiceAdvantage()">✕ Clear</button>
+            </div>
+        </div>
+    </div>
+
     <!-- CHARACTER QUICK-VIEW POPUP -->
     <div class="char-quickview" id="charQuickView">
         <div class="char-qv-header">
@@ -3404,6 +3545,8 @@
             document.getElementById('connectionTabContainer').style.display = 'none';
             document.getElementById('diceRollerBtn').classList.remove('visible');
             document.getElementById('diceRollLog').classList.remove('visible');
+            const advPanel = document.getElementById('diceAdvantagePanel');
+            if (advPanel) advPanel.classList.remove('panel-visible');
             document.getElementById('editCampaignBtn').style.display = 'none';
         }
 
@@ -3804,6 +3947,7 @@
             document.getElementById('connectionTabContainer').style.display = 'block';
             document.getElementById('diceRollerBtn').classList.add('visible');
             document.getElementById('diceRollLog').classList.add('visible');
+            showDiceAdvantagePanel();
             document.getElementById('roomCodeSection').style.display = 'block';
             document.getElementById('roomCode').textContent = roomCode;
             document.getElementById('dmControlsBtn').style.display = 'block';
@@ -3968,6 +4112,7 @@
                     document.getElementById('stagingZone').style.display = 'flex';
                     document.getElementById('diceRollerBtn').classList.add('visible');
                     document.getElementById('diceRollLog').classList.add('visible');
+                    showDiceAdvantagePanel();
                     updateConnectionStatus('Connected as Co-DM', true);
                     updateUserList();
                     initMusicPanel();
@@ -4042,6 +4187,7 @@
                     document.getElementById('playerPanelContainer').style.display = 'block';
                     document.getElementById('diceRollerBtn').classList.add('visible');
                     document.getElementById('diceRollLog').classList.add('visible');
+                    showDiceAdvantagePanel();
                     savePlayerState();
                     break;
                     
@@ -4160,7 +4306,7 @@
                             if (approved && c.peer !== conn.peer) sendToPeer(c, data);
                         });
                     }
-                    showDiceResult(data.result, data.rollerName, false, data.rollId);
+                    showDiceResult(data.result, data.rollerName, false, data.rollId, data.bonus || 0, data.advLabel || null);
                     break;
             }
         }
@@ -4224,7 +4370,7 @@
                     });
                     break;
                 case 'diceRoll':
-                    showDiceResult(data.result, data.rollerName, false, data.rollId);
+                    showDiceResult(data.result, data.rollerName, false, data.rollId, data.bonus || 0, data.advLabel || null);
                     break;
             }
         }
@@ -7157,6 +7303,9 @@
                     <div class="char-tray-hp-bar"><div class="char-tray-hp-fill" style="width:${hpPct}%"></div></div>
                 </div>`;
             }).join('');
+            // Keep advantage panel in sync with current character list
+            const advBody = document.getElementById('diceAdvantageBody');
+            if (advBody && advBody.classList.contains('open')) renderAdvantagePanel();
         }
 
         function openQuickView(idx) {
@@ -7258,6 +7407,95 @@
         }
 
         // =============================================
+        // DICE ADVANTAGE PANEL
+        // =============================================
+        let selectedAdvantageBonus = 0;
+        let selectedAdvantageLabel = null;
+        let advantageCharIdx = 0;
+
+        function showDiceAdvantagePanel() {
+            const panel = document.getElementById('diceAdvantagePanel');
+            if (panel) panel.classList.add('panel-visible');
+            renderAdvantagePanel();
+        }
+
+        function toggleDiceAdvantageBody() {
+            const body = document.getElementById('diceAdvantageBody');
+            const header = document.getElementById('diceAdvantageHeader');
+            const arrow = document.getElementById('diceAdvArrow');
+            if (!body) return;
+            const isOpen = body.classList.toggle('open');
+            header.classList.toggle('open', isOpen);
+            arrow.textContent = isOpen ? '▼' : '▲';
+            if (isOpen) renderAdvantagePanel();
+        }
+
+        function renderAdvantagePanel() {
+            loadCharactersFromStorage();
+            if (characters.length === 0) {
+                document.getElementById('advantageCharsRow').innerHTML = '<span class="advantage-chars-label">No characters — create one in the character sheet.</span>';
+                document.getElementById('advantageSkillsRow').innerHTML = '<button class="advantage-clear-btn" onclick="clearDiceAdvantage()">✕ Clear</button>';
+                return;
+            }
+            if (advantageCharIdx >= characters.length) advantageCharIdx = 0;
+
+            const charRow = document.getElementById('advantageCharsRow');
+            charRow.innerHTML = '<span class="advantage-chars-label">Character:</span>' +
+                characters.map((c, i) =>
+                    `<button class="advantage-char-btn ${i === advantageCharIdx ? 'active' : ''}" onclick="selectAdvantageChar(${i})">${c.emoji || '⚔️'} ${c.name || ('Char ' + (i+1))}</button>`
+                ).join('');
+
+            renderAdvantageSkills();
+        }
+
+        function selectAdvantageChar(idx) {
+            advantageCharIdx = idx;
+            renderAdvantagePanel();
+        }
+
+        function renderAdvantageSkills() {
+            const c = characters[advantageCharIdx];
+            if (!c) return;
+            const attrs = [
+                { key: 'STR', val: c.str || 10 },
+                { key: 'DEX', val: c.dex || 10 },
+                { key: 'CON', val: c.con || 10 },
+                { key: 'INT', val: c.int || 10 },
+                { key: 'WIS', val: c.wis || 10 },
+                { key: 'CHA', val: c.cha || 10 }
+            ];
+            const charName = c.name || ('Char ' + (advantageCharIdx + 1));
+            const skillsRow = document.getElementById('advantageSkillsRow');
+            skillsRow.innerHTML = attrs.map(({ key, val }) => {
+                const mod = Math.floor((parseInt(val) - 10) / 2);
+                const modStr = (mod >= 0 ? '+' : '') + mod;
+                const label = key + ' ' + modStr;
+                const isSelected = selectedAdvantageLabel === label && selectedAdvantageBonus === mod;
+                return `<button class="advantage-skill-btn ${isSelected ? 'selected' : ''}"
+                            onclick="selectDiceAdvantage('${key}', ${mod}, '${label}')">
+                            <span class="adv-attr">${key}</span>
+                            <span class="adv-mod">${modStr}</span>
+                        </button>`;
+            }).join('') + '<button class="advantage-clear-btn" onclick="clearDiceAdvantage()">✕ Clear</button>';
+        }
+
+        function selectDiceAdvantage(attr, bonus, label) {
+            selectedAdvantageBonus = bonus;
+            selectedAdvantageLabel = label;
+            const el = document.getElementById('advantageSelectedLabel');
+            if (el) el.textContent = label;
+            renderAdvantageSkills();
+        }
+
+        function clearDiceAdvantage() {
+            selectedAdvantageBonus = 0;
+            selectedAdvantageLabel = null;
+            const el = document.getElementById('advantageSelectedLabel');
+            if (el) el.textContent = '';
+            renderAdvantageSkills();
+        }
+
+        // =============================================
         // DICE ROLLER
         // =============================================
         let diceToastTimer = null;
@@ -7268,8 +7506,10 @@
             const btn = document.getElementById('diceRollerBtn');
             btn.classList.add('rolling');
             setTimeout(() => btn.classList.remove('rolling'), 500);
-            showDiceResult(result, myName || 'Anonymous', true, rollId);
-            const msg = { type: 'diceRoll', result, rollerName: myName || 'Anonymous', rollId };
+            const bonus = selectedAdvantageBonus || 0;
+            const advLabel = selectedAdvantageLabel || null;
+            showDiceResult(result, myName || 'Anonymous', true, rollId, bonus, advLabel);
+            const msg = { type: 'diceRoll', result, rollerName: myName || 'Anonymous', rollId, bonus, advLabel };
             if (!isDM) {
                 connections.forEach(({ conn, role }) => { if (role === 'dm') sendToPeer(conn, msg); });
             } else {
@@ -7278,17 +7518,25 @@
             saveDiceRollToFirebase(result, myName || 'Anonymous', rollId);
         }
 
-        function showDiceResult(result, rollerName, isOwn, rollId) {
+        function showDiceResult(result, rollerName, isOwn, rollId, bonus, advLabel) {
             if (rollId !== undefined) {
                 if (shownRollIds.has(rollId)) return;
                 shownRollIds.add(rollId);
             }
+            const b = bonus || 0;
+            const total = result + b;
             const toast = document.getElementById('diceToast');
             const numEl  = document.getElementById('toastNum');
             const nameEl = document.getElementById('toastRoller');
             numEl.className = 'toast-num' + (result === 20 ? ' nat20' : result === 1 ? ' nat1' : '');
-            numEl.textContent = result;
-            nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20';
+            if (b !== 0 && advLabel) {
+                const sign = b >= 0 ? '+' : '';
+                numEl.textContent = result + ' ' + sign + b + ' = ' + total;
+                nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20 (' + advLabel + ')';
+            } else {
+                numEl.textContent = result;
+                nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20';
+            }
             toast.classList.add('show');
             clearTimeout(diceToastTimer);
             diceToastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
@@ -7296,7 +7544,12 @@
             const entry = document.createElement('div');
             entry.className = 'dice-log-entry';
             const cls = result === 20 ? ' nat20' : result === 1 ? ' nat1' : '';
-            entry.innerHTML = `<span style="color:var(--text-dim);font-size:0.75rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rollerName}</span><span class="dice-log-num${cls}">${result}</span>`;
+            if (b !== 0) {
+                const sign = b >= 0 ? '+' : '';
+                entry.innerHTML = `<span style="color:var(--text-dim);font-size:0.75rem;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rollerName}</span><span class="dice-log-num${cls}">${result}${sign}${b}=${total}</span>`;
+            } else {
+                entry.innerHTML = `<span style="color:var(--text-dim);font-size:0.75rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rollerName}</span><span class="dice-log-num${cls}">${result}</span>`;
+            }
             log.prepend(entry);
             while (log.children.length > 5) log.lastChild.remove();
         }
