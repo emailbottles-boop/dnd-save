@@ -3313,7 +3313,7 @@
         }
 
         // Campaign name
-        let campaignName = localStorage.getItem('fracturedSkyCampaignName') || 'Session';
+        let campaignName = localStorage.getItem('fracturedSkyCampaignName') || 'From Sunnyville';
         function updateCampaignNameDisplay() {
             const el = document.getElementById('sessionNameDisplay');
             if (el) el.textContent = campaignName;
@@ -7781,7 +7781,7 @@
                     const rolls = (snap.data().rolls || [])
                         .sort((a, b) => b.timestamp - a.timestamp)
                         .slice(0, 5);
-                    rolls.reverse().forEach(r => showDiceResult(r.result, r.rollerName, false, r.rollId));
+                    rolls.reverse().forEach(r => showDiceResult(r.result, r.rollerName, false, r.rollId, 0, null, true));
                 }).catch(() => {});
 
                 // Real-time listener — only surfaces rolls that arrive after we joined
@@ -7909,28 +7909,30 @@
             saveDiceRollToFirebase(result, myName || 'Anonymous', rollId);
         }
 
-        function showDiceResult(result, rollerName, isOwn, rollId, bonus, advLabel) {
+        function showDiceResult(result, rollerName, isOwn, rollId, bonus, advLabel, silent) {
             if (rollId !== undefined) {
                 if (shownRollIds.has(rollId)) return;
                 shownRollIds.add(rollId);
             }
             const b = bonus || 0;
             const total = result + b;
-            const toast = document.getElementById('diceToast');
-            const numEl  = document.getElementById('toastNum');
-            const nameEl = document.getElementById('toastRoller');
-            numEl.className = 'toast-num' + (result === 20 ? ' nat20' : result === 1 ? ' nat1' : '');
-            if (b !== 0 && advLabel) {
-                const sign = b >= 0 ? '+' : '';
-                numEl.textContent = result + ' ' + sign + b + ' = ' + total;
-                nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20 (' + advLabel + ')';
-            } else {
-                numEl.textContent = result;
-                nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20';
+            if (!silent) {
+                const toast = document.getElementById('diceToast');
+                const numEl  = document.getElementById('toastNum');
+                const nameEl = document.getElementById('toastRoller');
+                numEl.className = 'toast-num' + (result === 20 ? ' nat20' : result === 1 ? ' nat1' : '');
+                if (b !== 0 && advLabel) {
+                    const sign = b >= 0 ? '+' : '';
+                    numEl.textContent = result + ' ' + sign + b + ' = ' + total;
+                    nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20 (' + advLabel + ')';
+                } else {
+                    numEl.textContent = result;
+                    nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20';
+                }
+                toast.classList.add('show');
+                clearTimeout(diceToastTimer);
+                diceToastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
             }
-            toast.classList.add('show');
-            clearTimeout(diceToastTimer);
-            diceToastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
             const log = document.getElementById('diceRollLog');
             const entry = document.createElement('div');
             entry.className = 'dice-log-entry';
