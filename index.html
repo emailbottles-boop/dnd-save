@@ -2430,6 +2430,10 @@
         let firebaseUser = null;
         let firebaseSaveTimeout = null;
         let firebaseRoomRef = null; // set to roomCode string once DM opens room
+        let playerFirebaseRoomId = null; // set when player is approved (from canonicalRoomId)
+        let diceRollsUnsubscribe = null; // Firestore dice roll listener cleanup fn
+        let shownRollIds = new Set(); // roll IDs already displayed — prevents P2P + Firebase double-show
+        let diceListenSince = 0; // timestamp when dice listener started (filters out pre-join rolls)
 
         async function firebaseSignIn() {
             if (typeof firebase === 'undefined' || !fbDb) return;
@@ -3253,6 +3257,7 @@
                     }
 
                     loadFromFirebase(loadId);
+                    loadAndListenDiceRolls(loadId);
 
                     // Keep Firebase updated every 20 s so onSnapshot watchers on
                     // players and co-DMs receive a timely wake-up call even if
@@ -3583,6 +3588,8 @@
                     // future DM refreshes the player watches the same Firebase doc that
                     // the DM always writes its new peer ID to. Saving conn.peer here
                     // caused the watch chain to drift and the room to "die" after 2 refreshes.
+                    playerFirebaseRoomId = data.canonicalRoomId || conn.peer;
+                    loadAndListenDiceRolls(playerFirebaseRoomId);
                     localStorage.setItem('fracturedSkyPlayerRoom', data.canonicalRoomId || conn.peer);
                     localStorage.setItem('fracturedSkyPlayerName', myName);
                     // Keep sessionStorage in sync so refresh always uses the canonical room ID.
@@ -3715,7 +3722,7 @@
                             if (approved && c.peer !== conn.peer) sendToPeer(c, data);
                         });
                     }
-                    showDiceResult(data.result, data.rollerName, false);
+                    showDiceResult(data.result, data.rollerName, false, data.rollId);
                     break;
             }
         }
@@ -3779,7 +3786,7 @@
                     });
                     break;
                 case 'diceRoll':
-                    showDiceResult(data.result, data.rollerName, false);
+                    showDiceResult(data.result, data.rollerName, false, data.rollId);
                     break;
             }
         }
@@ -6377,25 +6384,77 @@
 
 
         // =============================================
+        // DICE ROLL FIREBASE PERSISTENCE
+        // =============================================
+
+        function saveDiceRollToFirebase(result, rollerName, rollId) {
+            const roomId = firebaseRoomRef || playerFirebaseRoomId;
+            if (!roomId || !fbDb) return;
+            firebaseSignIn().then(() => {
+                fbDb.collection('vtt_rooms').doc(roomId + '__dice_log')
+                    .set({
+                        rolls: firebase.firestore.FieldValue.arrayUnion(
+                            { result, rollerName, rollId, timestamp: Date.now() }
+                        )
+                    }, { merge: true })
+                    .catch(e => console.error('🎲 Dice log save error:', e));
+            });
+        }
+
+        function loadAndListenDiceRolls(roomId) {
+            if (diceRollsUnsubscribe) { diceRollsUnsubscribe(); diceRollsUnsubscribe = null; }
+            if (!roomId || !fbDb) return;
+            firebaseSignIn().then(() => {
+                const docRef = fbDb.collection('vtt_rooms').doc(roomId + '__dice_log');
+
+                // Load last 5 historical rolls so the DM/players can see recent history on join
+                docRef.get().then(snap => {
+                    if (!snap.exists) return;
+                    const rolls = (snap.data().rolls || [])
+                        .sort((a, b) => b.timestamp - a.timestamp)
+                        .slice(0, 5);
+                    rolls.reverse().forEach(r => showDiceResult(r.result, r.rollerName, false, r.rollId));
+                }).catch(() => {});
+
+                // Real-time listener — only surfaces rolls that arrive after we joined
+                diceListenSince = Date.now();
+                diceRollsUnsubscribe = docRef.onSnapshot(snap => {
+                    if (!snap.exists) return;
+                    (snap.data().rolls || []).forEach(r => {
+                        if (r.timestamp >= diceListenSince) {
+                            showDiceResult(r.result, r.rollerName, false, r.rollId);
+                        }
+                    });
+                }, () => {});
+            });
+        }
+
+        // =============================================
         // DICE ROLLER
         // =============================================
         let diceToastTimer = null;
 
         function rollD20() {
             const result = Math.floor(Math.random() * 20) + 1;
+            const rollId = Date.now() + '_' + Math.random().toString(36).slice(2, 8);
             const btn = document.getElementById('diceRollerBtn');
             btn.classList.add('rolling');
             setTimeout(() => btn.classList.remove('rolling'), 500);
-            showDiceResult(result, myName || 'Anonymous', true);
-            const msg = { type: 'diceRoll', result, rollerName: myName || 'Anonymous' };
+            showDiceResult(result, myName || 'Anonymous', true, rollId);
+            const msg = { type: 'diceRoll', result, rollerName: myName || 'Anonymous', rollId };
             if (!isDM) {
                 connections.forEach(({ conn, role }) => { if (role === 'dm') sendToPeer(conn, msg); });
             } else {
                 broadcast(msg);
             }
+            saveDiceRollToFirebase(result, myName || 'Anonymous', rollId);
         }
 
-        function showDiceResult(result, rollerName, isOwn) {
+        function showDiceResult(result, rollerName, isOwn, rollId) {
+            if (rollId !== undefined) {
+                if (shownRollIds.has(rollId)) return;
+                shownRollIds.add(rollId);
+            }
             const toast = document.getElementById('diceToast');
             const numEl  = document.getElementById('toastNum');
             const nameEl = document.getElementById('toastRoller');
