@@ -21,17 +21,19 @@
         }
 
         :root {
-            --bg-dark: #0a0e1a;
-            --bg-card: #151928;
-            --bg-hover: #1f2537;
-            --accent: #8b5cf6;
-            --accent-secondary: #ec4899;
-            --gold: #fbbf24;
-            --text: #e5e7eb;
-            --text-dim: #9ca3af;
-            --border: rgba(139, 92, 246, 0.2);
-            --success: #10b981;
-            --danger: #ef4444;
+            --bg-dark: #0e0b08;
+            --bg-card: #1a1510;
+            --bg-hover: #261e14;
+            --accent: #c8922a;
+            --accent-secondary: #e8b84b;
+            --gold: #f5c518;
+            --text: #e8dcc8;
+            --text-dim: #9e8e72;
+            --border: rgba(200, 146, 42, 0.35);
+            --success: #22c55e;
+            --danger: #dc2626;
+            --crimson: #9b2335;
+            --parchment: #f4e4c1;
         }
 
         body {
@@ -87,35 +89,45 @@
             background: var(--bg-hover);
             border: 1px solid var(--border);
             color: var(--text);
-            border-radius: 8px;
+            border-radius: 2px;
             cursor: pointer;
             font-size: 0.9rem;
-            font-weight: 500;
+            font-weight: 600;
             transition: all 0.2s;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
         }
 
         .btn:hover {
             background: var(--accent);
             border-color: var(--accent);
+            color: var(--bg-dark);
             transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(200,146,42,0.4);
         }
 
         .btn-primary {
             background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-            border: none;
-            color: white;
+            border: 1px solid var(--accent);
+            color: var(--bg-dark);
+            font-weight: 700;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--accent-secondary), var(--gold));
+            color: var(--bg-dark);
         }
 
         .btn-small {
-            padding: 0.4rem 0.8rem;
-            font-size: 0.8rem;
+            padding: 0.3rem 0.7rem;
+            font-size: 0.75rem;
         }
 
         .btn-success {
             background: var(--success);
             border-color: var(--success);
-            color: white;
+            color: #0e0b08;
         }
 
         .btn-danger {
@@ -128,7 +140,9 @@
         .welcome-screen {
             position: fixed;
             inset: 0;
-            background: linear-gradient(135deg, #0a0e1a 0%, #1a1f3a 100%);
+            background: radial-gradient(ellipse at center, #1a1008 0%, #0e0b08 60%, #000 100%);
+            background-image: radial-gradient(ellipse at center, #1a1008 0%, #0e0b08 60%, #000 100%),
+                url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8922a' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
             display: flex;
             align-items: center;
             justify-content: center;
@@ -170,23 +184,27 @@
 
         .welcome-btn {
             padding: 1rem 2rem;
-            font-size: 1.1rem;
-            border-radius: 12px;
+            font-size: 1rem;
+            border-radius: 2px;
             cursor: pointer;
-            border: none;
-            font-weight: 600;
+            border: 2px solid var(--border);
+            font-weight: 700;
             transition: all 0.3s;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }
 
         .welcome-btn-primary {
             background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-            color: white;
+            color: var(--bg-dark);
+            border-color: var(--gold);
         }
 
         .welcome-btn-primary:hover {
             transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.5);
+            box-shadow: 0 10px 30px rgba(200,146,42,0.5);
+            background: linear-gradient(135deg, var(--gold), var(--accent-secondary));
         }
 
         .welcome-btn-secondary {
@@ -198,6 +216,7 @@
         .welcome-btn-secondary:hover {
             border-color: var(--accent);
             background: var(--bg-hover);
+            color: var(--gold);
         }
 
         /* MODALS */
@@ -223,12 +242,12 @@
 
         .modal-content {
             background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
+            border: 2px solid var(--border);
+            border-radius: 3px;
             padding: 2rem;
             max-width: 450px;
             width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7), inset 0 0 80px rgba(200,146,42,0.03);
             max-height: 80vh;
             overflow-y: auto;
         }
@@ -267,7 +286,7 @@
             padding: 0.75rem;
             background: var(--bg-dark);
             border: 1px solid var(--border);
-            border-radius: 6px;
+            border-radius: 2px;
             color: var(--text);
             font-size: 0.95rem;
             font-family: 'Inter', sans-serif;
@@ -444,12 +463,12 @@
         .tabletop {
             flex: 1;
             background: var(--bg-card);
-            border-radius: 12px;
-            border: 1px solid var(--border);
+            border-radius: 2px;
+            border: 2px solid var(--border);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(200,146,42,0.1);
         }
 
         .tabletop-header {
@@ -494,10 +513,139 @@
         }
 
         /* CANVAS */
+        /* CHAR TRAY */
+        .char-tray {
+            position: fixed;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            align-items: flex-end;
+            z-index: 7500;
+            padding: 6px 12px;
+            background: rgba(14,11,8,0.9);
+            border: 2px solid var(--border);
+            border-radius: 3px 3px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(200,146,42,0.1);
+            transition: all 0.3s;
+            pointer-events: auto;
+            max-width: calc(100vw - 40px);
+            overflow-x: auto;
+        }
+        .char-tray:empty { display: none; }
+        .char-tray-label {
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-family: 'Cinzel', serif;
+            margin-right: 4px;
+            white-space: nowrap;
+            align-self: center;
+        }
+        .char-tray-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            padding: 6px 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 2px 2px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 70px;
+            position: relative;
+        }
+        .char-tray-btn:hover, .char-tray-btn.active {
+            background: var(--bg-hover);
+            border-color: var(--gold);
+            box-shadow: 0 -2px 10px rgba(200,146,42,0.3);
+        }
+        .char-tray-btn .tray-name {
+            font-size: 0.7rem;
+            font-family: 'Cinzel', serif;
+            color: var(--gold);
+            white-space: nowrap;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .char-tray-btn .tray-hp {
+            font-size: 0.6rem;
+            color: var(--danger);
+        }
+        .char-tray-btn .tray-class {
+            font-size: 0.55rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .char-tray-hp-bar {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--bg-dark);
+        }
+        .char-tray-hp-fill {
+            height: 100%;
+            background: var(--danger);
+            transition: width 0.4s;
+        }
+
+        /* CHAR QUICK-VIEW POPUP */
+        .char-quickview {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.95);
+            width: 380px;
+            max-width: calc(100vw - 20px);
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 3px;
+            box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+            z-index: 7600;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .char-quickview.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) scale(1);
+        }
+        .char-qv-header {
+            background: var(--bg-hover);
+            padding: 0.6rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .char-qv-name { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1rem; }
+        .char-qv-sub  { font-size: 0.7rem; color: var(--text-dim); }
+        .char-qv-body { padding: 0.75rem; }
+        .char-qv-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.6rem; }
+        .char-qv-stat {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            padding: 0.4rem;
+            text-align: center;
+        }
+        .char-qv-stat-val { font-size: 1.2rem; font-weight: 700; color: var(--text); font-family: 'Cinzel', serif; }
+        .char-qv-stat-lbl { font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+        .char-qv-hp-bar-wrap { margin: 0.3rem 0 0.6rem; }
+        .char-qv-hp-bar-bg { background: var(--bg-dark); border-radius: 2px; height: 8px; overflow: hidden; }
+        .char-qv-hp-bar-fill { height: 100%; background: var(--danger); border-radius: 2px; transition: width 0.4s; }
+        .char-qv-actions { display: flex; gap: 0.5rem; }
+
         .canvas-container {
             flex: 1;
             position: relative;
-            background: radial-gradient(circle at center, #1a1f2e 0%, var(--bg-dark) 100%);
+            background: radial-gradient(circle at center, #1a1208 0%, var(--bg-dark) 100%);
             overflow: hidden;
         }
 
@@ -518,7 +666,7 @@
             transform: translateX(-50%);
             background: var(--bg-card);
             border: 2px solid var(--gold);
-            border-radius: 12px;
+            border-radius: 2px;
             padding: 1rem;
             display: flex;
             gap: 0.75rem;
@@ -586,9 +734,9 @@
         .minimap {
             background: var(--bg-card);
             border: 2px solid var(--border);
-            border-radius: 12px;
+            border-radius: 2px;
             padding: 0.75rem;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(200,146,42,0.1);
             width: 180px;
             transition: all 0.3s;
         }
@@ -756,7 +904,7 @@
         .section {
             background: var(--bg-hover);
             border: 1px solid var(--border);
-            border-radius: 10px;
+            border-radius: 2px;
             padding: 1rem;
             margin-bottom: 1rem;
             transition: all 0.3s;
@@ -1049,16 +1197,16 @@
         .dice-roller-btn {
             position: fixed; bottom: 130px; right: 1rem;
             width: 54px; height: 54px;
-            background: linear-gradient(135deg, #7c3aed, #4c1d95);
-            border: 2px solid #8b5cf6; border-radius: 50%;
+            background: linear-gradient(135deg, #9b2335, #6b0f1a);
+            border: 2px solid #c8922a; border-radius: 3px;
             cursor: pointer; font-size: 1.3rem;
             display: none; align-items: center; justify-content: center; flex-direction: column;
-            box-shadow: 0 4px 15px rgba(139,92,246,0.4);
-            z-index: 8000; color: white; line-height: 1;
+            box-shadow: 0 4px 15px rgba(200,146,42,0.3);
+            z-index: 8000; color: var(--gold); line-height: 1;
             transition: transform 0.15s, box-shadow 0.15s;
         }
         .dice-roller-btn.visible { display: flex; }
-        .dice-roller-btn:hover { transform: scale(1.12); box-shadow: 0 6px 22px rgba(139,92,246,0.65); }
+        .dice-roller-btn:hover { transform: scale(1.12); box-shadow: 0 6px 22px rgba(200,146,42,0.5); }
         .dice-roller-btn.rolling { animation: diceRollAnim 0.5s ease-out; }
         @keyframes diceRollAnim {
             0%   { transform: rotate(0deg) scale(1); }
@@ -1149,7 +1297,7 @@
         .char-section {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 2px;
             padding: 1.25rem;
             margin-bottom: 1rem;
         }
@@ -1179,12 +1327,12 @@
         .ability-block {
             background: var(--bg-hover);
             border: 2px solid var(--border);
-            border-radius: 10px;
+            border-radius: 2px;
             padding: 0.75rem;
             text-align: center;
             transition: border-color 0.2s;
         }
-        .ability-block:hover { border-color: var(--accent); }
+        .ability-block:hover { border-color: var(--gold); box-shadow: 0 0 12px rgba(245,197,24,0.2); }
         .ability-name {
             font-size: 0.7rem;
             color: var(--text-dim);
@@ -1217,7 +1365,7 @@
         .stat-block {
             background: var(--bg-hover);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 2px;
             padding: 0.75rem;
             text-align: center;
         }
@@ -1245,7 +1393,7 @@
             padding: 0.6rem 0.75rem;
             background: var(--bg-dark);
             border: 1px solid var(--border);
-            border-radius: 6px;
+            border-radius: 2px;
             color: var(--text);
             font-family: 'Inter', sans-serif;
             font-size: 0.9rem;
@@ -1333,15 +1481,17 @@
         }
         .char-tab {
             padding: 0.4rem 1rem;
-            border-radius: 6px;
+            border-radius: 2px 2px 0 0;
             cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.75rem;
+            font-weight: 700;
             border: 1px solid transparent;
             transition: all 0.2s;
             color: var(--text-dim);
+            font-family: 'Cinzel', serif;
+            letter-spacing: 0.04em;
         }
-        .char-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .char-tab.active { background: var(--accent); color: var(--bg-dark); border-color: var(--accent); }
         .char-tab-content { display: none; }
         .char-tab-content.active { display: block; }
         .death-saves {
@@ -1372,6 +1522,88 @@
             resize: vertical;
         }
         .notes-textarea:focus { outline: none; border-color: var(--accent); }
+
+        /* EXHAUSTION PIPS */
+        .exhaustion-pip {
+            width: 26px; height: 26px;
+            border: 2px solid var(--border);
+            border-radius: 2px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; font-weight: 700; font-family: 'Cinzel', serif;
+            color: var(--text-dim);
+            transition: all 0.15s;
+        }
+        .exhaustion-pip:hover { border-color: var(--danger); color: var(--danger); }
+        .exhaustion-pip.active { background: var(--danger); border-color: var(--danger); color: white; }
+
+        /* CONDITIONS */
+        .condition-tag {
+            padding: 3px 8px;
+            border-radius: 2px;
+            border: 1px solid var(--border);
+            font-size: 0.65rem;
+            font-family: 'Cinzel', serif;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: var(--text-dim);
+            user-select: none;
+        }
+        .condition-tag:hover { border-color: var(--danger); color: var(--danger); }
+        .condition-tag.active { background: var(--danger); border-color: var(--danger); color: white; }
+
+        /* ATTACK ROWS */
+        .attack-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 2fr 1fr auto;
+            gap: 0.4rem;
+            align-items: center;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            padding: 0.4rem;
+        }
+        .attack-row input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            font-size: 0.8rem;
+            padding: 0.2rem 0.3rem;
+            outline: none;
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+        }
+        .attack-row input:focus { border-bottom-color: var(--accent); }
+        .attack-row .atk-del {
+            background: none; border: none; color: var(--danger);
+            cursor: pointer; font-size: 1rem; padding: 0 0.3rem;
+            transition: transform 0.15s;
+        }
+        .attack-row .atk-del:hover { transform: scale(1.2); }
+
+        /* SPELL SLOT ROWS */
+        .spell-slot-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.5rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+        }
+        .spell-slot-label { font-size: 0.75rem; color: var(--gold); font-family: 'Cinzel', serif; min-width: 60px; }
+        .spell-slot-pips { display: flex; gap: 4px; flex:1; }
+        .ss-pip {
+            width: 20px; height: 20px; border-radius: 2px;
+            border: 2px solid var(--border);
+            cursor: pointer; transition: all 0.15s;
+        }
+        .ss-pip.used { background: var(--bg-hover); border-color: var(--text-dim); }
+        .ss-pip.available { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 6px rgba(200,146,42,0.4); }
+        .ss-pip:hover { transform: scale(1.15); }
+        .spell-slot-max { display: flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--text-dim); }
+        .spell-slot-max input { width: 36px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 2px; color: var(--text); text-align: center; font-size: 0.75rem; padding: 2px; }
 
         /* MUSIC PLAYER */
         .music-panel {
@@ -2176,7 +2408,7 @@
             <!-- Character List -->
             <div class="char-list-panel">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-                    <span style="font-size:0.85rem;color:var(--gold);font-weight:600;">Your Characters</span>
+                    <span style="font-size:0.85rem;color:var(--gold);font-weight:600;font-family:'Cinzel',serif;">Your Characters</span>
                     <button class="btn btn-small btn-danger" onclick="deleteCharacter()" id="deleteCharBtn" style="display:none;">🗑 Delete</button>
                 </div>
                 <div id="charListEl"><p style="font-size:0.85rem;color:var(--text-dim);">No characters yet. Click "+ New" to create one.</p></div>
@@ -2190,6 +2422,8 @@
                     <div class="char-tab" onclick="switchCharTab('abilities')">💪 Abilities</div>
                     <div class="char-tab" onclick="switchCharTab('combat')">🛡️ Combat</div>
                     <div class="char-tab" onclick="switchCharTab('skills')">🎲 Skills</div>
+                    <div class="char-tab" onclick="switchCharTab('spells')">✨ Spells</div>
+                    <div class="char-tab" onclick="switchCharTab('equipment')">🎒 Equipment</div>
                     <div class="char-tab" onclick="switchCharTab('notes')">📝 Notes</div>
                     <div class="char-tab" onclick="switchCharTab('features')">📖 Features</div>
                 </div>
@@ -2202,21 +2436,25 @@
                             <div><label class="char-label">Character Name</label><input class="char-input" id="cName" placeholder="Thorin Oakenshield"></div>
                             <div><label class="char-label">Player Name</label><input class="char-input" id="cPlayer" placeholder="Your name"></div>
                         </div>
-                        <div class="char-grid-3">
-                            <div><label class="char-label">Class</label>
-                                <select class="char-input" id="cClass" onchange="updateProfBonus()">
-                                    <option>Barbarian</option><option>Bard</option><option>Cleric</option>
-                                    <option>Druid</option><option>Fighter</option><option>Monk</option>
+                        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+                            <div><label class="char-label">Class (& Subclass)</label>
+                                <select class="char-input" id="cClass" onchange="updateProfBonus();updateSpellcastingAbility()">
+                                    <option>Artificer</option><option>Barbarian</option><option>Bard</option><option>Cleric</option>
+                                    <option>Druid</option><option selected>Fighter</option><option>Monk</option>
                                     <option>Paladin</option><option>Ranger</option><option>Rogue</option>
                                     <option>Sorcerer</option><option>Warlock</option><option>Wizard</option>
                                 </select>
                             </div>
-                            <div><label class="char-label">Level</label><input class="char-input" id="cLevel" type="number" min="1" max="20" value="1" oninput="updateProfBonus()"></div>
-                            <div><label class="char-label">Proficiency Bonus</label><input class="char-input" id="cProfBonus" readonly style="background:var(--bg-card);color:var(--accent);font-weight:700;"></div>
+                            <div><label class="char-label">Level</label><input class="char-input" id="cLevel" type="number" min="1" max="20" value="1" oninput="updateProfBonus();updateSpellcastingAbility()"></div>
+                            <div><label class="char-label">Prof Bonus</label><input class="char-input" id="cProfBonus" readonly style="background:var(--bg-card);color:var(--accent);font-weight:700;text-align:center;"></div>
+                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                                <label class="char-label" style="margin-bottom:0.5rem;">Inspiration</label>
+                                <input type="checkbox" id="cInspiration" style="width:24px;height:24px;accent-color:var(--gold);cursor:pointer;" title="Inspiration">
+                            </div>
                         </div>
-                        <div class="char-grid-3" style="margin-top:0.75rem;">
-                            <div><label class="char-label">Race</label><input class="char-input" id="cRace" placeholder="Dwarf"></div>
-                            <div><label class="char-label">Background</label><input class="char-input" id="cBackground" placeholder="Folk Hero"></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+                            <div><label class="char-label">Race</label><input class="char-input" id="cRace" placeholder="Human"></div>
+                            <div><label class="char-label">Background</label><input class="char-input" id="cBackground" placeholder="Soldier"></div>
                             <div><label class="char-label">Alignment</label>
                                 <select class="char-input" id="cAlignment">
                                     <option>Lawful Good</option><option>Neutral Good</option><option>Chaotic Good</option>
@@ -2224,16 +2462,58 @@
                                     <option>Lawful Evil</option><option>Neutral Evil</option><option>Chaotic Evil</option>
                                 </select>
                             </div>
+                            <div><label class="char-label">XP</label><input class="char-input" id="cXP" type="number" min="0" value="0" placeholder="0"></div>
+                        </div>
+                        <div class="char-grid-2">
+                            <div><label class="char-label">Multiclass (optional)</label><input class="char-input" id="cMulticlass" placeholder="e.g. Rogue 3"></div>
+                            <div><label class="char-label">Token / Portrait Emoji</label><input class="char-input" id="cEmoji" placeholder="🧙" maxlength="2" style="font-size:1.3rem;text-align:center;"></div>
+                        </div>
+                    </div>
+                    <div class="char-section">
+                        <h3>Exhaustion & Conditions</h3>
+                        <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap;">
+                            <div>
+                                <label class="char-label">Exhaustion (0-6)</label>
+                                <div style="display:flex;gap:4px;margin-top:0.4rem;">
+                                    <div class="exhaustion-pip" data-level="1" onclick="toggleExhaustion(1)" title="Lv 1: Disadvantage on checks">1</div>
+                                    <div class="exhaustion-pip" data-level="2" onclick="toggleExhaustion(2)" title="Lv 2: Speed halved">2</div>
+                                    <div class="exhaustion-pip" data-level="3" onclick="toggleExhaustion(3)" title="Lv 3: Dis. on attacks & saves">3</div>
+                                    <div class="exhaustion-pip" data-level="4" onclick="toggleExhaustion(4)" title="Lv 4: HP max halved">4</div>
+                                    <div class="exhaustion-pip" data-level="5" onclick="toggleExhaustion(5)" title="Lv 5: Speed = 0">5</div>
+                                    <div class="exhaustion-pip" data-level="6" onclick="toggleExhaustion(6)" title="Lv 6: Death">6</div>
+                                </div>
+                                <div id="exhaustionLabel" style="font-size:0.7rem;color:var(--text-dim);margin-top:0.3rem;">No exhaustion</div>
+                            </div>
+                            <div style="flex:1;">
+                                <label class="char-label">Active Conditions</label>
+                                <div id="conditionsGrid" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:0.4rem;"></div>
+                            </div>
                         </div>
                     </div>
                     <div class="char-section">
                         <h3>Personality</h3>
                         <div class="char-grid-2">
-                            <div><label class="char-label">Personality Trait</label><textarea class="notes-textarea" id="cPersonality" style="min-height:70px;" placeholder="I always tell the truth..."></textarea></div>
-                            <div><label class="char-label">Ideal</label><textarea class="notes-textarea" id="cIdeal" style="min-height:70px;" placeholder="Greater Good..."></textarea></div>
-                            <div><label class="char-label">Bond</label><textarea class="notes-textarea" id="cBond" style="min-height:70px;" placeholder="I would die for my village..."></textarea></div>
-                            <div><label class="char-label">Flaw</label><textarea class="notes-textarea" id="cFlaw" style="min-height:70px;" placeholder="I'm too proud..."></textarea></div>
+                            <div><label class="char-label">Personality Trait</label><textarea class="notes-textarea" id="cPersonality" style="min-height:70px;" placeholder="I always tell the truth, even when it's not what people want to hear..."></textarea></div>
+                            <div><label class="char-label">Ideal</label><textarea class="notes-textarea" id="cIdeal" style="min-height:70px;" placeholder="Greater Good. It is each person's responsibility to make the most good for the whole tribe..."></textarea></div>
+                            <div><label class="char-label">Bond</label><textarea class="notes-textarea" id="cBond" style="min-height:70px;" placeholder="I would die for my village's freedom..."></textarea></div>
+                            <div><label class="char-label">Flaw</label><textarea class="notes-textarea" id="cFlaw" style="min-height:70px;" placeholder="I'm too proud to admit when I'm wrong..."></textarea></div>
                         </div>
+                    </div>
+                    <div class="char-section">
+                        <h3>Appearance & Backstory</h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+                            <div><label class="char-label">Age</label><input class="char-input" id="cAge" placeholder="35"></div>
+                            <div><label class="char-label">Height</label><input class="char-input" id="cHeight" placeholder="6'2&quot;"></div>
+                            <div><label class="char-label">Weight</label><input class="char-input" id="cWeight" placeholder="180 lbs"></div>
+                            <div><label class="char-label">Eyes</label><input class="char-input" id="cEyes" placeholder="Blue"></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+                            <div><label class="char-label">Skin</label><input class="char-input" id="cSkin" placeholder="Tan"></div>
+                            <div><label class="char-label">Hair</label><input class="char-input" id="cHair" placeholder="Dark brown"></div>
+                            <div><label class="char-label">Distinguishing Marks</label><input class="char-input" id="cMarks" placeholder="Scar over left eye"></div>
+                        </div>
+                        <label class="char-label">Backstory</label>
+                        <textarea class="notes-textarea" id="cBackstory" style="min-height:100px;" placeholder="Your character's backstory, origin, and motivations..."></textarea>
                     </div>
                 </div>
 
@@ -2273,18 +2553,28 @@
                                 <div class="ability-mod" id="mCHA">+0</div>
                             </div>
                         </div>
+                        <div style="margin-top:0.75rem;padding:0.5rem 0.75rem;background:var(--bg-dark);border-radius:2px;font-size:0.75rem;color:var(--text-dim);">
+                            💡 Roll 4d6 drop lowest (or use Standard Array: 15, 14, 13, 12, 10, 8) and assign to each ability.
+                        </div>
                     </div>
                     <div class="char-section">
                         <h3>Saving Throws</h3>
                         <div class="skill-list" id="savingThrowList"></div>
+                    </div>
+                    <div class="char-section">
+                        <h3>Languages & Proficiencies</h3>
+                        <div class="char-grid-2">
+                            <div><label class="char-label">Languages</label><textarea class="notes-textarea" id="cLanguages" style="min-height:60px;" placeholder="Common, Elvish, Dwarvish..."></textarea></div>
+                            <div><label class="char-label">Tool / Weapon / Armor Proficiencies</label><textarea class="notes-textarea" id="cOtherProfs" style="min-height:60px;" placeholder="Smith's tools, longswords, heavy armor..."></textarea></div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- COMBAT TAB -->
                 <div class="char-tab-content" id="tabCombat">
                     <div class="char-section">
-                        <h3>Hit Points</h3>
-                        <div class="char-grid-3" style="margin-bottom:1rem;">
+                        <h3>Hit Points & Defenses</h3>
+                        <div class="char-grid-3" style="margin-bottom:0.75rem;">
                             <div class="stat-block">
                                 <label>Max HP</label>
                                 <input type="number" id="cHPMax" value="10" min="0">
@@ -2302,43 +2592,59 @@
                                 <input type="number" id="cTempHP" value="0" min="0">
                             </div>
                         </div>
-                        <div style="margin-bottom:0.75rem;">
-                            <label class="char-label">Death Saves</label>
-                            <div style="display:flex;gap:1rem;margin-top:0.5rem;">
-                                <div>
-                                    <span style="font-size:0.75rem;color:var(--success);margin-right:0.5rem;">Successes</span>
-                                    <div class="death-saves">
-                                        <div class="death-save-pip success" onclick="toggleDeathSave(this)" data-index="0"></div>
-                                        <div class="death-save-pip success" onclick="toggleDeathSave(this)" data-index="1"></div>
-                                        <div class="death-save-pip success" onclick="toggleDeathSave(this)" data-index="2"></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.75rem;">
+                            <div class="stat-block"><label>AC</label><input type="number" id="cAC" value="10" min="0"></div>
+                            <div class="stat-block"><label>Initiative</label><input type="number" id="cInit" value="0" readonly style="color:var(--accent);" title="DEX modifier"></div>
+                            <div class="stat-block"><label>Speed</label><input type="number" id="cSpeed" value="30" min="0"></div>
+                            <div class="stat-block"><label>Hit Dice</label><input type="text" id="cHitDice" value="1d10" style="font-size:0.9rem;text-align:center;width:100%;background:transparent;border:none;color:var(--text);outline:none;"></div>
+                            <div class="stat-block"><label>Used HD</label><input type="number" id="cHitDiceUsed" value="0" min="0"></div>
+                        </div>
+                        <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;">
+                            <div>
+                                <label class="char-label">Death Saves</label>
+                                <div style="display:flex;gap:0.75rem;margin-top:0.4rem;">
+                                    <div>
+                                        <span style="font-size:0.7rem;color:var(--success);margin-right:0.3rem;">✓ Successes</span>
+                                        <div class="death-saves">
+                                            <div class="death-save-pip success" onclick="toggleDeathSave(this)"></div>
+                                            <div class="death-save-pip success" onclick="toggleDeathSave(this)"></div>
+                                            <div class="death-save-pip success" onclick="toggleDeathSave(this)"></div>
+                                        </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <span style="font-size:0.75rem;color:var(--danger);margin-right:0.5rem;">Failures</span>
-                                    <div class="death-saves">
-                                        <div class="death-save-pip failure" onclick="toggleDeathSave(this)" data-index="0"></div>
-                                        <div class="death-save-pip failure" onclick="toggleDeathSave(this)" data-index="1"></div>
-                                        <div class="death-save-pip failure" onclick="toggleDeathSave(this)" data-index="2"></div>
+                                    <div>
+                                        <span style="font-size:0.7rem;color:var(--danger);margin-right:0.3rem;">✗ Failures</span>
+                                        <div class="death-saves">
+                                            <div class="death-save-pip failure" onclick="toggleDeathSave(this)"></div>
+                                            <div class="death-save-pip failure" onclick="toggleDeathSave(this)"></div>
+                                            <div class="death-save-pip failure" onclick="toggleDeathSave(this)"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                            <div style="flex:1;">
+                                <label class="char-label">Concentration (spell name)</label>
+                                <input class="char-input" id="cConcentration" placeholder="e.g. Bless, Fog Cloud...">
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                            <div><label class="char-label">Passive Perception</label><input class="char-input" id="cPassivePerception" readonly style="background:var(--bg-card);color:var(--accent);font-weight:700;text-align:center;"></div>
+                            <div><label class="char-label">Passive Investigation</label><input class="char-input" id="cPassiveInvestigation" readonly style="background:var(--bg-card);color:var(--accent);font-weight:700;text-align:center;"></div>
                         </div>
                     </div>
+
                     <div class="char-section">
-                        <h3>Combat Stats</h3>
+                        <h3>Attacks & Weapons</h3>
+                        <div id="attacksList" style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.75rem;"></div>
+                        <button class="btn btn-small" onclick="addAttack()" style="width:100%;">+ Add Attack / Weapon</button>
+                    </div>
+
+                    <div class="char-section">
+                        <h3>Resistances, Immunities & Vulnerabilities</h3>
                         <div class="char-grid-3">
-                            <div class="stat-block"><label>Armor Class</label><input type="number" id="cAC" value="10" min="0"></div>
-                            <div class="stat-block"><label>Initiative</label><input type="number" id="cInit" value="0" readonly style="color:var(--accent);" title="Equals DEX modifier"></div>
-                            <div class="stat-block"><label>Speed (ft)</label><input type="number" id="cSpeed" value="30" min="0"></div>
+                            <div><label class="char-label">Damage Resistances</label><textarea class="notes-textarea" id="cResistances" style="min-height:60px;" placeholder="Fire, Poison..."></textarea></div>
+                            <div><label class="char-label">Damage Immunities</label><textarea class="notes-textarea" id="cImmunities" style="min-height:60px;" placeholder="Psychic (Divination Wizard)..."></textarea></div>
+                            <div><label class="char-label">Vulnerabilities</label><textarea class="notes-textarea" id="cVulnerabilities" style="min-height:60px;" placeholder="Fire (Yeti)..."></textarea></div>
                         </div>
-                        <div class="char-grid-2" style="margin-top:0.75rem;">
-                            <div><label class="char-label">Hit Dice</label><input class="char-input" id="cHitDice" placeholder="1d10" title="e.g. 1d10 for Fighter"></div>
-                            <div><label class="char-label">Passive Perception</label><input class="char-input" id="cPassivePerception" readonly style="background:var(--bg-card);color:var(--accent);font-weight:700;"></div>
-                        </div>
-                    </div>
-                    <div class="char-section">
-                        <h3>Equipment & Inventory</h3>
-                        <textarea class="notes-textarea" id="cInventory" placeholder="List weapons, armor, and items here..."></textarea>
                     </div>
                 </div>
 
@@ -2350,25 +2656,114 @@
                     </div>
                 </div>
 
+                <!-- SPELLS TAB -->
+                <div class="char-tab-content" id="tabSpells">
+                    <div class="char-section">
+                        <h3>Spellcasting</h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+                            <div><label class="char-label">Spellcasting Class</label><input class="char-input" id="cSpellClass" placeholder="Wizard" readonly style="background:var(--bg-card);"></div>
+                            <div><label class="char-label">Spellcasting Ability</label><input class="char-input" id="cSpellAbility" placeholder="INT" readonly style="background:var(--bg-card);color:var(--accent);font-weight:700;text-align:center;"></div>
+                            <div><label class="char-label">Spell Save DC</label><input class="char-input" id="cSpellSaveDC" readonly style="background:var(--bg-card);color:var(--accent);font-weight:700;text-align:center;"></div>
+                            <div><label class="char-label">Spell Attack Bonus</label><input class="char-input" id="cSpellAttackBonus" readonly style="background:var(--bg-card);color:var(--accent);font-weight:700;text-align:center;"></div>
+                        </div>
+                        <div style="padding:0.5rem 0.75rem;background:var(--bg-dark);border-radius:2px;font-size:0.75rem;color:var(--text-dim);">
+                            Spell Save DC = 8 + Prof Bonus + Spellcasting Ability Modifier &nbsp;|&nbsp; Spell Attack = Prof Bonus + Spellcasting Ability Modifier
+                        </div>
+                    </div>
+
+                    <div class="char-section">
+                        <h3>Spell Slots</h3>
+                        <div id="spellSlotsGrid" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+                    </div>
+
+                    <div class="char-section">
+                        <h3>Cantrips (∞)</h3>
+                        <textarea class="notes-textarea" id="cCantrips" style="min-height:70px;" placeholder="Fire Bolt, Mage Hand, Prestidigitation, Minor Illusion..."></textarea>
+                    </div>
+
+                    <div class="char-section">
+                        <h3>Prepared / Known Spells</h3>
+                        <textarea class="notes-textarea" id="cSpells" style="min-height:200px;" placeholder="Level 1: Magic Missile, Shield, Sleep, Thunderwave&#10;Level 2: Misty Step, Shatter&#10;Level 3: Fireball, Counterspell&#10;..."></textarea>
+                    </div>
+                </div>
+
+                <!-- EQUIPMENT TAB -->
+                <div class="char-tab-content" id="tabEquipment">
+                    <div class="char-section">
+                        <h3>Currency</h3>
+                        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;">
+                            <div class="stat-block" style="border-color:#a97142;">
+                                <label style="color:#a97142;">PP</label>
+                                <input type="number" id="cPP" value="0" min="0">
+                                <div style="font-size:0.6rem;color:var(--text-dim);">Platinum</div>
+                            </div>
+                            <div class="stat-block" style="border-color:var(--gold);">
+                                <label style="color:var(--gold);">GP</label>
+                                <input type="number" id="cGP" value="0" min="0">
+                                <div style="font-size:0.6rem;color:var(--text-dim);">Gold</div>
+                            </div>
+                            <div class="stat-block" style="border-color:#7ec8e3;">
+                                <label style="color:#7ec8e3;">EP</label>
+                                <input type="number" id="cEP" value="0" min="0">
+                                <div style="font-size:0.6rem;color:var(--text-dim);">Electrum</div>
+                            </div>
+                            <div class="stat-block" style="border-color:#c0c0c0;">
+                                <label style="color:#c0c0c0;">SP</label>
+                                <input type="number" id="cSP" value="0" min="0">
+                                <div style="font-size:0.6rem;color:var(--text-dim);">Silver</div>
+                            </div>
+                            <div class="stat-block" style="border-color:#b87333;">
+                                <label style="color:#b87333;">CP</label>
+                                <input type="number" id="cCP" value="0" min="0">
+                                <div style="font-size:0.6rem;color:var(--text-dim);">Copper</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="char-section">
+                        <h3>Equipment & Inventory</h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+                            <div><label class="char-label">Carrying Capacity (STR × 15 lbs)</label><input class="char-input" id="cCarryingCap" readonly style="background:var(--bg-card);color:var(--accent);text-align:center;"></div>
+                            <div><label class="char-label">Current Weight (lbs, manual)</label><input class="char-input" id="cCurrentWeight" type="number" min="0" value="0" placeholder="0"></div>
+                        </div>
+                        <textarea class="notes-textarea" id="cInventory" style="min-height:180px;" placeholder="Longsword (3 lbs)&#10;Chain Mail (55 lbs)&#10;Shield (6 lbs)&#10;Explorer's Pack&#10;  - Backpack, bedroll, mess kit, tinderbox, 10 torches...&#10;3 daggers (3 lbs)"></textarea>
+                    </div>
+
+                    <div class="char-section">
+                        <h3>Attuned Magic Items (max 3)</h3>
+                        <div style="display:flex;flex-direction:column;gap:0.4rem;">
+                            <input class="char-input" id="cAttune1" placeholder="1. (none)">
+                            <input class="char-input" id="cAttune2" placeholder="2. (none)">
+                            <input class="char-input" id="cAttune3" placeholder="3. (none)">
+                        </div>
+                    </div>
+
+                    <div class="char-section">
+                        <h3>Treasure & Other</h3>
+                        <textarea class="notes-textarea" id="cTreasure" style="min-height:100px;" placeholder="Sapphire (500 gp)&#10;Ancient Map&#10;Letter from the King..."></textarea>
+                    </div>
+                </div>
+
                 <!-- NOTES TAB -->
                 <div class="char-tab-content" id="tabNotes">
                     <div class="char-section">
-                        <h3>Spells</h3>
-                        <textarea class="notes-textarea" id="cSpells" placeholder="List your spells, cantrips, and spell slots here..."></textarea>
-                    </div>
-                    <div class="char-section">
                         <h3>Features & Traits</h3>
-                        <textarea class="notes-textarea" id="cFeatures" placeholder="Class features, racial traits, feats..."></textarea>
+                        <textarea class="notes-textarea" id="cFeatures" style="min-height:100px;" placeholder="Class features, racial traits, feats, fighting styles..."></textarea>
                     </div>
                     <div class="char-section">
                         <h3>Campaign Notes</h3>
-                        <textarea class="notes-textarea" id="cNotes" placeholder="Session notes, plot hooks, NPCs met..."></textarea>
+                        <textarea class="notes-textarea" id="cNotes" style="min-height:120px;" placeholder="Session notes, plot hooks, NPCs met, important locations..."></textarea>
                     </div>
                     <div class="char-section">
-                        <h3>Backstory</h3>
-                        <textarea class="notes-textarea" id="cBackstory" placeholder="Your character's backstory..."></textarea>
+                        <h3>Allies & Organizations</h3>
+                        <textarea class="notes-textarea" id="cAllies" style="min-height:80px;" placeholder="The Harpers - allied faction&#10;Gandalf the Grey - mentor&#10;..."></textarea>
+                    </div>
+                    <div class="char-section">
+                        <h3>Additional Notes</h3>
+                        <textarea class="notes-textarea" id="cExtra" style="min-height:80px;" placeholder="Anything else worth noting..."></textarea>
                     </div>
                 </div>
+
                 <!-- FEATURES TAB -->
                 <div class="char-tab-content" id="tabFeatures">
                     <div id="featuresPanel">
@@ -2376,6 +2771,46 @@
                     </div>
                 </div>
             </div><!-- end charEditor -->
+        </div>
+    </div>
+
+    <!-- CHARACTER TRAY (bottom of screen) -->
+    <div class="char-tray" id="charTray"></div>
+
+    <!-- CHARACTER QUICK-VIEW POPUP -->
+    <div class="char-quickview" id="charQuickView">
+        <div class="char-qv-header">
+            <div>
+                <div class="char-qv-name" id="qvName">Character</div>
+                <div class="char-qv-sub" id="qvSub">Class • Race</div>
+            </div>
+            <button onclick="closeQuickView()" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:1.1rem;padding:0;">✕</button>
+        </div>
+        <div class="char-qv-body">
+            <div class="char-qv-hp-bar-wrap">
+                <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text-dim);margin-bottom:2px;">
+                    <span>HP</span><span id="qvHPText">10/10</span>
+                </div>
+                <div class="char-qv-hp-bar-bg"><div class="char-qv-hp-bar-fill" id="qvHPBar" style="width:100%"></div></div>
+            </div>
+            <div class="char-qv-stats">
+                <div class="char-qv-stat"><div class="char-qv-stat-val" id="qvAC">10</div><div class="char-qv-stat-lbl">AC</div></div>
+                <div class="char-qv-stat"><div class="char-qv-stat-val" id="qvInit">+0</div><div class="char-qv-stat-lbl">Init</div></div>
+                <div class="char-qv-stat"><div class="char-qv-stat-val" id="qvSpeed">30</div><div class="char-qv-stat-lbl">Speed</div></div>
+                <div class="char-qv-stat"><div class="char-qv-stat-val" id="qvProf">+2</div><div class="char-qv-stat-lbl">Prof</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:0.6rem;">
+                <div class="char-qv-stat"><div class="char-qv-stat-val" style="font-size:0.85rem;" id="qvSTR">10</div><div class="char-qv-stat-lbl">STR</div></div>
+                <div class="char-qv-stat"><div class="char-qv-stat-val" style="font-size:0.85rem;" id="qvDEX">10</div><div class="char-qv-stat-lbl">DEX</div></div>
+                <div class="char-qv-stat"><div class="char-qv-stat-val" style="font-size:0.85rem;" id="qvCON">10</div><div class="char-qv-stat-lbl">CON</div></div>
+                <div class="char-qv-stat"><div class="char-qv-stat-val" style="font-size:0.85rem;" id="qvINT">10</div><div class="char-qv-stat-lbl">INT</div></div>
+                <div class="char-qv-stat"><div class="char-qv-stat-val" style="font-size:0.85rem;" id="qvWIS">10</div><div class="char-qv-stat-lbl">WIS</div></div>
+                <div class="char-qv-stat"><div class="char-qv-stat-val" style="font-size:0.85rem;" id="qvCHA">10</div><div class="char-qv-stat-lbl">CHA</div></div>
+            </div>
+            <div class="char-qv-actions">
+                <button class="btn btn-primary btn-small" onclick="openFullSheetFromTray()" style="flex:1;">📜 Full Sheet</button>
+                <button class="btn btn-small" onclick="closeQuickView()" style="flex:0;">Close</button>
+            </div>
         </div>
     </div>
 
@@ -2768,6 +3203,9 @@
 
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
+
+            // Load char tray on startup
+            try { loadCharactersFromStorage(); renderCharTray(); } catch(e) {}
 
             // On page hide/close: flush any pending Firebase save immediately
             // so game state is never lost on DM refresh.
@@ -5272,6 +5710,31 @@
             draggedToken = null;
         });
 
+        // === SCROLL-WHEEL ZOOM (zooms toward mouse cursor) ===
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // World coordinates of the mouse before zoom
+            const worldX = (mouseX - panX) / zoom;
+            const worldY = (mouseY - panY) / zoom;
+
+            const factor = e.deltaY < 0 ? 1.1 : 0.909;
+            const newZoom = Math.min(3.0, Math.max(0.25, zoom * factor));
+
+            // Adjust pan so the world point stays under the cursor
+            panX = mouseX - worldX * newZoom;
+            panY = mouseY - worldY * newZoom;
+            zoom = newZoom;
+
+            const sliderVal = Math.round(zoom * 100);
+            document.getElementById('zoomSlider').value = sliderVal;
+            document.getElementById('zoomValue').textContent = sliderVal + '%';
+            draw();
+        }, { passive: false });
+
         // === FOG ===
         function showFogGroupModal() {
             document.getElementById('fogGroupModal').classList.add('active');
@@ -6083,6 +6546,7 @@
             document.getElementById('charOverlay').classList.add('active');
             updateAllAbilityMods();
             updateProfBonus();
+            renderCharTray();
         }
 
         function closeCharSheet() {
@@ -6106,30 +6570,54 @@
                 el.innerHTML = '<p style="font-size:0.85rem;color:var(--text-dim);">No characters yet. Click "+ New" to create one.</p>';
                 document.getElementById('charEditor').style.display = 'none';
                 document.getElementById('deleteCharBtn').style.display = 'none';
+                renderCharTray();
                 return;
             }
-            el.innerHTML = characters.map((c, i) => `
-                <div class="char-list-item ${i === activeCharIdx ? 'active' : ''}" onclick="loadCharacter(${i})">
-                    <div>
-                        <div style="font-weight:600;">${c.name || 'Unnamed'}</div>
-                        <div style="font-size:0.75rem;color:var(--text-dim);">${c.class || '?'} ${c.level || 1} • ${c.race || '?'}</div>
+            el.innerHTML = characters.map((c, i) => {
+                const hpPct = c.hpMax > 0 ? Math.max(0, Math.min(100, Math.round((c.hp / c.hpMax) * 100))) : 0;
+                return `<div class="char-list-item ${i === activeCharIdx ? 'active' : ''}" onclick="loadCharacter(${i})">
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <span style="font-size:1.4rem;">${c.emoji || '⚔️'}</span>
+                        <div>
+                            <div style="font-weight:600;font-family:'Cinzel',serif;">${c.name || 'Unnamed'}</div>
+                            <div style="font-size:0.75rem;color:var(--text-dim);">${c.class || '?'} ${c.level || 1} • ${c.race || '?'}</div>
+                        </div>
                     </div>
                     <div style="text-align:right;font-size:0.8rem;">
                         <div style="color:var(--danger);">❤️ ${c.hp || 0}/${c.hpMax || 0}</div>
                         <div style="color:var(--text-dim);">🛡️ AC ${c.ac || 10}</div>
+                        <div style="background:var(--bg-dark);border-radius:2px;height:4px;margin-top:3px;"><div style="background:var(--danger);height:4px;border-radius:2px;width:${hpPct}%"></div></div>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
+            renderCharTray();
         }
 
         function newCharacter() {
             const char = {
                 name:'', player: myName || '', class:'Fighter', level:1, race:'', background:'', alignment:'True Neutral',
+                xp:0, multiclass:'', emoji:'⚔️',
                 str:10, dex:10, con:10, int:10, wis:10, cha:10,
-                hp:10, hpMax:10, tempHp:0, ac:10, speed:30, hitDice:'1d10',
+                hp:10, hpMax:10, tempHp:0, ac:10, speed:30, hitDice:'1d10', hitDiceUsed:0,
+                inspiration:false, exhaustion:0, conditions:[],
+                concentration:'',
                 skillProfs:{}, saveProfs:{},
                 personality:'', ideal:'', bond:'', flaw:'',
-                inventory:'', spells:'', features:'', notes:'', backstory:'',
+                age:'', height:'', weight:'', eyes:'', skin:'', hair:'', marks:'',
+                languages:'Common', otherProfs:'',
+                // Combat
+                attacks:[],
+                resistances:'', immunities:'', vulnerabilities:'',
+                // Spells
+                cantrips:'', spells:'', spellSlots:{1:{max:0,used:0},2:{max:0,used:0},3:{max:0,used:0},4:{max:0,used:0},5:{max:0,used:0},6:{max:0,used:0},7:{max:0,used:0},8:{max:0,used:0},9:{max:0,used:0}},
+                // Equipment
+                pp:0, gp:0, ep:0, sp:0, cp:0,
+                inventory:'', currentWeight:0,
+                attune1:'', attune2:'', attune3:'',
+                treasure:'',
+                // Notes
+                features:'', notes:'', allies:'', extra:'',
+                backstory:'',
                 deathSuccesses:[false,false,false], deathFailures:[false,false,false],
                 featureChoices:{}
             };
@@ -6137,6 +6625,8 @@
             activeCharIdx = characters.length - 1;
             saveCharactersToStorage();
             renderCharList();
+            buildConditionsGrid(char);
+            buildSpellSlotsUI(char);
             populateCharEditor(char);
             document.getElementById('charEditor').style.display = 'block';
             document.getElementById('deleteCharBtn').style.display = 'inline-block';
@@ -6145,7 +6635,10 @@
         function loadCharacter(idx) {
             activeCharIdx = idx;
             const char = characters[idx];
+            buildConditionsGrid(char);
+            buildSpellSlotsUI(char);
             populateCharEditor(char);
+            renderAttacksList(char.attacks || []);
             document.getElementById('charEditor').style.display = 'block';
             document.getElementById('deleteCharBtn').style.display = 'inline-block';
             renderCharList();
@@ -6158,39 +6651,74 @@
             activeCharIdx = -1;
             saveCharactersToStorage();
             renderCharList();
+            renderCharTray();
             document.getElementById('charEditor').style.display = 'none';
             document.getElementById('deleteCharBtn').style.display = 'none';
         }
 
+        function _setVal(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+        function _setChk(id, val) { const el = document.getElementById(id); if (el) el.checked = !!val; }
+
         function populateCharEditor(c) {
-            document.getElementById('cName').value = c.name || '';
-            document.getElementById('cPlayer').value = c.player || '';
-            document.getElementById('cClass').value = c.class || 'Fighter';
-            document.getElementById('cLevel').value = c.level || 1;
-            document.getElementById('cRace').value = c.race || '';
-            document.getElementById('cBackground').value = c.background || '';
-            document.getElementById('cAlignment').value = c.alignment || 'True Neutral';
-            document.getElementById('aSTR').value = c.str || 10;
-            document.getElementById('aDEX').value = c.dex || 10;
-            document.getElementById('aCON').value = c.con || 10;
-            document.getElementById('aINT').value = c.int || 10;
-            document.getElementById('aWIS').value = c.wis || 10;
-            document.getElementById('aCHA').value = c.cha || 10;
-            document.getElementById('cHP').value = c.hp || 10;
-            document.getElementById('cHPMax').value = c.hpMax || 10;
-            document.getElementById('cTempHP').value = c.tempHp || 0;
-            document.getElementById('cAC').value = c.ac || 10;
-            document.getElementById('cSpeed').value = c.speed || 30;
-            document.getElementById('cHitDice').value = c.hitDice || '1d10';
-            document.getElementById('cPersonality').value = c.personality || '';
-            document.getElementById('cIdeal').value = c.ideal || '';
-            document.getElementById('cBond').value = c.bond || '';
-            document.getElementById('cFlaw').value = c.flaw || '';
-            document.getElementById('cInventory').value = c.inventory || '';
-            document.getElementById('cSpells').value = c.spells || '';
-            document.getElementById('cFeatures').value = c.features || '';
-            document.getElementById('cNotes').value = c.notes || '';
-            document.getElementById('cBackstory').value = c.backstory || '';
+            _setVal('cName', c.name || '');
+            _setVal('cPlayer', c.player || '');
+            _setVal('cClass', c.class || 'Fighter');
+            _setVal('cLevel', c.level || 1);
+            _setVal('cRace', c.race || '');
+            _setVal('cBackground', c.background || '');
+            _setVal('cAlignment', c.alignment || 'True Neutral');
+            _setVal('cXP', c.xp || 0);
+            _setVal('cMulticlass', c.multiclass || '');
+            _setVal('cEmoji', c.emoji || '⚔️');
+            _setChk('cInspiration', c.inspiration);
+            _setVal('aSTR', c.str || 10);
+            _setVal('aDEX', c.dex || 10);
+            _setVal('aCON', c.con || 10);
+            _setVal('aINT', c.int || 10);
+            _setVal('aWIS', c.wis || 10);
+            _setVal('aCHA', c.cha || 10);
+            _setVal('cHP', c.hp || 10);
+            _setVal('cHPMax', c.hpMax || 10);
+            _setVal('cTempHP', c.tempHp || 0);
+            _setVal('cAC', c.ac || 10);
+            _setVal('cSpeed', c.speed || 30);
+            _setVal('cHitDice', c.hitDice || '1d10');
+            _setVal('cHitDiceUsed', c.hitDiceUsed || 0);
+            _setVal('cConcentration', c.concentration || '');
+            _setVal('cPersonality', c.personality || '');
+            _setVal('cIdeal', c.ideal || '');
+            _setVal('cBond', c.bond || '');
+            _setVal('cFlaw', c.flaw || '');
+            _setVal('cAge', c.age || '');
+            _setVal('cHeight', c.height || '');
+            _setVal('cWeight', c.weight || '');
+            _setVal('cEyes', c.eyes || '');
+            _setVal('cSkin', c.skin || '');
+            _setVal('cHair', c.hair || '');
+            _setVal('cMarks', c.marks || '');
+            _setVal('cLanguages', c.languages || '');
+            _setVal('cOtherProfs', c.otherProfs || '');
+            _setVal('cResistances', c.resistances || '');
+            _setVal('cImmunities', c.immunities || '');
+            _setVal('cVulnerabilities', c.vulnerabilities || '');
+            _setVal('cCantrips', c.cantrips || '');
+            _setVal('cSpells', c.spells || '');
+            _setVal('cPP', c.pp || 0);
+            _setVal('cGP', c.gp || 0);
+            _setVal('cEP', c.ep || 0);
+            _setVal('cSP', c.sp || 0);
+            _setVal('cCP', c.cp || 0);
+            _setVal('cCurrentWeight', c.currentWeight || 0);
+            _setVal('cAttune1', c.attune1 || '');
+            _setVal('cAttune2', c.attune2 || '');
+            _setVal('cAttune3', c.attune3 || '');
+            _setVal('cTreasure', c.treasure || '');
+            _setVal('cInventory', c.inventory || '');
+            _setVal('cFeatures', c.features || '');
+            _setVal('cNotes', c.notes || '');
+            _setVal('cAllies', c.allies || '');
+            _setVal('cExtra', c.extra || '');
+            _setVal('cBackstory', c.backstory || '');
             // Skill profs
             document.querySelectorAll('.skill-prof-check').forEach(cb => {
                 cb.checked = !!(c.skillProfs && c.skillProfs[cb.dataset.skill]);
@@ -6203,45 +6731,106 @@
             ['deathSuccesses','deathFailures'].forEach(key => {
                 const type = key === 'deathSuccesses' ? 'success' : 'failure';
                 document.querySelectorAll(`.death-save-pip.${type}`).forEach((pip, i) => {
-                    const filled = c[key] && c[key][i];
-                    pip.classList.toggle('filled', !!filled);
+                    pip.classList.toggle('filled', !!(c[key] && c[key][i]));
                 });
             });
+            // Exhaustion
+            const exLevel = c.exhaustion || 0;
+            document.querySelectorAll('.exhaustion-pip').forEach(pip => {
+                pip.classList.toggle('active', parseInt(pip.dataset.level) <= exLevel);
+            });
+            updateExhaustionLabel(exLevel);
+            // Conditions
+            document.querySelectorAll('.condition-tag').forEach(tag => {
+                tag.classList.toggle('active', !!(c.conditions && c.conditions.includes(tag.dataset.cond)));
+            });
+            // Attacks
+            renderAttacksList(c.attacks || []);
+            // Spell slots
+            buildSpellSlotsUI(c);
+            // Carrying capacity
+            updateCarryingCap();
             updateAllAbilityMods();
             updateProfBonus();
+            updateSpellcastingAbility();
         }
+
+        function _getVal(id, def='') { const el = document.getElementById(id); return el ? el.value : def; }
+        function _getInt(id, def=0)  { return parseInt(_getVal(id, def)) || def; }
+        function _getChk(id) { const el = document.getElementById(id); return el ? el.checked : false; }
 
         function saveCharacter() {
             if (activeCharIdx < 0) { alert('No character selected. Click "+ New" first.'); return; }
             const c = characters[activeCharIdx];
-            c.name = document.getElementById('cName').value;
-            c.player = document.getElementById('cPlayer').value;
-            c.class = document.getElementById('cClass').value;
-            c.level = parseInt(document.getElementById('cLevel').value) || 1;
-            c.race = document.getElementById('cRace').value;
-            c.background = document.getElementById('cBackground').value;
-            c.alignment = document.getElementById('cAlignment').value;
-            c.str = parseInt(document.getElementById('aSTR').value) || 10;
-            c.dex = parseInt(document.getElementById('aDEX').value) || 10;
-            c.con = parseInt(document.getElementById('aCON').value) || 10;
-            c.int = parseInt(document.getElementById('aINT').value) || 10;
-            c.wis = parseInt(document.getElementById('aWIS').value) || 10;
-            c.cha = parseInt(document.getElementById('aCHA').value) || 10;
-            c.hp = parseInt(document.getElementById('cHP').value) || 0;
-            c.hpMax = parseInt(document.getElementById('cHPMax').value) || 10;
-            c.tempHp = parseInt(document.getElementById('cTempHP').value) || 0;
-            c.ac = parseInt(document.getElementById('cAC').value) || 10;
-            c.speed = parseInt(document.getElementById('cSpeed').value) || 30;
-            c.hitDice = document.getElementById('cHitDice').value;
-            c.personality = document.getElementById('cPersonality').value;
-            c.ideal = document.getElementById('cIdeal').value;
-            c.bond = document.getElementById('cBond').value;
-            c.flaw = document.getElementById('cFlaw').value;
-            c.inventory = document.getElementById('cInventory').value;
-            c.spells = document.getElementById('cSpells').value;
-            c.features = document.getElementById('cFeatures').value;
-            c.notes = document.getElementById('cNotes').value;
-            c.backstory = document.getElementById('cBackstory').value;
+            c.name = _getVal('cName');
+            c.player = _getVal('cPlayer');
+            c.class = _getVal('cClass');
+            c.level = _getInt('cLevel', 1);
+            c.race = _getVal('cRace');
+            c.background = _getVal('cBackground');
+            c.alignment = _getVal('cAlignment');
+            c.xp = _getInt('cXP', 0);
+            c.multiclass = _getVal('cMulticlass');
+            c.emoji = _getVal('cEmoji') || '⚔️';
+            c.inspiration = _getChk('cInspiration');
+            c.str = _getInt('aSTR', 10);
+            c.dex = _getInt('aDEX', 10);
+            c.con = _getInt('aCON', 10);
+            c.int = _getInt('aINT', 10);
+            c.wis = _getInt('aWIS', 10);
+            c.cha = _getInt('aCHA', 10);
+            c.hp = _getInt('cHP', 0);
+            c.hpMax = _getInt('cHPMax', 10);
+            c.tempHp = _getInt('cTempHP', 0);
+            c.ac = _getInt('cAC', 10);
+            c.speed = _getInt('cSpeed', 30);
+            c.hitDice = _getVal('cHitDice');
+            c.hitDiceUsed = _getInt('cHitDiceUsed', 0);
+            c.concentration = _getVal('cConcentration');
+            c.personality = _getVal('cPersonality');
+            c.ideal = _getVal('cIdeal');
+            c.bond = _getVal('cBond');
+            c.flaw = _getVal('cFlaw');
+            c.age = _getVal('cAge');
+            c.height = _getVal('cHeight');
+            c.weight = _getVal('cWeight');
+            c.eyes = _getVal('cEyes');
+            c.skin = _getVal('cSkin');
+            c.hair = _getVal('cHair');
+            c.marks = _getVal('cMarks');
+            c.languages = _getVal('cLanguages');
+            c.otherProfs = _getVal('cOtherProfs');
+            c.resistances = _getVal('cResistances');
+            c.immunities = _getVal('cImmunities');
+            c.vulnerabilities = _getVal('cVulnerabilities');
+            c.cantrips = _getVal('cCantrips');
+            c.spells = _getVal('cSpells');
+            c.pp = _getInt('cPP', 0);
+            c.gp = _getInt('cGP', 0);
+            c.ep = _getInt('cEP', 0);
+            c.sp = _getInt('cSP', 0);
+            c.cp = _getInt('cCP', 0);
+            c.currentWeight = _getInt('cCurrentWeight', 0);
+            c.attune1 = _getVal('cAttune1');
+            c.attune2 = _getVal('cAttune2');
+            c.attune3 = _getVal('cAttune3');
+            c.treasure = _getVal('cTreasure');
+            c.inventory = _getVal('cInventory');
+            c.features = _getVal('cFeatures');
+            c.notes = _getVal('cNotes');
+            c.allies = _getVal('cAllies');
+            c.extra = _getVal('cExtra');
+            c.backstory = _getVal('cBackstory');
+            // Exhaustion
+            const activePips = document.querySelectorAll('.exhaustion-pip.active');
+            c.exhaustion = activePips.length;
+            // Conditions
+            c.conditions = [];
+            document.querySelectorAll('.condition-tag.active').forEach(tag => c.conditions.push(tag.dataset.cond));
+            // Attacks
+            c.attacks = readAttacksList();
+            // Spell slots
+            c.spellSlots = readSpellSlots();
             // Skill profs
             c.skillProfs = {};
             document.querySelectorAll('.skill-prof-check').forEach(cb => {
@@ -6263,12 +6852,16 @@
             });
             saveCharactersToStorage();
             renderCharList();
+            renderCharTray();
             // Flash save button
             const btn = document.querySelector('[onclick="saveCharacter()"]');
-            const orig = btn.textContent;
-            btn.textContent = '✓ Saved!';
-            btn.style.background = 'var(--success)';
-            setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1500);
+            if (btn) {
+                const orig = btn.textContent;
+                btn.textContent = '✓ Saved!';
+                btn.style.background = 'var(--success)';
+                btn.style.color = '#0e0b08';
+                setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 1500);
+            }
         }
 
         function getAbilityMod(score) { return Math.floor((parseInt(score) - 10) / 2); }
@@ -6279,10 +6872,12 @@
             document.getElementById('m' + attr).textContent = (mod >= 0 ? '+' : '') + mod;
             // Update initiative from DEX
             if (attr === 'DEX') document.getElementById('cInit').value = (mod >= 0 ? '+' : '') + mod;
-            // Update passive perception from WIS
-            if (attr === 'WIS') updatePassivePerception();
+            // Update passive perception/investigation from WIS/INT
+            if (attr === 'WIS' || attr === 'INT') updatePassivePerception();
+            if (attr === 'STR') updateCarryingCap();
             updateSkillMods();
             updateSaveMods();
+            updateSpellcastingAbility();
         }
 
         function updateAllAbilityMods() {
@@ -6296,6 +6891,7 @@
             updateSkillMods();
             updateSaveMods();
             updatePassivePerception();
+            updateSpellcastingAbility();
         }
 
         function getProfBonus() {
@@ -6339,6 +6935,164 @@
             const pp = 10 + wisMod + (isProficient ? prof : 0);
             const el = document.getElementById('cPassivePerception');
             if (el) el.value = pp;
+            // Also update passive investigation
+            const invCheck = document.querySelector('.skill-prof-check[data-skill="Investigation"]');
+            const isInvProf = invCheck && invCheck.checked;
+            const intMod = getAttrMod('INT');
+            const pi = 10 + intMod + (isInvProf ? prof : 0);
+            const el2 = document.getElementById('cPassiveInvestigation');
+            if (el2) el2.value = pi;
+        }
+
+        function updateCarryingCap() {
+            const strScore = parseInt((document.getElementById('aSTR') || {}).value) || 10;
+            const cap = strScore * 15;
+            const el = document.getElementById('cCarryingCap');
+            if (el) el.value = cap + ' lbs';
+        }
+
+        // Spellcasting ability by class
+        const SPELL_ABILITY = {
+            Artificer:'INT', Bard:'CHA', Cleric:'WIS', Druid:'WIS',
+            Paladin:'CHA', Ranger:'WIS', Sorcerer:'CHA', Warlock:'CHA', Wizard:'INT'
+        };
+        function updateSpellcastingAbility() {
+            const cls = (document.getElementById('cClass') || {}).value || 'Fighter';
+            const ability = SPELL_ABILITY[cls] || '';
+            _setVal('cSpellAbility', ability);
+            _setVal('cSpellClass', cls);
+            const prof = getProfBonus();
+            if (ability) {
+                const mod = getAttrMod(ability);
+                _setVal('cSpellSaveDC', 8 + prof + mod);
+                _setVal('cSpellAttackBonus', (prof + mod >= 0 ? '+' : '') + (prof + mod));
+            } else {
+                _setVal('cSpellSaveDC', '—');
+                _setVal('cSpellAttackBonus', '—');
+            }
+        }
+
+        // === EXHAUSTION ===
+        const EXHAUSTION_LABELS = ['No exhaustion','Disadvantage on ability checks','Speed halved','Disadvantage on attacks & saves','HP maximum halved','Speed = 0','Death'];
+        function toggleExhaustion(level) {
+            const c = (activeCharIdx >= 0) ? characters[activeCharIdx] : null;
+            if (!c) return;
+            const cur = c.exhaustion || 0;
+            c.exhaustion = (cur === level) ? level - 1 : level;
+            document.querySelectorAll('.exhaustion-pip').forEach(pip => {
+                pip.classList.toggle('active', parseInt(pip.dataset.level) <= c.exhaustion);
+            });
+            updateExhaustionLabel(c.exhaustion);
+        }
+        function updateExhaustionLabel(level) {
+            const el = document.getElementById('exhaustionLabel');
+            if (el) el.textContent = EXHAUSTION_LABELS[level] || 'No exhaustion';
+        }
+
+        // === CONDITIONS ===
+        const CONDITIONS_LIST = ['Blinded','Charmed','Deafened','Exhaustion','Frightened','Grappled','Incapacitated','Invisible','Paralyzed','Petrified','Poisoned','Prone','Restrained','Stunned','Unconscious'];
+        function buildConditionsGrid(c) {
+            const grid = document.getElementById('conditionsGrid');
+            if (!grid) return;
+            grid.innerHTML = CONDITIONS_LIST.map(cond => `
+                <div class="condition-tag ${(c.conditions||[]).includes(cond) ? 'active' : ''}" data-cond="${cond}" onclick="toggleCondition(this)">${cond}</div>
+            `).join('');
+        }
+        function toggleCondition(tag) {
+            tag.classList.toggle('active');
+        }
+
+        // === ATTACKS ===
+        let _attacksData = [];
+        function renderAttacksList(attacks) {
+            _attacksData = attacks ? [...attacks] : [];
+            const el = document.getElementById('attacksList');
+            if (!el) return;
+            if (_attacksData.length === 0) {
+                el.innerHTML = '<p style="font-size:0.8rem;color:var(--text-dim);">No attacks yet. Click "+ Add Attack / Weapon" below.</p>';
+                return;
+            }
+            el.innerHTML = `<div style="display:grid;grid-template-columns:2fr 1fr 2fr 1fr auto;gap:0.3rem;margin-bottom:0.3rem;padding:0 0.4rem;">
+                <span style="font-size:0.65rem;color:var(--text-dim);text-transform:uppercase;">Name</span>
+                <span style="font-size:0.65rem;color:var(--text-dim);text-transform:uppercase;">Atk Bonus</span>
+                <span style="font-size:0.65rem;color:var(--text-dim);text-transform:uppercase;">Damage / Type</span>
+                <span style="font-size:0.65rem;color:var(--text-dim);text-transform:uppercase;">Range</span>
+                <span></span>
+            </div>` + _attacksData.map((a, i) => `
+                <div class="attack-row">
+                    <input value="${a.name||''}" oninput="_attacksData[${i}].name=this.value" placeholder="Longsword">
+                    <input value="${a.bonus||''}" oninput="_attacksData[${i}].bonus=this.value" placeholder="+5">
+                    <input value="${a.damage||''}" oninput="_attacksData[${i}].damage=this.value" placeholder="1d8+3 slashing">
+                    <input value="${a.range||''}" oninput="_attacksData[${i}].range=this.value" placeholder="5 ft">
+                    <button class="atk-del" onclick="removeAttack(${i})" title="Remove">✕</button>
+                </div>
+            `).join('');
+        }
+        function addAttack() {
+            _attacksData.push({name:'', bonus:'', damage:'', range:''});
+            renderAttacksList(_attacksData);
+        }
+        function removeAttack(i) {
+            _attacksData.splice(i, 1);
+            renderAttacksList(_attacksData);
+        }
+        function readAttacksList() { return [..._attacksData]; }
+
+        // === SPELL SLOTS ===
+        function buildSpellSlotsUI(c) {
+            const el = document.getElementById('spellSlotsGrid');
+            if (!el) return;
+            const slots = c.spellSlots || {};
+            const ordinals = ['1st','2nd','3rd','4th','5th','6th','7th','8th','9th'];
+            el.innerHTML = [1,2,3,4,5,6,7,8,9].map(lvl => {
+                const s = slots[lvl] || {max:0, used:0};
+                const max = s.max || 0;
+                const used = s.used || 0;
+                const pips = Array.from({length: Math.max(max, 0)}, (_, i) =>
+                    `<div class="ss-pip ${i < (max - used) ? 'available' : 'used'}" onclick="toggleSpellSlot(${lvl}, ${i})" title="Slot ${i+1}"></div>`
+                ).join('');
+                return `<div class="spell-slot-row">
+                    <span class="spell-slot-label">${ordinals[lvl-1]}</span>
+                    <div class="spell-slot-pips" id="ssPips${lvl}">${pips || '<span style="font-size:0.7rem;color:var(--text-dim);">No slots</span>'}</div>
+                    <div class="spell-slot-max">
+                        Max: <input type="number" min="0" max="9" value="${max}" onchange="updateSpellSlotMax(${lvl}, this.value)" style="width:36px;">
+                        <button onclick="recoverAllSlots(${lvl})" title="Recover all" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:0.85rem;padding:0 2px;" title="Long rest recover">↻</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        function toggleSpellSlot(lvl, pipIdx) {
+            const c = (activeCharIdx >= 0) ? characters[activeCharIdx] : null;
+            if (!c) return;
+            if (!c.spellSlots) c.spellSlots = {};
+            if (!c.spellSlots[lvl]) c.spellSlots[lvl] = {max:0, used:0};
+            const s = c.spellSlots[lvl];
+            const available = s.max - s.used;
+            if (pipIdx < available) {
+                s.used = s.max - pipIdx; // use slots up to this pip
+            } else {
+                s.used = Math.max(0, s.used - 1); // recover one slot
+            }
+            buildSpellSlotsUI(c);
+        }
+        function updateSpellSlotMax(lvl, val) {
+            const c = (activeCharIdx >= 0) ? characters[activeCharIdx] : null;
+            if (!c) return;
+            if (!c.spellSlots) c.spellSlots = {};
+            if (!c.spellSlots[lvl]) c.spellSlots[lvl] = {max:0, used:0};
+            c.spellSlots[lvl].max = Math.max(0, parseInt(val) || 0);
+            c.spellSlots[lvl].used = Math.min(c.spellSlots[lvl].used, c.spellSlots[lvl].max);
+            buildSpellSlotsUI(c);
+        }
+        function recoverAllSlots(lvl) {
+            const c = (activeCharIdx >= 0) ? characters[activeCharIdx] : null;
+            if (!c || !c.spellSlots || !c.spellSlots[lvl]) return;
+            c.spellSlots[lvl].used = 0;
+            buildSpellSlotsUI(c);
+        }
+        function readSpellSlots() {
+            const c = (activeCharIdx >= 0) ? characters[activeCharIdx] : null;
+            return c ? (c.spellSlots || {}) : {};
         }
 
         function buildSkillList() {
@@ -6382,6 +7136,80 @@
             pip.classList.toggle('filled');
         }
 
+        // =============================================
+        // CHARACTER TRAY
+        // =============================================
+        let _quickViewCharIdx = -1;
+
+        function renderCharTray() {
+            loadCharactersFromStorage();
+            const tray = document.getElementById('charTray');
+            if (!tray) return;
+            if (characters.length === 0) { tray.innerHTML = ''; return; }
+            tray.innerHTML = '<span class="char-tray-label">Party</span>' + characters.map((c, i) => {
+                const hpPct = c.hpMax > 0 ? Math.max(0, Math.min(100, Math.round((c.hp / c.hpMax) * 100))) : 0;
+                const emoji = c.emoji || '⚔️';
+                return `<div class="char-tray-btn" onclick="openQuickView(${i})" title="${c.name || 'Unnamed'} — ${c.class || '?'} ${c.level || 1}">
+                    <div style="font-size:1.3rem;line-height:1;">${emoji}</div>
+                    <div class="tray-name">${c.name || 'Unnamed'}</div>
+                    <div class="tray-class">${c.class || '?'} ${c.level || 1}</div>
+                    <div class="tray-hp">${c.hp || 0}/${c.hpMax || 0}</div>
+                    <div class="char-tray-hp-bar"><div class="char-tray-hp-fill" style="width:${hpPct}%"></div></div>
+                </div>`;
+            }).join('');
+        }
+
+        function openQuickView(idx) {
+            const c = characters[idx];
+            if (!c) return;
+            _quickViewCharIdx = idx;
+            const qv = document.getElementById('charQuickView');
+            document.getElementById('qvName').textContent = (c.emoji || '⚔️') + ' ' + (c.name || 'Unnamed');
+            document.getElementById('qvSub').textContent = `${c.class || '?'} ${c.level || 1} • ${c.race || '?'} • ${c.alignment || ''}`;
+            const hp = c.hp || 0, hpMax = c.hpMax || 1;
+            document.getElementById('qvHPText').textContent = `${hp}/${hpMax}`;
+            document.getElementById('qvHPBar').style.width = Math.max(0, Math.min(100, Math.round(hp/hpMax*100))) + '%';
+            document.getElementById('qvAC').textContent = c.ac || 10;
+            const dexMod = Math.floor(((c.dex || 10) - 10) / 2);
+            document.getElementById('qvInit').textContent = (dexMod >= 0 ? '+' : '') + dexMod;
+            document.getElementById('qvSpeed').textContent = (c.speed || 30) + 'ft';
+            const prof = Math.ceil((c.level || 1) / 4) + 1;
+            document.getElementById('qvProf').textContent = '+' + prof;
+            document.getElementById('qvSTR').textContent = c.str || 10;
+            document.getElementById('qvDEX').textContent = c.dex || 10;
+            document.getElementById('qvCON').textContent = c.con || 10;
+            document.getElementById('qvINT').textContent = c.int || 10;
+            document.getElementById('qvWIS').textContent = c.wis || 10;
+            document.getElementById('qvCHA').textContent = c.cha || 10;
+            qv.classList.add('show');
+        }
+
+        function closeQuickView() {
+            document.getElementById('charQuickView').classList.remove('show');
+            _quickViewCharIdx = -1;
+        }
+
+        function openFullSheetFromTray() {
+            const idx = _quickViewCharIdx;
+            closeQuickView();
+            showCharSheet();
+            if (idx >= 0) setTimeout(() => loadCharacter(idx), 50);
+        }
+
+        // Click outside quick view to close
+        document.addEventListener('click', (e) => {
+            const qv = document.getElementById('charQuickView');
+            const tray = document.getElementById('charTray');
+            if (qv && qv.classList.contains('show')) {
+                if (!qv.contains(e.target) && !tray.contains(e.target)) closeQuickView();
+            }
+        });
+
+        // Auto-load tray from storage on boot
+        window.addEventListener('DOMContentLoaded', () => {
+            loadCharactersFromStorage();
+            renderCharTray();
+        });
 
         // =============================================
         // DICE ROLL FIREBASE PERSISTENCE
