@@ -1,7 +1,6 @@
 /**
  * Campaign Generator for "From Sunnyville VTT v4.0"
- * Creates "The Ruins of Ashenvale" - a rich pre-built campaign JSON
- * showcasing terrain tiles, fog of war, tokens, locked cells, and more.
+ * Creates "The Ruins of Ashenvale" - improved edge connectivity & river continuity
  */
 
 const zlib = require('zlib');
@@ -34,15 +33,11 @@ function chunk(type, data) {
   return Buffer.concat([lb, tb, db, cb]);
 }
 
-/**
- * makePNG(w, h, getPixel) → base64 PNG string
- * getPixel(x,y) → [r,g,b,a]   (RGBA color type 6)
- */
 function makePNG(w, h, getPixel) {
   const raw = Buffer.alloc(h * (1 + w * 4));
   let off = 0;
   for (let y = 0; y < h; y++) {
-    raw[off++] = 0; // filter = None
+    raw[off++] = 0;
     for (let x = 0; x < w; x++) {
       const [r, g, b, a] = getPixel(x, y);
       raw[off++] = r; raw[off++] = g; raw[off++] = b; raw[off++] = a;
@@ -51,17 +46,16 @@ function makePNG(w, h, getPixel) {
   const compressed = zlib.deflateSync(raw, { level: 9 });
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4);
-  ihdr[8] = 8; ihdr[9] = 6; // RGBA
+  ihdr[8] = 8; ihdr[9] = 6;
   const sig = Buffer.from([137,80,78,71,13,10,26,10]);
   return Buffer.concat([sig, chunk('IHDR', ihdr), chunk('IDAT', compressed), chunk('IEND', Buffer.alloc(0))]).toString('base64');
 }
 
-// ─── Terrain tile generators (400×400 PNG) ───────────────────────────────────
+// ─── Noise functions ──────────────────────────────────────────────────────────
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-// Simplex-ish noise (fast, deterministic)
 function hash(x, y, seed) {
   let h = (x * 374761393 + y * 668265263 + seed * 1234567891) >>> 0;
   h ^= h >>> 13; h = Math.imul(h, 1540483477) >>> 0;
@@ -87,22 +81,54 @@ function fbm(x, y, seed, octaves=4) {
   return v / max;
 }
 
-// ──── Cell 0,0 – Elderwood Forest (deep, ancient) ───────────────────────────
+// ─── Edge-blend helper ────────────────────────────────────────────────────────
+// edges: array of ['t'|'b'|'l'|'r', [nr,ng,nb], widthPx, strength0to1]
+// Quadratic falloff for smooth seam-free blending.
+function edgeBlend(x, y, r, g, b, edges) {
+  let fr = r, fg = g, fb = b;
+  for (const [side, [nr, ng, nb], w = 60, s = 0.80] of edges) {
+    let t = 0;
+    if      (side === 't') t = clamp(1 - y / w, 0, 1);
+    else if (side === 'b') t = clamp(1 - (399 - y) / w, 0, 1);
+    else if (side === 'l') t = clamp(1 - x / w, 0, 1);
+    else if (side === 'r') t = clamp(1 - (399 - x) / w, 0, 1);
+    if (t > 0) {
+      const blend = t * t * s;
+      fr = Math.round(lerp(fr, nr, blend));
+      fg = Math.round(lerp(fg, ng, blend));
+      fb = Math.round(lerp(fb, nb, blend));
+    }
+  }
+  return [clamp(fr,0,255), clamp(fg,0,255), clamp(fb,0,255)];
+}
+
+// ─── Neighbor color constants (center colors of each cell) ───────────────────
+const C_FOREST    = [30, 70, 24];   // Elderwood Forest
+const C_TRAIL_E   = [38, 85, 28];   // Forest Trail (edge, no path)
+const C_PEAKS     = [112, 104, 98]; // Stormcrest Peaks
+const C_BANK      = [42, 96, 32];   // Silverbrook river bank grass
+const C_WATER     = [44, 122, 180]; // Silverbrook river water
+const C_RUINS     = [120, 112, 103];// Ruins Courtyard stone
+const C_TOWER     = [92, 85, 79];   // Sunken Tower rubble
+const C_CAVE      = [72, 68, 63];   // Cave entrance rock
+const C_UNDER     = [40, 36, 32];   // Underhalls dark stone
+const C_GRAVE     = [42, 54, 38];   // Graveyard earth
+
+// ──── Cell 0,0 – Elderwood Forest ────────────────────────────────────────────
+// Neighbors: right→(1,0) Trail, bottom→(0,1) River
 function cell_0_0() {
   return makePNG(400, 400, (x, y) => {
     const nx = x / 80, ny = y / 80;
     const n = fbm(nx, ny, 42);
     const n2 = fbm(nx * 2 + 7.3, ny * 2 + 1.8, 99);
 
-    // Base forest floor: dark earthy green
     let r = clamp(Math.round(lerp(20, 45, n)),  0, 255);
     let g = clamp(Math.round(lerp(55, 95, n)),  0, 255);
     let b = clamp(Math.round(lerp(18, 40, n)),  0, 255);
 
-    // Moss patches
     if (n2 > 0.62) { r -= 5; g += 10; b -= 5; }
 
-    // Tree canopy trunks (dark circles scattered)
+    // Tree canopies
     const treeSeeds = [
       [60,60],[150,40],[330,70],[50,200],[290,160],[180,290],
       [90,340],[360,310],[230,80],[130,170],[310,240],[70,130],
@@ -110,13 +136,13 @@ function cell_0_0() {
     ];
     for (const [tx,ty] of treeSeeds) {
       const d = Math.hypot(x-tx, y-ty);
-      if (d < 28) { // canopy
+      if (d < 28) {
         const shade = d / 28;
         r = Math.round(lerp(12, r, shade * shade));
         g = Math.round(lerp(38, g, shade * shade));
         b = Math.round(lerp(10, b, shade * shade));
       }
-      if (d < 5) { r=45; g=28; b=14; } // trunk
+      if (d < 5) { r=45; g=28; b=14; }
     }
 
     // Fallen log
@@ -126,42 +152,60 @@ function cell_0_0() {
       if (Math.abs(y - logY) < 2) { r=70; g=42; b=22; }
     }
 
-    // Subtle edge fade (reduced to avoid dark seams between cells)
-    const ex = Math.min(x, 399-x)/40, ey = Math.min(y, 399-y)/40;
-    const ev = clamp(Math.min(ex,ey), 0, 1);
-    r = Math.round(r * (0.92 + 0.08*ev));
-    g = Math.round(g * (0.92 + 0.08*ev));
-    b = Math.round(b * (0.92 + 0.08*ev));
+    // Stream feeding into the river below (bottom-center area, y > 280)
+    // River in (0,1) is centered ~x=200; continue it up into this cell
+    if (y > 270) {
+      const streamC = 200 + Math.sin(y / 55) * 20 + Math.sin(y / 22 + 0.7) * 8;
+      const streamW = 35 * clamp((y - 270) / 130, 0, 1);
+      const dStream = Math.abs(x - streamC);
+      if (dStream < streamW) {
+        const t = 1 - dStream / streamW;
+        const wn = fbm(x/20, y/20, 22);
+        const wr = Math.round(lerp(38, 60, wn));
+        const wg = Math.round(lerp(105, 148, wn));
+        const wb = Math.round(lerp(158, 205, wn));
+        r = Math.round(lerp(r, wr, t * t * 0.9));
+        g = Math.round(lerp(g, wg, t * t * 0.9));
+        b = Math.round(lerp(b, wb, t * t * 0.9));
+      }
+    }
+
+    // Edge blending toward neighbors
+    [r, g, b] = edgeBlend(x, y, r, g, b, [
+      ['b', C_BANK,   70, 0.70],  // blend toward river bank at bottom
+      ['r', C_TRAIL_E, 50, 0.55], // blend toward trail at right
+    ]);
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
 }
 
-// ──── Cell 1,0 – Forest Trail (path heading south) ──────────────────────────
+// ──── Cell 1,0 – Forest Trail ─────────────────────────────────────────────────
+// Neighbors: left→(0,0) Forest, right→(2,0) Peaks, bottom→(1,1) Ruins
 function cell_1_0() {
   return makePNG(400, 400, (x, y) => {
     const nx = x / 80, ny = y / 80;
     const n = fbm(nx, ny, 77);
 
-    // Base green forest
     let r = clamp(Math.round(lerp(25, 60, n)), 0, 255);
     let g = clamp(Math.round(lerp(70, 110, n)), 0, 255);
     let b = clamp(Math.round(lerp(20, 48, n)), 0, 255);
 
-    // Central dirt path (wiggly)
+    // Central dirt path (wiggly, continuous from top to bottom)
     const pathCenter = 200 + Math.sin(y / 40) * 18 + Math.sin(y/17+1.2) * 8;
     const pathWidth  = 52;
     const distPath   = Math.abs(x - pathCenter);
     if (distPath < pathWidth) {
       const t = 1 - distPath / pathWidth;
       const pn = fbm(x/30, y/30, 13);
-      const pr = Math.round(lerp(130, 165, pn));
-      const pg = Math.round(lerp(100, 130, pn));
-      const pb = Math.round(lerp( 60,  85, pn));
+      // Path color transitions from dirt toward stone at the bottom (→ ruins)
+      const stoneBlend = clamp((y - 300) / 100, 0, 1);
+      const pr = Math.round(lerp(lerp(130, 165, pn), C_RUINS[0], stoneBlend));
+      const pg = Math.round(lerp(lerp(100, 130, pn), C_RUINS[1], stoneBlend));
+      const pb = Math.round(lerp(lerp( 60,  85, pn), C_RUINS[2], stoneBlend));
       r = Math.round(lerp(r, pr, t * t));
       g = Math.round(lerp(g, pg, t * t));
       b = Math.round(lerp(b, pb, t * t));
-      // tracks / ruts
       if (distPath < 5 || (distPath > pathWidth-8 && distPath < pathWidth-3)) {
         r = Math.round(r * 0.82); g = Math.round(g * 0.82); b = Math.round(b * 0.82);
       }
@@ -187,29 +231,30 @@ function cell_1_0() {
     if (Math.abs(x - 230) < 4 && y > 20 && y < 70) { r=100; g=65; b=30; }
     if (Math.abs(y - 25) < 5 && x > 215 && x < 275) { r=100; g=65; b=30; }
 
-    // Subtle edge fade
-    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 40, 0, 1);
-    r = Math.round(r * (0.92 + 0.08*ev));
-    g = Math.round(g * (0.92 + 0.08*ev));
-    b = Math.round(b * (0.92 + 0.08*ev));
+    // Edge blending toward neighbors
+    [r, g, b] = edgeBlend(x, y, r, g, b, [
+      ['l', C_FOREST,  50, 0.60],  // forest on left
+      ['r', C_PEAKS,   60, 0.65],  // peaks on right
+      ['b', C_RUINS,   75, 0.70],  // ruins courtyard below
+    ]);
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
 }
 
-// ──── Cell 2,0 – Stormcrest Peaks (top-down rocky high ground) ──────────────
+// ──── Cell 2,0 – Stormcrest Peaks ────────────────────────────────────────────
+// Neighbors: left→(1,0) Trail, bottom→(2,1) Tower
 function cell_2_0() {
   return makePNG(400, 400, (x, y) => {
     const nx = x/100, ny = y/100;
     const n  = fbm(nx, ny, 33);
     const n2 = fbm(nx*2+1.3, ny*2+1.3, 77, 3);
 
-    // Base: grey-brown rocky ground viewed from directly above
     let r = Math.round(lerp(90, 138, n));
     let g = Math.round(lerp(85, 128, n));
     let b = Math.round(lerp(80, 120, n));
 
-    // Snow/frost patches in high areas (noise-driven, not y-based)
+    // Snow/frost patches
     const snowN = fbm(nx*1.4+3, ny*1.4+3, 22, 3);
     if (snowN > 0.63) {
       const st = clamp((snowN - 0.63) / 0.37, 0, 1);
@@ -218,7 +263,7 @@ function cell_2_0() {
       b = Math.round(lerp(b, 240, st));
     }
 
-    // Large boulders (dark ovals with SE drop-shadow rim)
+    // Large boulders
     const boulders = [
       [70, 55, 28],[250, 40, 22],[355, 95, 18],
       [130,175, 24],[305,215, 26],[55, 290, 20],
@@ -232,14 +277,13 @@ function cell_2_0() {
         r = Math.round(lerp(50, Math.round(lerp(82, 118, bn)), d/br));
         g = Math.round(lerp(48, Math.round(lerp(77, 110, bn)), d/br));
         b = Math.round(lerp(45, Math.round(lerp(72, 104, bn)), d/br));
-        // Shadow on south-east rim
         if (x > bx + br*0.3 && y > by + br*0.3 && d > br*0.6) {
           r = Math.round(r * 0.58); g = Math.round(g * 0.58); b = Math.round(b * 0.58);
         }
       }
     }
 
-    // Rock fissures / cracks
+    // Rock fissures
     for (const [cx, cy, ang, len] of [
       [155, 145, 0.4, 65],[310, 305, -0.3, 55],[210, 255, 0.85, 50]
     ]) {
@@ -251,25 +295,18 @@ function cell_2_0() {
       }
     }
 
-    // Left edge blends toward forest (slight green tint in left 30px)
-    if (x < 30) {
-      const gt = (30 - x) / 30;
-      r = Math.round(lerp(r, 55, gt * 0.35));
-      g = Math.round(lerp(g, 90, gt * 0.35));
-      b = Math.round(lerp(b, 42, gt * 0.35));
-    }
-
-    // Subtle edge fade (reduced – only 8% to avoid dark seams)
-    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 40, 0, 1);
-    r = Math.round(r * (0.92 + 0.08*ev));
-    g = Math.round(g * (0.92 + 0.08*ev));
-    b = Math.round(b * (0.92 + 0.08*ev));
+    // Edge blending toward neighbors
+    [r, g, b] = edgeBlend(x, y, r, g, b, [
+      ['l', C_TRAIL_E, 65, 0.65],  // forest trail on left
+      ['b', C_TOWER,   70, 0.70],  // tower below
+    ]);
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
 }
 
-// ──── Cell 0,1 – Silverbrook Crossing ───────────────────────────────────────
+// ──── Cell 0,1 – Silverbrook Crossing ────────────────────────────────────────
+// Neighbors: top→(0,0) Forest, right→(1,1) Ruins, bottom→(0,2) Cave
 function cell_0_1() {
   return makePNG(400, 400, (x, y) => {
     const nx = x/80, ny = y/80;
@@ -280,7 +317,7 @@ function cell_0_1() {
     let g = clamp(Math.round(lerp(80,120, n)),  0,255);
     let b = clamp(Math.round(lerp(22, 50, n)),  0,255);
 
-    // River runs vertically through centre with slight meander
+    // River runs vertically through centre - meander matches cell 0,0 stream
     const riverC = 200 + Math.sin(y/55)*25 + Math.sin(y/22+0.7)*10;
     const riverW = 90;
     const dRiver = Math.abs(x - riverC);
@@ -316,19 +353,22 @@ function cell_0_1() {
       }
     }
 
-    // Subtle edge fade
-    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 40, 0, 1);
-    r=Math.round(r*(0.92+0.08*ev)); g=Math.round(g*(0.92+0.08*ev)); b=Math.round(b*(0.92+0.08*ev));
+    // Edge blending toward neighbors
+    [r, g, b] = edgeBlend(x, y, r, g, b, [
+      ['t', C_FOREST, 60, 0.65],   // forest above
+      ['r', C_RUINS,  65, 0.65],   // ruins to the right
+      ['b', C_CAVE,   70, 0.72],   // cave below
+    ]);
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
 }
 
-// ──── Cell 1,1 – Ruins of Ashenvale Courtyard (center) ──────────────────────
+// ──── Cell 1,1 – Ruins of Ashenvale Courtyard ────────────────────────────────
+// Neighbors: top→(1,0) Trail, left→(0,1) River, right→(2,1) Tower, bottom→(1,2) Underhalls
 function cell_1_1() {
   return makePNG(400, 400, (x, y) => {
     const nx = x/60, ny = y/60;
-    const n = fbm(nx, ny, 66);
 
     // Stone floor
     const sn = fbm(x/20, y/20, 7, 3);
@@ -336,15 +376,13 @@ function cell_1_1() {
     let g = Math.round(lerp( 98, 135, sn));
     let b = Math.round(lerp( 90, 125, sn));
 
-    // Cracks network
-    // Horizontal cracks
+    // Cracks
     for (const cy of [100, 200, 310]) {
       const wave = Math.sin(x/30)*6 + Math.sin(x/11)*2;
       if (Math.abs(y - cy - wave) < 2) {
         r=Math.round(r*0.55); g=Math.round(g*0.55); b=Math.round(b*0.55);
       }
     }
-    // Vertical cracks
     for (const cx of [130, 270, 340]) {
       const wave = Math.sin(y/25)*5 + Math.sin(y/9)*2;
       if (Math.abs(x - cx - wave) < 2) {
@@ -352,7 +390,7 @@ function cell_1_1() {
       }
     }
 
-    // Moss patches (dark green splotches)
+    // Moss patches
     const mn = fbm(nx*1.5+3, ny*1.5+3, 44);
     if (mn > 0.62) {
       r = Math.round(lerp(r, 45, (mn-0.62)/0.38));
@@ -360,7 +398,7 @@ function cell_1_1() {
       b = Math.round(lerp(b, 35, (mn-0.62)/0.38));
     }
 
-    // Broken pillars at corners (cylinders = circles)
+    // Broken pillars at corners
     const pillars = [[60,60],[340,60],[60,340],[340,340]];
     for (const [px,py] of pillars) {
       const d = Math.hypot(x-px, y-py);
@@ -369,24 +407,20 @@ function cell_1_1() {
         r=Math.round(lerp(140, 190, pn));
         g=Math.round(lerp(130, 178, pn));
         b=Math.round(lerp(120, 165, pn));
-        if (d > 22) { // pillar edge shadow
-          r=Math.round(r*0.7); g=Math.round(g*0.7); b=Math.round(b*0.7);
-        }
+        if (d > 22) { r=Math.round(r*0.7); g=Math.round(g*0.7); b=Math.round(b*0.7); }
       }
     }
 
     // Central altar / ritual circle
     const cx=200, cy=200;
     const dC = Math.hypot(x-cx, y-cy);
-    if (dC < 55 && dC > 48) { // ring
+    if (dC < 55 && dC > 48) {
       r=Math.round(lerp(r,180,0.7)); g=Math.round(lerp(g,140,0.7)); b=Math.round(lerp(b,50,0.7));
     }
-    if (dC < 30 && dC > 25) { // inner ring
+    if (dC < 30 && dC > 25) {
       r=Math.round(lerp(r,160,0.5)); g=Math.round(lerp(g,100,0.5)); b=Math.round(lerp(b,30,0.5));
     }
-    if (dC < 6) { // center stone
-      r=180; g=120; b=40;
-    }
+    if (dC < 6) { r=180; g=120; b=40; }
 
     // Wall fragments on edges
     const wallT = 22;
@@ -400,22 +434,46 @@ function cell_1_1() {
       }
     }
 
+    // Path entrance from trail above (top-center, x≈200, fades in over y=0..60)
+    {
+      const pathC = 200 + Math.sin(y/40)*10;
+      const pathW = 45 * clamp(1 - y/80, 0, 1);
+      if (pathW > 1 && Math.abs(x - pathC) < pathW) {
+        const t = 1 - Math.abs(x - pathC) / pathW;
+        const pn = fbm(x/30, y/30, 13);
+        const pr = Math.round(lerp(130, 165, pn));
+        const pg = Math.round(lerp(100, 130, pn));
+        const pb = Math.round(lerp( 60,  85, pn));
+        r = Math.round(lerp(r, pr, t * t * 0.7));
+        g = Math.round(lerp(g, pg, t * t * 0.7));
+        b = Math.round(lerp(b, pb, t * t * 0.7));
+      }
+    }
+
+    // Edge blending toward neighbors
+    [r, g, b] = edgeBlend(x, y, r, g, b, [
+      ['t', C_TRAIL_E, 65, 0.65],  // forest trail above
+      ['l', C_BANK,    60, 0.60],  // river bank on left
+      ['r', C_TOWER,   60, 0.60],  // tower on right
+      ['b', C_UNDER,   85, 0.78],  // CRITICAL: dark underhalls below
+    ]);
+
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
 }
 
-// ──── Cell 2,1 – Sunken Tower (top-down tower footprint) ────────────────────
+// ──── Cell 2,1 – Sunken Tower ────────────────────────────────────────────────
+// Neighbors: left→(1,1) Ruins, top→(2,0) Peaks, bottom→(2,2) Graveyard
 function cell_2_1() {
   return makePNG(400, 400, (x, y) => {
     const nx = x/60, ny = y/60;
     const n = fbm(nx, ny, 55);
 
-    // Base: rubble-covered ground viewed from above
     let r = Math.round(lerp(75, 118, n));
     let g = Math.round(lerp(70, 108, n));
     let b = Math.round(lerp(65, 100, n));
 
-    // Tower footprint: thick stone walls viewed from directly above
+    // Tower footprint: thick stone walls from above
     const tWall = 28;
     const tL=70, tR=330, tT=55, tB=330;
     const inOuter = x>tL && x<tR && y>tT && y<tB;
@@ -427,29 +485,25 @@ function cell_2_1() {
       r = Math.round(lerp(88, 132, wn));
       g = Math.round(lerp(83, 124, wn));
       b = Math.round(lerp(78, 116, wn));
-      // Top-down stone block pattern
       const bRow = Math.floor(y / 22);
       const inMortar = y % 22 < 2 || (x + (bRow%2)*13) % 26 < 2;
       if (inMortar) { r=Math.round(r*0.58); g=Math.round(g*0.58); b=Math.round(b*0.58); }
-      // Ivy on outer west wall
       const ivyN = fbm(nx*4+8, ny*4+8, 17);
       if (x < tL+20 && ivyN > 0.55) {
         r=Math.round(lerp(r,28,0.5)); g=Math.round(lerp(g,78,0.5)); b=Math.round(lerp(b,18,0.5));
       }
     }
 
-    // Interior: dark hollow viewed from above, with scattered debris
+    // Interior: dark hollow with debris and brazier
     if (inInner) {
       const dn = fbm(nx*2+0.5, ny*2+0.5, 88, 2);
       r = Math.round(lerp(18, 40, dn));
       g = Math.round(lerp(14, 32, dn));
       b = Math.round(lerp(12, 28, dn));
-      // Debris / fallen stone chunks on floor
       if (dn > 0.62) {
         const dt = (dn-0.62)/0.38;
         r=Math.round(lerp(r, 65, dt*0.5)); g=Math.round(lerp(g, 60, dt*0.5)); b=Math.round(lerp(b, 55, dt*0.5));
       }
-      // Glowing embers / brazier at center
       const cd = Math.hypot(x-200, y-200);
       if (cd < 45) {
         const ct = clamp(1 - cd/45, 0, 1) ** 2;
@@ -458,7 +512,7 @@ function cell_2_1() {
       if (cd < 7) { r=255; g=190; b=60; }
     }
 
-    // Collapsed NE corner (broken wall section)
+    // Collapsed NE corner
     if (x > 270 && y < 130 && !inInner) {
       const rubN = fbm(x/20, y/20, 33);
       r=Math.round(lerp(r, Math.round(lerp(68,108,rubN)), 0.8));
@@ -466,40 +520,33 @@ function cell_2_1() {
       b=Math.round(lerp(b, Math.round(lerp(58, 92,rubN)), 0.8));
     }
 
-    // South doorway opening in wall
+    // South doorway
     if (x>186 && x<214 && y>tB-tWall && y<tB+4 && inOuter) {
       const dn2 = fbm(nx*2, ny*2, 44);
       r=Math.round(lerp(18,38,dn2)); g=Math.round(lerp(14,30,dn2)); b=Math.round(lerp(12,26,dn2));
     }
 
-    // Subtle edge fade
-    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 40, 0, 1);
-    r = Math.round(r * (0.92 + 0.08*ev));
-    g = Math.round(g * (0.92 + 0.08*ev));
-    b = Math.round(b * (0.92 + 0.08*ev));
+    // Edge blending toward neighbors
+    [r, g, b] = edgeBlend(x, y, r, g, b, [
+      ['t', C_PEAKS,  65, 0.65],   // peaks above
+      ['l', C_RUINS,  60, 0.62],   // ruins on left
+      ['b', C_GRAVE,  70, 0.68],   // graveyard below
+    ]);
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
 }
 
-// ──── Cell 0,2 – Maw of Darkness (top-down cave opening) ────────────────────
+// ──── Cell 0,2 – Maw of Darkness ─────────────────────────────────────────────
+// Neighbors: top→(0,1) River, right→(1,2) Underhalls
 function cell_0_2() {
   return makePNG(400, 400, (x, y) => {
     const nx = x/70, ny = y/70;
     const n = fbm(nx, ny, 111);
 
-    // Rocky ground from above – same grey-brown tones as surrounding cells
     let r = Math.round(lerp(58, 98, n));
     let g = Math.round(lerp(55, 90, n));
     let b = Math.round(lerp(52, 86, n));
-
-    // Top edge blends to grass/riverbank (cell 0,1 is above)
-    if (y < 30) {
-      const bt = (30 - y) / 30;
-      r = Math.round(lerp(r, 50, bt * 0.4));
-      g = Math.round(lerp(g, 95, bt * 0.4));
-      b = Math.round(lerp(b, 38, bt * 0.4));
-    }
 
     // Large boulders ringing the pit entrance
     const boulders = [
@@ -512,14 +559,13 @@ function cell_0_2() {
         r = Math.round(lerp(42, 82, d/br));
         g = Math.round(lerp(40, 78, d/br));
         b = Math.round(lerp(38, 74, d/br));
-        // SE shadow rim
         if (x > bx+br*0.25 && y > by+br*0.25 && d > br*0.65) {
           r=Math.round(r*0.6); g=Math.round(g*0.6); b=Math.round(b*0.6);
         }
       }
     }
 
-    // Cave mouth – large dark pit viewed from above
+    // Cave mouth – large dark pit
     const caveCX=205, caveCY=230, caveRX=120, caveRY=140;
     const caveDist = Math.hypot((x-caveCX)/caveRX, (y-caveCY)/caveRY);
     if (caveDist < 1.15) {
@@ -529,30 +575,48 @@ function cell_0_2() {
       b=Math.round(lerp(b,  4, fadeT * 0.96));
     }
 
-    // Mossy/wet rock around rim of cave
+    // River entering cave from top (matches cell 0,1's river position)
+    if (y < 100) {
+      const rC = 200 + Math.sin(y/55)*25 + Math.sin(y/22+0.7)*10;
+      const rW = 90 * clamp(1 - y/100, 0, 1);
+      const dR = Math.abs(x - rC);
+      if (rW > 1 && dR < rW) {
+        const t = 1 - dR / rW;
+        const wn = fbm(x/25+3, y/25+3, 22);
+        const wr = Math.round(lerp(35, 65, wn));
+        const wg = Math.round(lerp(100,150, wn));
+        const wb = Math.round(lerp(160,210, wn));
+        r = Math.round(lerp(r, wr, t * 0.85));
+        g = Math.round(lerp(g, wg, t * 0.85));
+        b = Math.round(lerp(b, wb, t * 0.85));
+      }
+    }
+
+    // Mossy/wet rock around rim
     const mossN = fbm(nx*2.5+5, ny*2.5+5, 77, 3);
     if (mossN > 0.62 && caveDist > 1.1 && caveDist < 1.6) {
       const mt = clamp((mossN-0.62)/0.38, 0, 1);
       r=Math.round(lerp(r, 28, mt*0.5)); g=Math.round(lerp(g, 68, mt*0.5)); b=Math.round(lerp(b, 18, mt*0.5));
     }
 
-    // Small pebble texture
+    // Pebble texture
     const pebN = fbm(nx*7+2, ny*7+2, 33, 2);
     if (pebN > 0.74 && caveDist > 1.2) {
       r=Math.round(r*0.72); g=Math.round(g*0.72); b=Math.round(b*0.72);
     }
 
-    // Subtle edge fade
-    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 40, 0, 1);
-    r = Math.round(r * (0.92 + 0.08*ev));
-    g = Math.round(g * (0.92 + 0.08*ev));
-    b = Math.round(b * (0.92 + 0.08*ev));
+    // Edge blending toward neighbors
+    [r, g, b] = edgeBlend(x, y, r, g, b, [
+      ['t', C_BANK,  70, 0.70],   // river bank above
+      ['r', C_UNDER, 60, 0.65],   // underhalls on right
+    ]);
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
 }
 
-// ──── Cell 1,2 – The Underhalls ─────────────────────────────────────────────
+// ──── Cell 1,2 – The Underhalls ──────────────────────────────────────────────
+// Neighbors: top→(1,1) Ruins, left→(0,2) Cave, right→(2,2) Graveyard
 function cell_1_2() {
   return makePNG(400, 400, (x, y) => {
     const nx = x/50, ny = y/50;
@@ -567,13 +631,12 @@ function cell_1_2() {
     const blockH = 40, blockW = 55;
     const bRow = Math.floor(y / blockH);
     const bOff = (bRow % 2) * (blockW * 0.5);
-    const bCol = Math.floor((x + bOff) / blockW);
     const inGrout = (y % blockH) < 3 || (x + bOff) % blockW < 3;
     if (inGrout) {
       r=Math.round(r*0.5); g=Math.round(g*0.5); b=Math.round(b*0.5);
     }
 
-    // Two torches with glow
+    // Torches with glow
     const torches = [[80,130],[320,130],[80,300],[320,300]];
     for (const [tx,ty] of torches) {
       const gd = Math.hypot(x-tx, y-ty);
@@ -584,7 +647,6 @@ function cell_1_2() {
         b=Math.round(lerp(b,  20, gt*0.7));
       }
       if (gd < 6) { r=255; g=200; b=60; }
-      // sconce bracket
       if (gd > 7 && gd < 12) { r=80; g=70; b=60; }
     }
 
@@ -593,9 +655,7 @@ function cell_1_2() {
     if (x>dX && x<dX+dW && y>dY && y<dY+dH) {
       const dn = fbm((x-dX)/10, (y-dY)/10, 99);
       r=Math.round(lerp(85,115,dn)); g=Math.round(lerp(55, 75,dn)); b=Math.round(lerp(30, 45,dn));
-      // planks
       if ((y-dY)%16 < 2) { r=Math.round(r*0.75); g=Math.round(g*0.75); b=Math.round(b*0.75); }
-      // door knob
       if (Math.hypot(x-(dX+dW-10), y-(dY+dH/2)) < 4) { r=200; g=160; b=20; }
     }
 
@@ -610,11 +670,19 @@ function cell_1_2() {
       }
     }
 
+    // CRITICAL: top edge blends strongly toward ruins stone brightness
+    [r, g, b] = edgeBlend(x, y, r, g, b, [
+      ['t', C_RUINS, 90, 0.85],   // ruins courtyard above — wide strong blend
+      ['l', C_CAVE,  55, 0.65],   // cave on left
+      ['r', C_GRAVE, 55, 0.62],   // graveyard on right
+    ]);
+
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
 }
 
-// ──── Cell 2,2 – Whisper Graveyard ──────────────────────────────────────────
+// ──── Cell 2,2 – Whisper Graveyard ───────────────────────────────────────────
+// Neighbors: top→(2,1) Tower, left→(1,2) Underhalls
 function cell_2_2() {
   return makePNG(400, 400, (x, y) => {
     const nx = x/70, ny = y/70;
@@ -638,17 +706,14 @@ function cell_2_2() {
       [80,320,30,46],[190,340,26,40],[310,310,34,52],[370,350,24,38]
     ];
     for (const [tx,ty,tw,th] of tombs) {
-      // Main stone
       if (x>tx && x<tx+tw && y>ty && y<ty+th) {
         const tn = fbm((x-tx)/8, (y-ty)/8, 77);
         r=Math.round(lerp(90,130,tn));
         g=Math.round(lerp(88,125,tn));
         b=Math.round(lerp(92,130,tn));
-        // inscription line
         if (Math.abs(y-(ty+th*0.4)) < 2 && x>tx+4 && x<tx+tw-4) {
           r=Math.round(r*0.6); g=Math.round(g*0.6); b=Math.round(b*0.6);
         }
-        // Rounded top
         const topR = tw/2, topCY = ty + topR;
         if (y < topCY && Math.hypot(x-(tx+tw/2), y-topCY) < topR) {
           r=Math.round(lerp(90,130,tn));
@@ -661,11 +726,7 @@ function cell_2_2() {
     // Dead trees
     const deadTrees = [[200,150],[350,280]];
     for (const [dtx,dty] of deadTrees) {
-      // Trunk
-      if (Math.abs(x-dtx) < 5 && y > dty && y < dty+120) {
-        r=50; g=40; b=32;
-      }
-      // Branches
+      if (Math.abs(x-dtx) < 5 && y > dty && y < dty+120) { r=50; g=40; b=32; }
       const branches = [[-25,-40,-3,-10],[25,-45,3,-15],[0,-60,0,-20],[-15,-20,-30,-50],[15,-22,28,-48]];
       for (const [bx1,by1,bx2,by2] of branches) {
         const len = Math.hypot(bx2-bx1, by2-by1);
@@ -677,7 +738,7 @@ function cell_2_2() {
       }
     }
 
-    // Mist / fog wisps (low alpha overlay)
+    // Mist / fog wisps
     const mistN = fbm(nx*0.8+5, ny*0.8+5, 555, 2);
     if (mistN > 0.58 && y > 200) {
       const mt = (mistN-0.58)/0.42;
@@ -686,53 +747,43 @@ function cell_2_2() {
       b=Math.round(lerp(b,180,mt*0.25));
     }
 
-    // Subtle edge fade
-    const ev = clamp(Math.min(x, 399-x, y, 399-y) / 40, 0, 1);
-    r=Math.round(r*(0.92+0.08*ev)); g=Math.round(g*(0.92+0.08*ev)); b=Math.round(b*(0.92+0.08*ev));
+    // Edge blending toward neighbors
+    [r, g, b] = edgeBlend(x, y, r, g, b, [
+      ['t', C_TOWER, 65, 0.65],   // tower above
+      ['l', C_UNDER, 55, 0.62],   // underhalls on left
+    ]);
 
     return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255), 255];
   });
 }
 
-// ──── Fog canvas generator (1200×1200, RGBA) ─────────────────────────────────
-// Returns fully-black fog PNG (1200×1200) - all covered
+// ──── Fog canvas generators ───────────────────────────────────────────────────
+
 function makeFogFull() {
-  // Small version: 1x1 black pixel scaled to fill by drawImage with no size args
-  // Actually we need real size. Use a 6x6 block-encoded version scaled.
-  // Just do real 1200x1200 - deflate handles solid color very efficiently
-  // Actually let's do 120x120 scaled - the import draws at native size so size matters.
-  // Use a small repeating tile... no, drawImage(img, 0, 0) draws at natural size.
-  // Let's do 1200x1200 for full coverage.
   return makePNG(1200, 1200, () => [0, 0, 0, 255]);
 }
 
-// Fog with center cell (400,400)→(800,800) revealed (transparent)
 function makeFogCenterRevealed() {
   return makePNG(1200, 1200, (x, y) => {
-    // Revealed region: cell (1,1) = x in [400,800], y in [400,800]
-    // Plus a partial reveal along top path (cell 1,0 bottom portion)
     if (x >= 400 && x <= 800 && y >= 400 && y <= 800) {
-      // Soft edge
       const ex = Math.min(x - 400, 800 - x) / 40;
       const ey = Math.min(y - 400, 800 - y) / 40;
       const edge = clamp(Math.min(ex, ey), 0, 1);
-      return [0, 0, 0, Math.round((1 - edge) * 0)]; // fully transparent at center
+      return [0, 0, 0, Math.round((1 - edge) * 0)];
     }
-    // Partial reveal: bottom of forest trail (1,0) -> bottom 80px
     if (x >= 440 && x <= 760 && y >= 340 && y <= 400) {
       const t = (y - 340) / 60;
       return [0, 0, 0, Math.round(lerp(255, 0, t))];
     }
-    // Partial reveal: tower entrance (2,1) left edge
     if (x >= 800 && x <= 870 && y >= 440 && y <= 760) {
       const t = (x - 800) / 70;
       return [0, 0, 0, Math.round(lerp(0, 255, t))];
     }
-    return [0, 0, 0, 255]; // fully covered
+    return [0, 0, 0, 255];
   });
 }
 
-// ──── Build the campaign JSON ─────────────────────────────────────────────────
+// ──── Build the campaign JSON ──────────────────────────────────────────────────
 
 console.log('Generating terrain tiles (this may take ~30s)...');
 
@@ -761,7 +812,6 @@ const fogRevealed = makeFogCenterRevealed();
 
 console.log('Assembling campaign...');
 
-// Token color palette
 const GOLD   = '#c8922a';
 const RED    = '#9b2335';
 const BLUE   = '#1e3a5f';
@@ -778,7 +828,6 @@ const campaign = {
   sessionId: 'ashenvale-2226',
   exported: now,
 
-  // ── Grid cells: 9 terrain tiles ──────────────────────────────────────────
   gridCells: {
     '0,0': `data:image/png;base64,${t00}`,
     '1,0': `data:image/png;base64,${t10}`,
@@ -791,13 +840,11 @@ const campaign = {
     '2,2': `data:image/png;base64,${t22}`,
   },
 
-  // ── Locked cells: cave & underhalls ──────────────────────────────────────
   lockedCells: {
-    '0,2': true,  // Cave entrance – DM-only area
-    '1,2': true,  // Underhalls – DM-only
+    '0,2': true,
+    '1,2': true,
   },
 
-  // ── Fog of war groups ─────────────────────────────────────────────────────
   fogGroups: {
     everyone: {
       name: 'Everyone',
@@ -810,204 +857,36 @@ const campaign = {
   },
   activeFogGroup: 'everyone',
 
-  // ── Staging tokens: party members waiting to be placed ───────────────────
   stagingTokens: [
-    {
-      id: baseTime + 1,
-      type: 'emoji',
-      icon: '⚔️',
-      color: BLUE,
-      size: 14,
-      owner: 'Player 1',
-      approved: true,
-      name: 'Fighter',
-    },
-    {
-      id: baseTime + 2,
-      type: 'emoji',
-      icon: '🧙',
-      color: PURPLE,
-      size: 14,
-      owner: 'Player 2',
-      approved: true,
-      name: 'Wizard',
-    },
-    {
-      id: baseTime + 3,
-      type: 'emoji',
-      icon: '🏹',
-      color: GREEN,
-      size: 14,
-      owner: 'Player 3',
-      approved: true,
-      name: 'Ranger',
-    },
-    {
-      id: baseTime + 4,
-      type: 'emoji',
-      icon: '✨',
-      color: GOLD,
-      size: 14,
-      owner: 'Player 4',
-      approved: true,
-      name: 'Cleric',
-    },
+    { id: baseTime+1, type:'emoji', icon:'⚔️', color:BLUE,   size:14, owner:'Player 1', approved:true, name:'Fighter' },
+    { id: baseTime+2, type:'emoji', icon:'🧙', color:PURPLE, size:14, owner:'Player 2', approved:true, name:'Wizard' },
+    { id: baseTime+3, type:'emoji', icon:'🏹', color:GREEN,  size:14, owner:'Player 3', approved:true, name:'Ranger' },
+    { id: baseTime+4, type:'emoji', icon:'✨', color:GOLD,   size:14, owner:'Player 4', approved:true, name:'Cleric' },
   ],
 
-  // ── Placed tokens: enemies already on the map ─────────────────────────────
-  // World coords: cell(col,row) top-left = (col*400, row*400)
   placedTokens: [
-    // ── Ruins courtyard (1,1) — center area ──────────────────────────────
-    {
-      id: baseTime + 10,
-      type: 'emoji',
-      icon: '👹',
-      color: RED,
-      size: 14,
-      owner: 'DM',
-      approved: true,
-      name: 'Goblin Scout',
-      x: 530,
-      y: 480,
-    },
-    {
-      id: baseTime + 11,
-      type: 'emoji',
-      icon: '👹',
-      color: RED,
-      size: 14,
-      owner: 'DM',
-      approved: true,
-      name: 'Goblin Archer',
-      x: 700,
-      y: 510,
-    },
-    {
-      id: baseTime + 12,
-      type: 'emoji',
-      icon: '💀',
-      color: GREY,
-      size: 14,
-      owner: 'DM',
-      approved: true,
-      name: 'Skeleton Guard',
-      x: 600,
-      y: 680,
-    },
-    // ── Altar / ritual circle ─────────────────────────────────────────────
-    {
-      id: baseTime + 13,
-      type: 'emoji',
-      icon: '🔮',
-      color: PURPLE,
-      size: 12,
-      owner: 'DM',
-      approved: true,
-      name: 'Arcane Focus',
-      x: 600,
-      y: 600,
-    },
-    // ── Sunken Tower (2,1) ────────────────────────────────────────────────
-    {
-      id: baseTime + 20,
-      type: 'emoji',
-      icon: '🧟',
-      color: GREEN,
-      size: 14,
-      owner: 'DM',
-      approved: true,
-      name: 'Zombie Guard',
-      x: 920,
-      y: 520,
-    },
-    {
-      id: baseTime + 21,
-      type: 'emoji',
-      icon: '🗡️',
-      color: GREY,
-      size: 12,
-      owner: 'DM',
-      approved: true,
-      name: 'Tower Warden',
-      x: 1050,
-      y: 650,
-    },
-    // ── Cave mouth (0,2) ──────────────────────────────────────────────────
-    {
-      id: baseTime + 30,
-      type: 'emoji',
-      icon: '🕷️',
-      color: GREY,
-      size: 12,
-      owner: 'DM',
-      approved: true,
-      name: 'Giant Spider',
-      x: 180,
-      y: 940,
-    },
-    {
-      id: baseTime + 31,
-      type: 'emoji',
-      icon: '🕷️',
-      color: GREY,
-      size: 12,
-      owner: 'DM',
-      approved: true,
-      name: 'Giant Spider',
-      x: 240,
-      y: 1020,
-    },
-    // ── Graveyard (2,2) — boss ────────────────────────────────────────────
-    {
-      id: baseTime + 40,
-      type: 'emoji',
-      icon: '☠️',
-      color: '#2a0a2a',
-      size: 18,
-      owner: 'DM',
-      approved: true,
-      name: 'Malgrath the Undying',
-      x: 1000,
-      y: 980,
-    },
-    {
-      id: baseTime + 41,
-      type: 'emoji',
-      icon: '💀',
-      color: GREY,
-      size: 12,
-      owner: 'DM',
-      approved: true,
-      name: 'Skeleton',
-      x: 870,
-      y: 870,
-    },
-    {
-      id: baseTime + 42,
-      type: 'emoji',
-      icon: '💀',
-      color: GREY,
-      size: 12,
-      owner: 'DM',
-      approved: true,
-      name: 'Skeleton',
-      x: 1100,
-      y: 920,
-    },
+    { id:baseTime+10, type:'emoji', icon:'👹', color:RED,    size:14, owner:'DM', approved:true, name:'Goblin Scout',        x:530,  y:480 },
+    { id:baseTime+11, type:'emoji', icon:'👹', color:RED,    size:14, owner:'DM', approved:true, name:'Goblin Archer',       x:700,  y:510 },
+    { id:baseTime+12, type:'emoji', icon:'💀', color:GREY,   size:14, owner:'DM', approved:true, name:'Skeleton Guard',      x:600,  y:680 },
+    { id:baseTime+13, type:'emoji', icon:'🔮', color:PURPLE, size:12, owner:'DM', approved:true, name:'Arcane Focus',        x:600,  y:600 },
+    { id:baseTime+20, type:'emoji', icon:'🧟', color:GREEN,  size:14, owner:'DM', approved:true, name:'Zombie Guard',        x:920,  y:520 },
+    { id:baseTime+21, type:'emoji', icon:'🗡️', color:GREY,   size:12, owner:'DM', approved:true, name:'Tower Warden',        x:1050, y:650 },
+    { id:baseTime+30, type:'emoji', icon:'🕷️', color:GREY,   size:12, owner:'DM', approved:true, name:'Giant Spider',        x:180,  y:940 },
+    { id:baseTime+31, type:'emoji', icon:'🕷️', color:GREY,   size:12, owner:'DM', approved:true, name:'Giant Spider',        x:240,  y:1020 },
+    { id:baseTime+40, type:'emoji', icon:'☠️', color:'#2a0a2a', size:18, owner:'DM', approved:true, name:'Malgrath the Undying', x:1000, y:980 },
+    { id:baseTime+41, type:'emoji', icon:'💀', color:GREY,   size:12, owner:'DM', approved:true, name:'Skeleton',            x:870,  y:870 },
+    { id:baseTime+42, type:'emoji', icon:'💀', color:GREY,   size:12, owner:'DM', approved:true, name:'Skeleton',            x:1100, y:920 },
   ],
 
-  // ── Placed images (none — all art is in gridCells) ────────────────────────
   placedImages: [],
 
-  // ── Player roster ─────────────────────────────────────────────────────────
   playerData: [
-    { name: 'Player 1', role: 'player', peerId: 'player1-peer' },
-    { name: 'Player 2', role: 'player', peerId: 'player2-peer' },
-    { name: 'Player 3', role: 'player', peerId: 'player3-peer' },
-    { name: 'Player 4', role: 'player', peerId: 'player4-peer' },
+    { name:'Player 1', role:'player', peerId:'player1-peer' },
+    { name:'Player 2', role:'player', peerId:'player2-peer' },
+    { name:'Player 3', role:'player', peerId:'player3-peer' },
+    { name:'Player 4', role:'player', peerId:'player4-peer' },
   ],
 
-  // ── View state: centered on ruins courtyard ───────────────────────────────
   zoom:           1.0,
   panX:           0,
   panY:           0,
@@ -1017,17 +896,15 @@ const campaign = {
 };
 
 const outPath = '/home/user/dnd-save/campaigns/ruins_of_ashenvale.json';
-require('fs').mkdirSync('/home/user/dnd-save/campaigns', { recursive: true });
-require('fs').writeFileSync(outPath, JSON.stringify(campaign, null, 2));
+fs.mkdirSync('/home/user/dnd-save/campaigns', { recursive: true });
+fs.writeFileSync(outPath, JSON.stringify(campaign, null, 2));
 
-const stats = require('fs').statSync(outPath);
+const stats = fs.statSync(outPath);
 console.log(`\n✅ Campaign written to: ${outPath}`);
 console.log(`   File size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
-console.log('\nCampaign "The Ruins of Ashenvale" includes:');
-console.log('  - 9 hand-crafted terrain tiles (400×400 each)');
-console.log('  - 2 fog-of-war groups (Everyone + Scouting Party)');
-console.log('  - Center cell revealed, rest fog-covered');
-console.log('  - 4 party staging tokens (Fighter, Wizard, Ranger, Cleric)');
-console.log('  - 11 placed enemy tokens (goblins, skeletons, spiders, boss)');
-console.log('  - 2 locked cells (cave & underhalls — DM-only)');
-console.log('  - Grid snap enabled, 4-player roster');
+console.log('\nImprovements in this version:');
+console.log('  - Neighbor-aware edge blending at every tile border');
+console.log('  - River flows continuously from forest (0,0) through crossing (0,1) into cave (0,2)');
+console.log('  - Forest trail path connects into ruins courtyard entrance');
+console.log('  - Underhalls top edge blends strongly into ruins stone (80-90px)');
+console.log('  - All seams use quadratic falloff for smooth transitions');
