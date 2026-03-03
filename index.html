@@ -1194,20 +1194,49 @@
         .welcome-divider::after { left: calc(50% + 1.5rem); }
 
         /* DICE ROLLER */
+        .dice-roller-wrapper {
+            position: fixed; bottom: 160px; right: calc(28% - 32px);
+            display: none; flex-direction: column; align-items: center; gap: 0;
+            z-index: 8000;
+        }
+        .dice-roller-wrapper.visible { display: flex; }
+        .dice-type-dropdown {
+            background: rgba(14,11,8,0.97); border: 1px solid var(--border);
+            border-radius: 10px; padding: 0.35rem 0.4rem;
+            display: none; flex-direction: column; gap: 0.2rem;
+            margin-bottom: 0.4rem; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+        }
+        .dice-type-dropdown.open { display: flex; }
+        .dice-type-option {
+            padding: 0.2rem 0.9rem; background: var(--bg-hover);
+            border: 1px solid var(--border); color: var(--text);
+            border-radius: 5px; cursor: pointer; font-size: 0.8rem;
+            font-weight: 700; font-family: 'Cinzel', serif; text-align: center;
+            transition: all 0.15s; letter-spacing: 0.04em;
+        }
+        .dice-type-option:hover { background: var(--accent); color: var(--bg-dark); }
+        .dice-type-option.active { background: var(--accent); color: var(--bg-dark); border-color: var(--accent); }
         .dice-roller-btn {
-            position: fixed; bottom: 160px; right: calc(28% - 38px);
-            width: 76px; height: 76px;
+            width: 60px; height: 60px;
             background: linear-gradient(135deg, #9b2335, #6b0f1a);
             border: 2px solid #c8922a; border-radius: 50%;
-            cursor: pointer; font-size: 2rem;
-            display: none; align-items: center; justify-content: center; flex-direction: column;
+            cursor: pointer; font-size: 1.6rem;
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
             box-shadow: 0 4px 18px rgba(200,146,42,0.45);
-            z-index: 8000; color: var(--gold); line-height: 1;
+            color: var(--gold); line-height: 1;
             transition: transform 0.15s, box-shadow 0.15s;
         }
-        .dice-roller-btn.visible { display: flex; }
         .dice-roller-btn:hover { transform: scale(1.12); box-shadow: 0 6px 22px rgba(200,146,42,0.5); }
         .dice-roller-btn.rolling { animation: diceRollAnim 0.5s ease-out; }
+        .dice-select-btn {
+            width: 32px; height: 13px; margin-top: -1px;
+            background: rgba(26,21,16,0.9); border: 1px solid var(--border);
+            border-top: none; border-radius: 0 0 8px 8px;
+            cursor: pointer; color: var(--text-dim); font-size: 0.55rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s; letter-spacing: 0.03em;
+        }
+        .dice-select-btn:hover { background: var(--accent); color: var(--bg-dark); }
         @keyframes diceRollAnim {
             0%   { transform: rotate(0deg) scale(1); }
             25%  { transform: rotate(120deg) scale(1.2); }
@@ -1216,7 +1245,7 @@
             100% { transform: rotate(360deg) scale(1); }
         }
         .dice-roll-log {
-            position: fixed; bottom: 248px; right: calc(28% - 100px);
+            position: fixed; bottom: 232px; right: calc(28% - 100px);
             width: 200px; display: none; flex-direction: column-reverse;
             gap: 0.3rem; z-index: 7999; max-height: 220px; overflow: hidden; pointer-events: none;
         }
@@ -1226,7 +1255,9 @@
             border-radius: 8px; padding: 0.35rem 0.6rem; font-size: 0.78rem;
             display: flex; justify-content: space-between; align-items: center;
             animation: slideRight 0.3s ease-out;
+            transition: opacity 0.5s, transform 0.5s;
         }
+        .dice-log-entry.removing { opacity: 0; transform: translateX(110%); }
         @keyframes slideRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .dice-log-num { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
         .dice-log-num.nat20 { color: #fbbf24; }
@@ -2097,13 +2128,25 @@
 
     <!-- DICE ROLLER -->
     <div class="dice-roll-log" id="diceRollLog"></div>
-    <button class="dice-roller-btn" id="diceRollerBtn" onclick="rollD20()" title="Roll d20 — everyone sees it">
-        🎲<span style="font-size:0.5rem;margin-top:2px;opacity:0.85;">d20</span>
-    </button>
+    <div class="dice-roller-wrapper" id="diceRollerWrapper">
+        <div class="dice-type-dropdown" id="diceTypeDropdown">
+            <button class="dice-type-option" onclick="setDiceType(4)">d4</button>
+            <button class="dice-type-option" onclick="setDiceType(6)">d6</button>
+            <button class="dice-type-option" onclick="setDiceType(8)">d8</button>
+            <button class="dice-type-option" onclick="setDiceType(10)">d10</button>
+            <button class="dice-type-option" onclick="setDiceType(12)">d12</button>
+            <button class="dice-type-option active" onclick="setDiceType(20)">d20</button>
+            <button class="dice-type-option" onclick="setDiceType(100)">d100</button>
+        </div>
+        <button class="dice-roller-btn" id="diceRollerBtn" onclick="rollCurrentDice()" title="Click to roll — everyone sees it">
+            🎲<span id="diceTypeLabel" style="font-size:0.5rem;margin-top:2px;opacity:0.85;">d20</span>
+        </button>
+        <button class="dice-select-btn" id="diceSelectBtn" onclick="toggleDiceDropdown(event)" title="Choose dice type">▾ type</button>
+    </div>
     <div class="dice-result-toast" id="diceToast">
         <div class="toast-roller" id="toastRoller"></div>
         <div class="toast-num" id="toastNum">—</div>
-        <div class="toast-label">d20</div>
+        <div class="toast-label" id="toastDiceLabel">d20</div>
     </div>
 
     <!-- CONNECTION PANEL -->
@@ -2212,7 +2255,7 @@
                     <div style="margin-bottom: 1rem;">
                         <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Export/Import Campaign:</div>
                         <div class="btn-group">
-                            <button class="btn btn-primary" onclick="exportCampaign()" style="flex: 1;">📥 Export .JSON</button>
+                            <button class="btn btn-primary" onclick="exportCampaign()" style="flex: 1;">💾 Save .JSON</button>
                             <button class="btn" onclick="document.getElementById('importFile').click()" style="flex: 1;">📤 Import .JSON</button>
                         </div>
                         <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importCampaign(event)">
@@ -2338,13 +2381,14 @@
 
                         <div style="margin-bottom: 0.75rem;">
                             <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Fog Paint Mode:</div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
                                 <button class="btn btn-small btn-primary" onclick="setFogPaintMode('brush')" id="fogBrushBtn">🖌️ Brush</button>
-                                <button class="btn btn-small" onclick="setFogPaintMode('rect')" id="fogRectBtn">▭ Rectangle</button>
+                                <button class="btn btn-small" onclick="setFogPaintMode('rect')" id="fogRectBtn">▭ Rect</button>
+                                <button class="btn btn-small" onclick="setFogPaintMode('triangle')" id="fogTriBtn">△ Tri</button>
                             </div>
                         </div>
 
-                        <div class="control-row">
+                        <div class="control-row" id="fogSizeRow">
                             <label>Brush Size:</label>
                             <input type="range" class="slider" id="fogSize" min="20" max="150" value="60" oninput="updateFogSize(this.value)" style="flex: 1;">
                             <span id="fogSizeValue">60px</span>
@@ -3392,12 +3436,16 @@
         let activeFogGroup = 'everyone';
         let fogGroups = { everyone: { name: 'Everyone', canvas: null } };
         let fogMode = false;
-        let fogPaintMode = 'brush'; // 'brush' or 'rect'
+        let fogPaintMode = 'brush'; // 'brush', 'rect', or 'triangle'
         let fogBrushSize = 60;
         let fogRectStart = null;
+        let fogTriangleStart = null;
         let isFogDrawing = false;
         let dmFogOpacity = 0.3; // DM sees through fog
         let fogBroadcastTimeout = null; // For throttling broadcasts
+
+        // Dice
+        let currentDiceSides = 20;
 
         // Player requests
         let pendingRequests = [];
@@ -3644,7 +3692,7 @@
             document.getElementById('welcomeButtons').style.display = 'flex';
             document.getElementById('welcomeScreen').classList.remove('hidden');
             document.getElementById('connectionTabContainer').style.display = 'none';
-            document.getElementById('diceRollerBtn').classList.remove('visible');
+            document.getElementById('diceRollerWrapper').classList.remove('visible');
             document.getElementById('diceRollLog').classList.remove('visible');
             const advPanel = document.getElementById('diceAdvantagePanel');
             if (advPanel) advPanel.classList.remove('panel-visible');
@@ -4046,7 +4094,7 @@
             document.getElementById('welcomeButtons').style.display = 'flex';
             document.getElementById('startFreshBtn').style.display = 'none';
             document.getElementById('connectionTabContainer').style.display = 'block';
-            document.getElementById('diceRollerBtn').classList.add('visible');
+            document.getElementById('diceRollerWrapper').classList.add('visible');
             document.getElementById('diceRollLog').classList.add('visible');
             showDiceAdvantagePanel();
             document.getElementById('roomCodeSection').style.display = 'block';
@@ -4211,7 +4259,7 @@
                     document.getElementById('dmControlsBtn').style.display = 'block';
                     document.getElementById('musicToggleBtn').style.display = 'block';
                     document.getElementById('stagingZone').style.display = 'flex';
-                    document.getElementById('diceRollerBtn').classList.add('visible');
+                    document.getElementById('diceRollerWrapper').classList.add('visible');
                     document.getElementById('diceRollLog').classList.add('visible');
                     showDiceAdvantagePanel();
                     updateConnectionStatus('Connected as Co-DM', true);
@@ -4286,7 +4334,7 @@
                     document.getElementById('welcomeButtons').style.display = 'none';
                     document.getElementById('startFreshBtn').style.display = 'none';
                     document.getElementById('playerPanelContainer').style.display = 'block';
-                    document.getElementById('diceRollerBtn').classList.add('visible');
+                    document.getElementById('diceRollerWrapper').classList.add('visible');
                     document.getElementById('diceRollLog').classList.add('visible');
                     showDiceAdvantagePanel();
                     savePlayerState();
@@ -4407,7 +4455,7 @@
                             if (approved && c.peer !== conn.peer) sendToPeer(c, data);
                         });
                     }
-                    showDiceResult(data.result, data.rollerName, false, data.rollId, data.bonus || 0, data.advLabel || null);
+                    showDiceResult(data.result, data.rollerName, false, data.rollId, data.bonus || 0, data.advLabel || null, false, data.diceSides || 20);
                     break;
             }
         }
@@ -4471,7 +4519,7 @@
                     });
                     break;
                 case 'diceRoll':
-                    showDiceResult(data.result, data.rollerName, false, data.rollId, data.bonus || 0, data.advLabel || null);
+                    showDiceResult(data.result, data.rollerName, false, data.rollId, data.bonus || 0, data.advLabel || null, false, data.diceSides || 20);
                     break;
                 // --- Landmark stamps ---
                 case 'stampUpdate':
@@ -6058,11 +6106,13 @@
             // Fog mode painting
             if (isDM && fogMode) {
                 isFogDrawing = true;
-                
+
                 if (fogPaintMode === 'brush') {
                     paintFog(mx, my);
                 } else if (fogPaintMode === 'rect') {
                     fogRectStart = { x: mx, y: my };
+                } else if (fogPaintMode === 'triangle') {
+                    fogTriangleStart = { x: mx, y: my };
                 }
                 return;
             }
@@ -6141,9 +6191,7 @@
                 if (fogPaintMode === 'brush') {
                     paintFog(mx, my);
                 } else if (fogPaintMode === 'rect' && fogRectStart) {
-                    // Just update for preview, actual painting on mouseup
                     draw();
-                    
                     // Draw preview rectangle
                     ctx.save();
                     const reveal = document.getElementById('revealMode').checked;
@@ -6154,6 +6202,32 @@
                     ctx.scale(zoom, zoom);
                     ctx.strokeRect(fogRectStart.x, fogRectStart.y, mx - fogRectStart.x, my - fogRectStart.y);
                     ctx.restore();
+                } else if (fogPaintMode === 'triangle' && fogTriangleStart) {
+                    draw();
+                    // Draw preview equilateral triangle
+                    const tx1 = fogTriangleStart.x, ty1 = fogTriangleStart.y;
+                    const dx = mx - tx1, dy = my - ty1;
+                    const len = Math.sqrt(dx * dx + dy * dy);
+                    if (len > 1) {
+                        const halfBase = len / Math.sqrt(3);
+                        const nx = -dy / len, ny = dx / len; // perpendicular unit vector
+                        const lx = mx + halfBase * nx, ly = my + halfBase * ny;
+                        const rx = mx - halfBase * nx, ry = my - halfBase * ny;
+                        ctx.save();
+                        const reveal2 = document.getElementById('revealMode').checked;
+                        ctx.strokeStyle = reveal2 ? '#10b981' : '#ef4444';
+                        ctx.lineWidth = 2 / zoom;
+                        ctx.setLineDash([5 / zoom, 5 / zoom]);
+                        ctx.translate(panX, panY);
+                        ctx.scale(zoom, zoom);
+                        ctx.beginPath();
+                        ctx.moveTo(tx1, ty1);
+                        ctx.lineTo(lx, ly);
+                        ctx.lineTo(rx, ry);
+                        ctx.closePath();
+                        ctx.stroke();
+                        ctx.restore();
+                    }
                 }
                 return;
             }
@@ -6186,15 +6260,20 @@
                 broadcastImages();
             }
             
-            if (isFogDrawing && fogPaintMode === 'rect' && fogRectStart) {
+            if (isFogDrawing) {
                 const rect = canvas.getBoundingClientRect();
                 const mx = (e.clientX - rect.left - panX) / zoom;
                 const my = (e.clientY - rect.top - panY) / zoom;
-                
-                paintFogRect(fogRectStart.x, fogRectStart.y, mx, my);
-                fogRectStart = null;
+
+                if (fogPaintMode === 'rect' && fogRectStart) {
+                    paintFogRect(fogRectStart.x, fogRectStart.y, mx, my);
+                    fogRectStart = null;
+                } else if (fogPaintMode === 'triangle' && fogTriangleStart) {
+                    paintFogTriangle(fogTriangleStart.x, fogTriangleStart.y, mx, my);
+                    fogTriangleStart = null;
+                }
             }
-            
+
             isFogDrawing = false;
             isDrawing = false;
         });
@@ -6322,11 +6401,14 @@
             fogPaintMode = mode;
             document.getElementById('fogBrushBtn').classList.remove('btn-primary');
             document.getElementById('fogRectBtn').classList.remove('btn-primary');
-            
+            document.getElementById('fogTriBtn').classList.remove('btn-primary');
+            document.getElementById('fogSizeRow').style.display = mode === 'brush' ? '' : 'none';
             if (mode === 'brush') {
                 document.getElementById('fogBrushBtn').classList.add('btn-primary');
-            } else {
+            } else if (mode === 'rect') {
                 document.getElementById('fogRectBtn').classList.add('btn-primary');
+            } else if (mode === 'triangle') {
+                document.getElementById('fogTriBtn').classList.add('btn-primary');
             }
         }
 
@@ -6434,9 +6516,40 @@
             broadcastFog();
         }
 
+        function paintFogTriangle(x1, y1, x2, y2) {
+            if (!isDM || !fogGroups[activeFogGroup]) return;
+            const dx = x2 - x1, dy = y2 - y1;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len < 2) return;
+            const halfBase = len / Math.sqrt(3);
+            const nx = -dy / len, ny = dx / len;
+            const lx = x2 + halfBase * nx, ly = y2 + halfBase * ny;
+            const rx = x2 - halfBase * nx, ry = y2 - halfBase * ny;
+
+            const fogCtx = fogGroups[activeFogGroup].canvas.getContext('2d');
+            const reveal = document.getElementById('revealMode').checked;
+            fogCtx.save();
+            if (reveal) {
+                fogCtx.globalCompositeOperation = 'destination-out';
+                fogCtx.fillStyle = 'rgba(0,0,0,1)';
+            } else {
+                fogCtx.globalCompositeOperation = 'source-over';
+                fogCtx.fillStyle = 'rgba(0,0,0,1)';
+            }
+            fogCtx.beginPath();
+            fogCtx.moveTo(x1, y1);
+            fogCtx.lineTo(lx, ly);
+            fogCtx.lineTo(rx, ry);
+            fogCtx.closePath();
+            fogCtx.fill();
+            fogCtx.restore();
+            draw();
+            broadcastFog();
+        }
+
         function broadcastFog() {
             if (!isDM) return;
-            
+
             // Clear any pending broadcast
             if (fogBroadcastTimeout) {
                 clearTimeout(fogBroadcastTimeout);
@@ -7781,7 +7894,7 @@
                     const rolls = (snap.data().rolls || [])
                         .sort((a, b) => b.timestamp - a.timestamp)
                         .slice(0, 5);
-                    rolls.reverse().forEach(r => showDiceResult(r.result, r.rollerName, false, r.rollId, 0, null, true));
+                    rolls.reverse().forEach(r => showDiceResult(r.result, r.rollerName, false, r.rollId, 0, null, true, r.diceSides || 20));
                 }).catch(() => {});
 
                 // Real-time listener — only surfaces rolls that arrive after we joined
@@ -7790,7 +7903,7 @@
                     if (!snap.exists) return;
                     (snap.data().rolls || []).forEach(r => {
                         if (r.timestamp >= diceListenSince) {
-                            showDiceResult(r.result, r.rollerName, false, r.rollId);
+                            showDiceResult(r.result, r.rollerName, false, r.rollId, 0, null, false, r.diceSides || 20);
                         }
                     });
                 }, () => {});
@@ -7891,43 +8004,76 @@
         // =============================================
         let diceToastTimer = null;
 
-        function rollD20() {
-            const result = Math.floor(Math.random() * 20) + 1;
+        function rollCurrentDice() {
+            const sides = currentDiceSides;
+            const result = Math.floor(Math.random() * sides) + 1;
             const rollId = Date.now() + '_' + Math.random().toString(36).slice(2, 8);
             const btn = document.getElementById('diceRollerBtn');
             btn.classList.add('rolling');
             setTimeout(() => btn.classList.remove('rolling'), 500);
-            const bonus = selectedAdvantageBonus || 0;
-            const advLabel = selectedAdvantageLabel || null;
-            showDiceResult(result, myName || 'Anonymous', true, rollId, bonus, advLabel);
-            const msg = { type: 'diceRoll', result, rollerName: myName || 'Anonymous', rollId, bonus, advLabel };
+            // Bonus/advantage only applies to d20
+            const bonus = sides === 20 ? (selectedAdvantageBonus || 0) : 0;
+            const advLabel = sides === 20 ? (selectedAdvantageLabel || null) : null;
+            showDiceResult(result, myName || 'Anonymous', true, rollId, bonus, advLabel, false, sides);
+            const msg = { type: 'diceRoll', result, rollerName: myName || 'Anonymous', rollId, bonus, advLabel, diceSides: sides };
             if (!isDM) {
                 connections.forEach(({ conn, role }) => { if (role === 'dm') sendToPeer(conn, msg); });
             } else {
                 broadcast(msg);
             }
             saveDiceRollToFirebase(result, myName || 'Anonymous', rollId);
+            // Close dropdown if open
+            document.getElementById('diceTypeDropdown').classList.remove('open');
         }
 
-        function showDiceResult(result, rollerName, isOwn, rollId, bonus, advLabel, silent) {
+        function setDiceType(sides) {
+            currentDiceSides = sides;
+            document.getElementById('diceTypeLabel').textContent = 'd' + sides;
+            document.querySelectorAll('.dice-type-option').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent === 'd' + sides);
+            });
+            document.getElementById('diceTypeDropdown').classList.remove('open');
+        }
+
+        function toggleDiceDropdown(e) {
+            if (e) e.stopPropagation();
+            document.getElementById('diceTypeDropdown').classList.toggle('open');
+        }
+
+        // Close dice dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('diceRollerWrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                const dd = document.getElementById('diceTypeDropdown');
+                if (dd) dd.classList.remove('open');
+            }
+        });
+
+        function showDiceResult(result, rollerName, isOwn, rollId, bonus, advLabel, silent, diceSides) {
             if (rollId !== undefined) {
                 if (shownRollIds.has(rollId)) return;
                 shownRollIds.add(rollId);
             }
             const b = bonus || 0;
             const total = result + b;
+            const sides = diceSides || 20;
+            const dLabel = 'd' + sides;
+            const isNat20 = sides === 20 && result === 20;
+            const isNat1  = sides === 20 && result === 1;
             if (!silent) {
                 const toast = document.getElementById('diceToast');
                 const numEl  = document.getElementById('toastNum');
                 const nameEl = document.getElementById('toastRoller');
-                numEl.className = 'toast-num' + (result === 20 ? ' nat20' : result === 1 ? ' nat1' : '');
+                const labelEl = document.getElementById('toastDiceLabel');
+                numEl.className = 'toast-num' + (isNat20 ? ' nat20' : isNat1 ? ' nat1' : '');
+                if (labelEl) labelEl.textContent = dLabel;
                 if (b !== 0 && advLabel) {
                     const sign = b >= 0 ? '+' : '';
                     numEl.textContent = result + ' ' + sign + b + ' = ' + total;
-                    nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20 (' + advLabel + ')';
+                    nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' ' + dLabel + ' (' + advLabel + ')';
                 } else {
                     numEl.textContent = result;
-                    nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' d20';
+                    nameEl.textContent = (isOwn ? 'You roll' : rollerName + ' rolls') + ' ' + dLabel;
                 }
                 toast.classList.add('show');
                 clearTimeout(diceToastTimer);
@@ -7936,15 +8082,21 @@
             const log = document.getElementById('diceRollLog');
             const entry = document.createElement('div');
             entry.className = 'dice-log-entry';
-            const cls = result === 20 ? ' nat20' : result === 1 ? ' nat1' : '';
+            const cls = isNat20 ? ' nat20' : isNat1 ? ' nat1' : '';
+            const dLabelSpan = `<span style="color:var(--text-dim);font-size:0.65rem;opacity:0.7;">${dLabel}</span>`;
             if (b !== 0) {
                 const sign = b >= 0 ? '+' : '';
-                entry.innerHTML = `<span style="color:var(--text-dim);font-size:0.75rem;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rollerName}</span><span class="dice-log-num${cls}">${result}${sign}${b}=${total}</span>`;
+                entry.innerHTML = `<span style="color:var(--text-dim);font-size:0.75rem;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rollerName} ${dLabelSpan}</span><span class="dice-log-num${cls}">${result}${sign}${b}=${total}</span>`;
             } else {
-                entry.innerHTML = `<span style="color:var(--text-dim);font-size:0.75rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rollerName}</span><span class="dice-log-num${cls}">${result}</span>`;
+                entry.innerHTML = `<span style="color:var(--text-dim);font-size:0.75rem;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rollerName} ${dLabelSpan}</span><span class="dice-log-num${cls}">${result}</span>`;
             }
             log.prepend(entry);
-            while (log.children.length > 5) log.lastChild.remove();
+            // Auto-fade and remove entry after 8 seconds
+            setTimeout(() => {
+                entry.classList.add('removing');
+                setTimeout(() => { if (entry.parentNode) entry.parentNode.removeChild(entry); }, 500);
+            }, 8000);
+            while (log.children.length > 8) log.lastChild.remove();
         }
 
         // =============================================
