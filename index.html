@@ -916,6 +916,56 @@
             background: rgba(139, 92, 246, 0.05);
         }
 
+        .map-thumb-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            margin: 0.5rem 0;
+        }
+        .map-thumb-wrap {
+            position: relative;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            aspect-ratio: 1;
+            background: var(--bg-dark);
+            transition: border-color 0.2s;
+        }
+        .map-thumb-wrap:hover { border-color: var(--accent); }
+        .map-thumb-wrap canvas { width: 100%; height: 100%; display: block; }
+        .map-thumb-label {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.65);
+            font-size: 0.5rem;
+            text-align: center;
+            padding: 2px;
+            color: var(--text-dim);
+        }
+        .submap-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 0.5rem;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .submap-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 4px 6px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-dark);
+            transition: border-color 0.2s;
+        }
+        .submap-item:hover { border-color: var(--accent); }
+        .submap-item canvas { width: 60px; height: 37px; border-radius: 3px; flex-shrink: 0; }
+        .submap-item-label { font-size: 0.8rem; color: var(--text); }
+
         .section h3 {
             margin-bottom: 0.75rem;
             color: var(--gold);
@@ -2280,6 +2330,18 @@
                     <div class="success" id="importSuccess">Campaign imported!</div>
                     <div class="success" id="linkSuccess">Cloud link saved!</div>
                     <div class="error" id="importError">Import failed. Check file format.</div>
+                </div>
+
+                <!-- MAPS OVERVIEW -->
+                <div class="section" id="mapsSection">
+                    <h3>🗾 Maps</h3>
+                    <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:0.5rem;">Click a cell to navigate everyone there</div>
+                    <div class="map-thumb-grid" id="mapThumbGrid"></div>
+                    <button class="btn btn-small" style="width:100%;margin-top:0.5rem;" onclick="showFullWorldView()">🌍 Full World View</button>
+                    <div id="submapListWrapper" style="display:none;">
+                        <div style="font-size:0.8rem;color:var(--text-dim);margin-top:0.75rem;margin-bottom:0.25rem;">Stamp Illustrations</div>
+                        <div class="submap-list" id="submapList"></div>
+                    </div>
                 </div>
 
                 <!-- MAP BUILDER -->
@@ -4589,6 +4651,17 @@
                     }
                     showDiceResult(data.result, data.rollerName, false, data.rollId, data.bonus || 0, data.advLabel || null, false, data.diceSides || 20);
                     break;
+
+                case 'viewSync':
+                    if (!isDM && !isCoDM) {
+                        zoom = data.zoom || zoom;
+                        panX = data.panX !== undefined ? data.panX : panX;
+                        panY = data.panY !== undefined ? data.panY : panY;
+                        document.getElementById('zoomSlider').value = zoom * 100;
+                        document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
+                        draw();
+                    }
+                    break;
             }
         }
 
@@ -5722,6 +5795,7 @@
             startGlowAnimation();
             closeSubMapEditor();
             draw();
+            refreshMapsSection();
         }
 
         function clearSubMap() {
@@ -7256,8 +7330,88 @@
         });
 
         // === UI ===
+        function refreshMapsSection() {
+            const grid = document.getElementById('mapThumbGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            const names = [
+                ['Top-Left','Top-Center','Top-Right'],
+                ['Middle-Left','Center','Middle-Right'],
+                ['Bottom-Left','Bottom-Center','Bottom-Right']
+            ];
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'map-thumb-wrap';
+                    wrap.title = names[row][col] + ' — click to send everyone here';
+                    wrap.onclick = () => goToCell(col, row);
+
+                    const thumb = document.createElement('canvas');
+                    thumb.width = 80; thumb.height = 80;
+                    const tctx = thumb.getContext('2d');
+                    tctx.fillStyle = '#1a1f2e';
+                    tctx.fillRect(0, 0, 80, 80);
+                    const cell = gridCells[col + ',' + row];
+                    if (cell) tctx.drawImage(cell, 0, 0, 80, 80);
+
+                    const label = document.createElement('div');
+                    label.className = 'map-thumb-label';
+                    label.textContent = names[row][col];
+
+                    wrap.appendChild(thumb);
+                    wrap.appendChild(label);
+                    grid.appendChild(wrap);
+                }
+            }
+
+            // Sub-map illustrations
+            const listWrapper = document.getElementById('submapListWrapper');
+            const list = document.getElementById('submapList');
+            const stampIds = Object.keys(stampSubMaps);
+            if (stampIds.length === 0) { listWrapper.style.display = 'none'; return; }
+            listWrapper.style.display = 'block';
+            list.innerHTML = '';
+            stampIds.forEach(sid => {
+                const stamp = placedStamps.find(s => s.id === sid);
+                const item = document.createElement('div');
+                item.className = 'submap-item';
+                item.title = 'Edit illustration';
+                item.onclick = () => openSubMapEditor(sid);
+
+                const thumb = document.createElement('canvas');
+                thumb.width = 60; thumb.height = 37;
+                thumb.getContext('2d').drawImage(stampSubMaps[sid], 0, 0, 60, 37);
+
+                const lbl = document.createElement('div');
+                lbl.className = 'submap-item-label';
+                lbl.textContent = (stamp ? stamp.emoji + ' ' : '') + 'Illustration';
+
+                item.appendChild(thumb);
+                item.appendChild(lbl);
+                list.appendChild(item);
+            });
+        }
+
+        function goToCell(col, row) {
+            minimapNavigate(col, row);
+            broadcast({ type: 'viewSync', panX, panY, zoom });
+        }
+
+        function showFullWorldView() {
+            const worldW = GRID_SIZE * 3;
+            const worldH = GRID_SIZE * 3;
+            zoom = Math.min(canvas.width / worldW, canvas.height / worldH) * 0.9;
+            panX = (canvas.width - worldW * zoom) / 2;
+            panY = (canvas.height - worldH * zoom) / 2;
+            document.getElementById('zoomSlider').value = zoom * 100;
+            document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
+            draw();
+            broadcast({ type: 'viewSync', panX, panY, zoom });
+        }
+
         function toggleDMPanel() {
             document.getElementById('dmPanel').classList.toggle('open');
+            if (document.getElementById('dmPanel').classList.contains('open')) refreshMapsSection();
         }
 
         // Global error handler
