@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // DM user accounts — any Firebase-authenticated session (including anonymous)
+    // can read a username doc (to verify credentials) or create a new account.
+    match /vtt_users/{username} {
+      allow read, create, update: if request.auth != null;
+    }
+
+    // Game room state (map cells, fog, images, stamps, dice log, etc.)
+    // All sub-documents use the pattern vtt_rooms/{roomId__suffix}.
+    match /vtt_rooms/{docId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
