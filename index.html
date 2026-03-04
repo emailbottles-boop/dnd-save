@@ -1956,10 +1956,12 @@
                     <label>PASSWORD</label>
                     <input type="password" id="dmPass" placeholder="Choose a password" required>
                 </div>
-                <div class="form-group">
-                    <label>SESSION ID (Optional - leave blank for new session)</label>
-                    <input type="text" id="sessionId" placeholder="Paste previous session ID to rejoin">
-                    <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">💡 Save your session ID to rejoin this campaign later!</p>
+                <div class="form-group" id="sessionIdRow" style="display:none;">
+                    <label>SESSION ID (Advanced override — normally auto-loaded from cloud)</label>
+                    <input type="text" id="sessionId" placeholder="Leave blank to load your saved campaign">
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-dim); margin-bottom:0.5rem;">
+                    ☁️ Your campaign is automatically saved to the cloud and restored when you log in.
                 </div>
                 <div class="error" id="dmError">Invalid credentials</div>
                 <div class="info" id="dmInfo" style="display: none;">Rejoining previous session...</div>
@@ -2384,7 +2386,7 @@
                             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
                                 <button class="btn btn-small btn-primary" onclick="setFogPaintMode('brush')" id="fogBrushBtn">🖌️ Brush</button>
                                 <button class="btn btn-small" onclick="setFogPaintMode('rect')" id="fogRectBtn">▭ Rect</button>
-                                <button class="btn btn-small" onclick="setFogPaintMode('triangle')" id="fogTriBtn">△ Tri</button>
+                                <button class="btn btn-small" onclick="setFogPaintMode('triangle')" id="fogTriBtn">△ Triangle</button>
                             </div>
                         </div>
 
@@ -3128,6 +3130,51 @@
             }
         }
 
+        // === CLOUD DM ACCOUNTS ===
+        // Signs the DM in with email/password Firebase Auth.
+        // Uses a synthetic email (username@dndvtt.internal) so DMs only need a
+        // simple username — no real email required. Falls back to localStorage-only
+        // mode if Firebase Auth isn't available or the operation-not-allowed error
+        // occurs (i.e. Email/Password auth not yet enabled in the Firebase console).
+        async function firebaseDMSignIn(username, password) {
+            if (typeof firebase === 'undefined') throw new Error('Firebase unavailable');
+            const safeUser = username.toLowerCase().replace(/[^a-z0-9._-]/g, '');
+            const email = safeUser + '@dndvtt.internal';
+            try {
+                const result = await firebase.auth().signInWithEmailAndPassword(email, password);
+                return result.user;
+            } catch (err) {
+                if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/invalid-email') {
+                    // First time — create account
+                    const result = await firebase.auth().createUserWithEmailAndPassword(email, password);
+                    return result.user;
+                }
+                throw err;
+            }
+        }
+
+        // Reads the DM's saved canonical room ID from their cloud profile.
+        async function getDMCloudRoomId(uid) {
+            if (!fbDb) return null;
+            try {
+                const doc = await fbDb.collection('dm_profiles').doc(uid).get();
+                return (doc.exists && doc.data() && doc.data().roomId) ? doc.data().roomId : null;
+            } catch(e) { return null; }
+        }
+
+        // Persists the DM's canonical room ID to their cloud profile so they can
+        // recover the campaign from any device using the same credentials.
+        async function saveDMCloudProfile(uid, roomId) {
+            if (!fbDb || !uid || !roomId) return;
+            try {
+                await fbDb.collection('dm_profiles').doc(uid).set(
+                    { roomId, savedAt: Date.now() },
+                    { merge: true }
+                );
+                console.log('☁️ DM profile saved:', uid, '->', roomId);
+            } catch(e) { console.error('☁️ Failed to save DM profile:', e); }
+        }
+
         // Watch Firestore for DM peer ID changes; fires callback immediately with the
         // current value then on every future change. Stores the unsubscribe fn in
         // playerFirebaseWatcher so the watcher can be torn down cleanly.
@@ -3504,6 +3551,11 @@
                     clearTimeout(firebaseSaveTimeout);
                     firebaseSaveTimeout = null;
                     saveToFirebase(); // best-effort async save
+                    // Keep DM cloud profile link up-to-date so the campaign is
+                    // always recoverable from any device with the same credentials.
+                    if (firebaseUser.uid && !isCoDM) {
+                        saveDMCloudProfile(firebaseUser.uid, firebaseRoomRef);
+                    }
                 }
             }
             // visibilitychange fires reliably on tab switch, phone sleep, refresh
@@ -3715,8 +3767,9 @@
 
         // === AUTHENTICATION ===
         function showDMLogin() {
-            const savedSession = localStorage.getItem('fracturedSkySessionId');
-            if (savedSession) document.getElementById('sessionId').value = savedSession;
+            // Session ID field is hidden by default — cloud auth auto-loads campaign.
+            // Clear any stale value so the field doesn't accidentally act as override.
+            document.getElementById('sessionId').value = '';
             const creds = getDMCredentials();
             const firstTime = !creds.user || !creds.pass;
             document.getElementById('dmFirstTimeNotice').style.display = firstTime ? 'block' : 'none';
@@ -3769,25 +3822,77 @@
             document.getElementById('dmLoginBtn').textContent = 'LOGIN & CREATE ROOM';
         }
 
-        function dmLogin(e) {
+        async function dmLogin(e) {
             e.preventDefault();
-            const user = document.getElementById('dmUser').value;
+            const user = document.getElementById('dmUser').value.trim();
             const pass = document.getElementById('dmPass').value;
-            const sessionId = document.getElementById('sessionId').value.trim();
+            const manualSessionId = document.getElementById('sessionId').value.trim();
+
+            const btn = document.getElementById('dmLoginBtn');
+            btn.disabled = true;
+            btn.textContent = 'Signing in...';
+            document.getElementById('dmError').classList.remove('show');
+
+            // --- Cloud auth path (Firebase Email/Password) ---
+            if (typeof firebase !== 'undefined' && fbDb) {
+                try {
+                    const fbUser = await firebaseDMSignIn(user, pass);
+                    firebaseUser = fbUser;
+                    localStorage.setItem('fracturedSkyDMUser', user);
+                    localStorage.setItem('fracturedSkyDMPass', pass);
+
+                    // Look up their cloud-saved room ID (campaign) first;
+                    // manual session ID overrides if the DM typed one in.
+                    let roomId = manualSessionId || null;
+                    if (!roomId) {
+                        roomId = await getDMCloudRoomId(fbUser.uid);
+                    }
+                    if (roomId) {
+                        localStorage.setItem('fracturedSkySessionId', roomId);
+                    }
+                    closeDMModal();
+                    createRoom(roomId || null);
+                    return;
+                } catch (err) {
+                    if (err.code === 'auth/operation-not-allowed') {
+                        // Email/Password auth not enabled in Firebase console — fall through
+                        // to localStorage-only mode below.
+                        console.warn('⚠️ Firebase Email/Password auth not enabled. Falling back to local credentials.');
+                    } else {
+                        let msg = 'Login failed. Please check your credentials.';
+                        if (err.code === 'auth/wrong-password') msg = 'Wrong password.';
+                        if (err.code === 'auth/too-many-requests') msg = 'Too many attempts. Try again later.';
+                        document.getElementById('dmError').textContent = msg;
+                        document.getElementById('dmError').classList.add('show');
+                        btn.disabled = false;
+                        btn.textContent = document.getElementById('dmFirstTimeNotice').style.display !== 'none'
+                            ? 'CREATE ACCOUNT & OPEN ROOM' : 'LOGIN & CREATE ROOM';
+                        return;
+                    }
+                }
+            }
+
+            // --- Fallback: localStorage-only credentials ---
             const creds = getDMCredentials();
-            // If no credentials saved yet, treat this submission as first-time setup
             if (!creds.user || !creds.pass) {
                 localStorage.setItem('fracturedSkyDMUser', user);
                 localStorage.setItem('fracturedSkyDMPass', pass);
                 closeDMModal();
-                createRoom(sessionId || null);
+                btn.disabled = false;
+                btn.textContent = 'LOGIN & CREATE ROOM';
+                createRoom(manualSessionId || null);
                 return;
             }
             if (user === creds.user && pass === creds.pass) {
                 closeDMModal();
-                createRoom(sessionId || null);
+                btn.disabled = false;
+                btn.textContent = 'LOGIN & CREATE ROOM';
+                createRoom(manualSessionId || localStorage.getItem('fracturedSkySessionId') || null);
             } else {
+                document.getElementById('dmError').textContent = 'Invalid credentials';
                 document.getElementById('dmError').classList.add('show');
+                btn.disabled = false;
+                btn.textContent = 'LOGIN & CREATE ROOM';
             }
         }
 
@@ -3971,7 +4076,9 @@
                 onDMReady();
                 document.getElementById('firebaseSection').style.display = 'flex';
                 document.getElementById('firebaseStatus').style.display = 'inline';
-                firebaseSignIn().then(() => {
+                // If already signed in via cloud DM account, skip anonymous sign-in
+                const signInPromise = firebaseUser ? Promise.resolve() : firebaseSignIn();
+                signInPromise.then(() => {
                     const loadId = fbLoadId || roomCode;
                     // Always save/heartbeat to the canonical room doc (loadId) so
                     // data never splits across multiple Firestore documents when the
@@ -3984,6 +4091,11 @@
                     if (fbDb) {
                         const stamp = { currentPeerId: id, lastSeen: Date.now() };
                         fbDb.collection('vtt_rooms').doc(loadId).set(stamp, { merge: true }).catch(() => {});
+                        // Link this campaign to the DM's cloud account so they can
+                        // recover it from any device using the same credentials.
+                        if (firebaseUser && firebaseUser.uid && !isCoDM) {
+                            saveDMCloudProfile(firebaseUser.uid, loadId);
+                        }
                     }
 
                     loadFromFirebase(loadId);
@@ -5324,6 +5436,65 @@
                 ctx.restore();
             }
 
+            // === RULERS (5 ft per square) ===
+            // GRID_SNAP_SIZE = 25 world-px = 5 ft, so every tick = 5 ft
+            const RULER_W = 22; // ruler thickness in screen px
+            const FT_PER_SNAP = 5;
+            const totalSnaps = Math.ceil(GRID_SIZE * 3 / GRID_SNAP_SIZE);
+
+            // Background strips
+            ctx.fillStyle = 'rgba(12, 10, 22, 0.93)';
+            ctx.fillRect(RULER_W, 0, canvas.width - RULER_W, RULER_W); // top
+            ctx.fillRect(0, RULER_W, RULER_W, canvas.height - RULER_W); // left
+            ctx.fillStyle = 'rgba(8, 6, 18, 0.97)';
+            ctx.fillRect(0, 0, RULER_W, RULER_W); // corner
+
+            // Border line separating ruler from map
+            ctx.strokeStyle = 'rgba(120, 90, 200, 0.55)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(RULER_W, RULER_W); ctx.lineTo(canvas.width, RULER_W); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(RULER_W, RULER_W); ctx.lineTo(RULER_W, canvas.height); ctx.stroke();
+
+            // Tick marks + labels
+            ctx.font = '8px Inter, Arial';
+            for (let snap = 0; snap <= totalSnaps; snap++) {
+                const wx = snap * GRID_SNAP_SIZE;
+                const feet = snap * FT_PER_SNAP;
+                const isMajor = feet % 25 === 0;
+
+                // Top ruler (horizontal)
+                const sx = panX + wx * zoom;
+                if (sx >= RULER_W && sx <= canvas.width) {
+                    const tickH = isMajor ? RULER_W * 0.65 : RULER_W * 0.28;
+                    ctx.fillStyle = isMajor ? '#c4b5fd' : '#5a5580';
+                    ctx.fillRect(Math.floor(sx), RULER_W - tickH, 1, tickH);
+                    if (isMajor) {
+                        ctx.fillStyle = '#ddd6fe';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'top';
+                        ctx.fillText(feet + "'", sx, 2);
+                    }
+                }
+
+                // Left ruler (vertical)
+                const sy = panY + wx * zoom;
+                if (sy >= RULER_W && sy <= canvas.height) {
+                    const tickW = isMajor ? RULER_W * 0.65 : RULER_W * 0.28;
+                    ctx.fillStyle = isMajor ? '#c4b5fd' : '#5a5580';
+                    ctx.fillRect(RULER_W - tickW, Math.floor(sy), tickW, 1);
+                    if (isMajor) {
+                        ctx.save();
+                        ctx.fillStyle = '#ddd6fe';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.translate(RULER_W / 2, sy);
+                        ctx.rotate(-Math.PI / 2);
+                        ctx.fillText(feet + "'", 0, 0);
+                        ctx.restore();
+                    }
+                }
+            }
+
             updateMinimap();
         }
 
@@ -6402,12 +6573,19 @@
             document.getElementById('fogBrushBtn').classList.remove('btn-primary');
             document.getElementById('fogRectBtn').classList.remove('btn-primary');
             document.getElementById('fogTriBtn').classList.remove('btn-primary');
-            document.getElementById('fogSizeRow').style.display = mode === 'brush' ? '' : 'none';
+            const sizeRow = document.getElementById('fogSizeRow');
+            const sizeSlider = document.getElementById('fogSize');
             if (mode === 'brush') {
+                sizeRow.style.opacity = '1';
+                sizeSlider.disabled = false;
                 document.getElementById('fogBrushBtn').classList.add('btn-primary');
             } else if (mode === 'rect') {
+                sizeRow.style.opacity = '0.35';
+                sizeSlider.disabled = true;
                 document.getElementById('fogRectBtn').classList.add('btn-primary');
             } else if (mode === 'triangle') {
+                sizeRow.style.opacity = '0.35';
+                sizeSlider.disabled = true;
                 document.getElementById('fogTriBtn').classList.add('btn-primary');
             }
         }
