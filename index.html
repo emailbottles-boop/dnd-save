@@ -4002,36 +4002,52 @@
             localStorage.setItem('fracturedSkyPlayerRoom', code);
             localStorage.setItem('fracturedSkyPlayerName', myName);
 
-            peer = new Peer();
-            peer.on('open', (id) => {
-                myId = id;
-                const conn = peer.connect(code);
+            function doConnect(targetPeerId) {
+                peer = new Peer();
+                peer.on('open', (id) => {
+                    myId = id;
+                    const conn = peer.connect(targetPeerId);
 
-                setupConnection(conn, true);
+                    setupConnection(conn, true);
 
-                conn.on('open', () => {
-                    // Send join request
-                    sendToPeer(conn, {
-                        type: 'playerJoinRequest',
-                        name: myName,
-                        peerId: myId
+                    conn.on('open', () => {
+                        // Send join request
+                        sendToPeer(conn, {
+                            type: 'playerJoinRequest',
+                            name: myName,
+                            peerId: myId
+                        });
+
+                        document.getElementById('playerSuccess').classList.add('show');
+
+                        setTimeout(() => {
+                            closePlayerModal();
+                            document.getElementById('welcomeScreen').classList.add('hidden');
+                            document.getElementById('connectionTabContainer').style.display = 'block';
+                            updateConnectionStatus('Waiting for approval...', false);
+                        }, 2000);
                     });
-                    
-                    document.getElementById('playerSuccess').classList.add('show');
-                    
-                    setTimeout(() => {
-                        closePlayerModal();
-                        document.getElementById('welcomeScreen').classList.add('hidden');
-                        document.getElementById('connectionTabContainer').style.display = 'block';
-                        updateConnectionStatus('Waiting for approval...', false);
-                    }, 2000);
+
+                    conn.on('error', (err) => {
+                        document.getElementById('playerError').textContent = 'Connection failed: ' + err.type;
+                        document.getElementById('playerError').classList.add('show');
+                    });
                 });
-                
-                conn.on('error', (err) => {
-                    document.getElementById('playerError').textContent = 'Connection failed: ' + err.type;
-                    document.getElementById('playerError').classList.add('show');
-                });
-            });
+            }
+
+            // Look up the DM's current live peer ID from Firebase first —
+            // the DM may have refreshed and received a new peer ID since sharing
+            // the room code. Mirrors the same lookup done in joinAsCoDM().
+            if (fbDb) {
+                firebaseSignIn().then(() => {
+                    return fbDb.collection('vtt_rooms').doc(code).get();
+                }).then(doc => {
+                    const livePeerId = doc.exists && doc.data() && doc.data().currentPeerId;
+                    doConnect(livePeerId || code);
+                }).catch(() => doConnect(code));
+            } else {
+                doConnect(code);
+            }
         }
 
         function playerAutoReconnect() {
