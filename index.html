@@ -2386,6 +2386,7 @@
                     <!-- STAMP LIBRARY -->
                     <div id="stampLibraryToggle" style="display: none; margin: 0.75rem 0;">
                         <button class="btn" onclick="toggleStampLibrary()" style="width: 100%;">📚 Open Stamp Library</button>
+                        <button class="btn btn-primary" onclick="editCurrentCellStamp()" id="editStampIllustrationBtn" style="width: 100%; margin-top: 0.5rem; display: none;">✏️ Edit Landmark Illustration</button>
                     </div>
 
                     <!-- ERASER MODE TOGGLE -->
@@ -5486,42 +5487,43 @@
             });
 
             // === LANDMARK STAMP GLOWS ===
-            // Draw a golden pulsing glow around stamps that have a vertical illustration
             if (placedStamps.length > 0) {
                 const now = Date.now();
                 placedStamps.forEach(stamp => {
-                    if (!stampSubMaps[stamp.id]) return; // No sub-map, no glow
-                    const pulse = 0.5 + 0.5 * Math.sin(now / 480);
-                    const innerR = 22;
-                    const outerR = 34 + 6 * pulse;
+                    const hasIllustration = !!stampSubMaps[stamp.id];
 
-                    // Soft radial glow
-                    const grad = ctx.createRadialGradient(stamp.worldX, stamp.worldY, innerR * 0.4, stamp.worldX, stamp.worldY, outerR);
-                    grad.addColorStop(0, `rgba(255,215,0,${0.45 + 0.2 * pulse})`);
-                    grad.addColorStop(0.5, `rgba(255,180,0,${0.22 + 0.1 * pulse})`);
-                    grad.addColorStop(1, 'rgba(255,140,0,0)');
-                    ctx.fillStyle = grad;
-                    ctx.beginPath();
-                    ctx.arc(stamp.worldX, stamp.worldY, outerR, 0, Math.PI * 2);
-                    ctx.fill();
+                    if (hasIllustration) {
+                        // Pulsing golden glow for illustrated stamps
+                        const pulse = 0.5 + 0.5 * Math.sin(now / 480);
+                        const innerR = 22;
+                        const outerR = 34 + 6 * pulse;
 
-                    // Crisp ring border
-                    ctx.strokeStyle = `rgba(255,215,0,${0.75 + 0.25 * pulse})`;
-                    ctx.lineWidth = 2 + pulse;
-                    ctx.shadowColor = '#ffd700';
-                    ctx.shadowBlur = 8 * pulse;
-                    ctx.beginPath();
-                    ctx.arc(stamp.worldX, stamp.worldY, innerR, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.shadowBlur = 0;
+                        const grad = ctx.createRadialGradient(stamp.worldX, stamp.worldY, innerR * 0.4, stamp.worldX, stamp.worldY, outerR);
+                        grad.addColorStop(0, `rgba(255,215,0,${0.45 + 0.2 * pulse})`);
+                        grad.addColorStop(0.5, `rgba(255,180,0,${0.22 + 0.1 * pulse})`);
+                        grad.addColorStop(1, 'rgba(255,140,0,0)');
+                        ctx.fillStyle = grad;
+                        ctx.beginPath();
+                        ctx.arc(stamp.worldX, stamp.worldY, outerR, 0, Math.PI * 2);
+                        ctx.fill();
 
-                    // DM hint label
+                        ctx.strokeStyle = `rgba(255,215,0,${0.75 + 0.25 * pulse})`;
+                        ctx.lineWidth = 2 + pulse;
+                        ctx.shadowColor = '#ffd700';
+                        ctx.shadowBlur = 8 * pulse;
+                        ctx.beginPath();
+                        ctx.arc(stamp.worldX, stamp.worldY, innerR, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.shadowBlur = 0;
+                    }
+
+                    // DM hint: show on ALL stamps so new stamps are discoverable
                     if (isDM) {
-                        ctx.fillStyle = 'rgba(255,215,0,0.85)';
+                        ctx.fillStyle = hasIllustration ? 'rgba(255,215,0,0.85)' : 'rgba(180,180,255,0.75)';
                         ctx.font = 'bold 9px Arial';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'top';
-                        ctx.fillText('DBL-CLICK', stamp.worldX, stamp.worldY + 26);
+                        ctx.fillText(hasIllustration ? 'DBL-CLICK' : '✏️ DBL-CLICK', stamp.worldX, stamp.worldY + 26);
                     }
                 });
             }
@@ -5645,6 +5647,9 @@
             // Show/hide stamp library toggle
             if (t === 'stamp') {
                 document.getElementById('stampLibraryToggle').style.display = 'block';
+                // Show edit button if there are already stamps anywhere
+                const editBtn = document.getElementById('editStampIllustrationBtn');
+                if (editBtn) editBtn.style.display = placedStamps.length > 0 ? 'block' : 'none';
             } else {
                 document.getElementById('stampLibraryToggle').style.display = 'none';
             }
@@ -5681,6 +5686,21 @@
             currentAsset = 'Stamp: ' + emoji;
             (_elCurrentAsset||{}).textContent = currentAsset;
             setTool('stamp'); // Ensure stamp tool is active
+        }
+
+        // Open editor for the most recent stamp in the current cell (or any stamp if only one exists)
+        function editCurrentCellStamp() {
+            // Prefer stamps in the current cell, fall back to the most recently placed stamp overall
+            const cellMinX = currentCellX * GRID_SIZE;
+            const cellMinY = currentCellY * GRID_SIZE;
+            const cellMaxX = cellMinX + GRID_SIZE;
+            const cellMaxY = cellMinY + GRID_SIZE;
+            const inCell = placedStamps.filter(s =>
+                s.worldX >= cellMinX && s.worldX < cellMaxX &&
+                s.worldY >= cellMinY && s.worldY < cellMaxY
+            );
+            const target = inCell.length > 0 ? inCell[inCell.length - 1] : placedStamps[placedStamps.length - 1];
+            if (target) openSubMapEditor(target.id);
         }
 
         // Stamp library docking
@@ -6240,6 +6260,9 @@
                 broadcast({ type: 'stampUpdate', placedStamps });
                 scheduleSave();
                 isDrawing = false;
+                // Reveal "Edit Landmark Illustration" button so DM can open the editor right away
+                const editBtn = document.getElementById('editStampIllustrationBtn');
+                if (editBtn) editBtn.style.display = 'block';
             } else if (tool === 'eraser') {
                 mapCtx.save();
                 
@@ -6308,8 +6331,8 @@
             // === LANDMARK STAMP CLICK (players open sub-map viewer) ===
             if (!isDM && !fogMode) {
                 for (const stamp of placedStamps) {
-                    if (!stampSubMaps[stamp.id]) continue; // only glowing stamps
-                    if (Math.hypot(mx - stamp.worldX, my - stamp.worldY) < 32) {
+                    if (!stampSubMaps[stamp.id]) continue; // only illustrated stamps
+                    if (Math.hypot(mx - stamp.worldX, my - stamp.worldY) < 64) {
                         openSubMapViewer(stamp.id);
                         return;
                     }
@@ -6566,8 +6589,8 @@
             const mx = (e.clientX - rect.left - panX) / zoom;
             const my = (e.clientY - rect.top - panY) / zoom;
 
-            // Find nearest placed stamp within 32px world-space radius
-            let closest = null, closestDist = 32;
+            // Find nearest placed stamp within 64px world-space radius (generous — emoji is ~48px)
+            let closest = null, closestDist = 64;
             for (const stamp of placedStamps) {
                 const d = Math.hypot(mx - stamp.worldX, my - stamp.worldY);
                 if (d < closestDist) { closest = stamp; closestDist = d; }
