@@ -5881,28 +5881,8 @@
                 ];
             }
 
-            smc.addEventListener('mousedown', (e) => {
-                if (!activeSubMapId) return;
-                isSubMapDrawing = true;
-                const [x, y] = smCoords(e);
-                subMapLastX = x; subMapLastY = y;
-
-                if (subMapTool === 'fill') {
-                    smctx.fillStyle = subMapColor;
-                    smctx.fillRect(0, 0, smc.width, smc.height);
-                    isSubMapDrawing = false;
-                } else if (subMapTool === 'eraser') {
-                    smctx.save();
-                    smctx.globalCompositeOperation = 'destination-out';
-                }
-                // brush: nothing extra needed — each mousemove segment draws itself
-            });
-
-            smc.addEventListener('mousemove', (e) => {
-                if (!isSubMapDrawing || !activeSubMapId) return;
-                const [x, y] = smCoords(e);
+            function smDraw(x, y) {
                 if (subMapTool === 'brush') {
-                    // Draw only the new segment — never accumulate a long path
                     smctx.beginPath();
                     smctx.moveTo(subMapLastX, subMapLastY);
                     smctx.lineTo(x, y);
@@ -5921,15 +5901,41 @@
                     smctx.stroke();
                 }
                 subMapLastX = x; subMapLastY = y;
+            }
+
+            smc.addEventListener('mousedown', (e) => {
+                if (!activeSubMapId) return;
+                const [x, y] = smCoords(e);
+                subMapLastX = x; subMapLastY = y;
+
+                if (subMapTool === 'fill') {
+                    smctx.fillStyle = subMapColor;
+                    smctx.fillRect(0, 0, smc.width, smc.height);
+                    return;
+                }
+
+                isSubMapDrawing = true;
+                if (subMapTool === 'eraser') {
+                    smctx.save();
+                    smctx.globalCompositeOperation = 'destination-out';
+                }
+                // Draw a dot immediately on click (visible even without dragging)
+                smDraw(x + 0.1, y + 0.1);
             });
 
-            function smStopDrawing() {
+            // Document-level move/up so strokes don't break when mouse
+            // briefly leaves the canvas boundary mid-drag
+            document.addEventListener('mousemove', (e) => {
+                if (!isSubMapDrawing || !activeSubMapId) return;
+                const [x, y] = smCoords(e);
+                smDraw(x, y);
+            });
+
+            document.addEventListener('mouseup', () => {
                 if (!isSubMapDrawing) return;
                 isSubMapDrawing = false;
                 if (subMapTool === 'eraser') smctx.restore();
-            }
-            smc.addEventListener('mouseup', smStopDrawing);
-            smc.addEventListener('mouseleave', smStopDrawing);
+            });
 
             // Touch support for sub-map canvas
             function toMouse(touch) {
