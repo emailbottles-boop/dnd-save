@@ -1908,7 +1908,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 99998;
+            z-index: 100001; /* above .modal (99999) so illustrator is never blocked */
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
@@ -5891,45 +5891,45 @@
                     smctx.fillStyle = subMapColor;
                     smctx.fillRect(0, 0, smc.width, smc.height);
                     isSubMapDrawing = false;
-                } else if (subMapTool === 'brush') {
-                    smctx.beginPath();
-                    smctx.moveTo(x, y);
-                    smctx.strokeStyle = subMapColor;
-                    smctx.lineWidth = subMapSize;
-                    smctx.lineCap = 'round';
-                    smctx.lineJoin = 'round';
                 } else if (subMapTool === 'eraser') {
                     smctx.save();
                     smctx.globalCompositeOperation = 'destination-out';
-                    smctx.beginPath();
-                    smctx.moveTo(x, y);
-                    smctx.lineWidth = subMapSize * 2;
-                    smctx.lineCap = 'round';
-                    smctx.lineJoin = 'round';
                 }
+                // brush: nothing extra needed — each mousemove segment draws itself
             });
 
             smc.addEventListener('mousemove', (e) => {
                 if (!isSubMapDrawing || !activeSubMapId) return;
                 const [x, y] = smCoords(e);
-                if (subMapTool === 'brush' || subMapTool === 'eraser') {
+                if (subMapTool === 'brush') {
+                    // Draw only the new segment — never accumulate a long path
+                    smctx.beginPath();
+                    smctx.moveTo(subMapLastX, subMapLastY);
                     smctx.lineTo(x, y);
+                    smctx.strokeStyle = subMapColor;
+                    smctx.lineWidth = subMapSize;
+                    smctx.lineCap = 'round';
+                    smctx.lineJoin = 'round';
+                    smctx.stroke();
+                } else if (subMapTool === 'eraser') {
+                    smctx.beginPath();
+                    smctx.moveTo(subMapLastX, subMapLastY);
+                    smctx.lineTo(x, y);
+                    smctx.lineWidth = subMapSize * 2;
+                    smctx.lineCap = 'round';
+                    smctx.lineJoin = 'round';
                     smctx.stroke();
                 }
                 subMapLastX = x; subMapLastY = y;
             });
 
-            smc.addEventListener('mouseup', () => {
+            function smStopDrawing() {
                 if (!isSubMapDrawing) return;
                 isSubMapDrawing = false;
                 if (subMapTool === 'eraser') smctx.restore();
-            });
-
-            smc.addEventListener('mouseleave', () => {
-                if (!isSubMapDrawing) return;
-                isSubMapDrawing = false;
-                if (subMapTool === 'eraser') smctx.restore();
-            });
+            }
+            smc.addEventListener('mouseup', smStopDrawing);
+            smc.addEventListener('mouseleave', smStopDrawing);
 
             // Touch support for sub-map canvas
             function toMouse(touch) {
