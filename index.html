@@ -4034,6 +4034,10 @@
                         document.getElementById('playerError').classList.add('show');
                     });
                 });
+                peer.on('error', (err) => {
+                    document.getElementById('playerError').textContent = 'Could not reach server: ' + err.type + '. Check room code and try again.';
+                    document.getElementById('playerError').classList.add('show');
+                });
             }
 
             // Look up the DM's current live peer ID from Firebase first —
@@ -5868,7 +5872,9 @@
         }
 
         // ── Sub-map canvas drawing events (set up once) ──
-        (function setupSubMapCanvasEvents() {
+        // Deferred to window 'load' because the sub-map modal HTML sits after
+        // the </script> tag, so the canvas doesn't exist during script parse.
+        window.addEventListener('load', function setupSubMapCanvasEvents() {
             const smc = document.getElementById('subMapCanvas');
             if (!smc) return;
             const smctx = smc.getContext('2d');
@@ -5938,7 +5944,7 @@
             smc.addEventListener('touchstart', e => { e.preventDefault(); smc.dispatchEvent(new MouseEvent('mousedown', toMouse(e.touches[0]))); }, { passive: false });
             smc.addEventListener('touchmove',  e => { e.preventDefault(); smc.dispatchEvent(new MouseEvent('mousemove', toMouse(e.touches[0]))); }, { passive: false });
             smc.addEventListener('touchend',   e => { e.preventDefault(); smc.dispatchEvent(new MouseEvent('mouseup',   {})); }, { passive: false });
-        })();
+        });
 
         // Player token functions
         let playerTokenType = 'emoji';
