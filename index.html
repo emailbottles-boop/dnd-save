@@ -3883,7 +3883,7 @@
             document.getElementById('dmSetupSuccess').style.display = 'none';
         }
 
-        function saveDMCredentials() {
+        async function saveDMCredentials() {
             const newUser = document.getElementById('dmNewUser').value.trim();
             const newPass = document.getElementById('dmNewPass').value;
             const confirm = document.getElementById('dmNewPassConfirm').value;
@@ -3894,6 +3894,22 @@
             if (newPass !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.classList.add('show'); return; }
             localStorage.setItem('fracturedSkyDMUser', newUser);
             localStorage.setItem('fracturedSkyDMPass', newPass);
+            // Also update Firestore so the cloud account stays in sync.
+            // Without this, the next login attempt would fail with "Wrong password"
+            // because Firestore still holds the old hash.
+            if (fbDb) {
+                try {
+                    await firebaseSignIn();
+                    const safeUser = newUser.toLowerCase().replace(/[^a-z0-9._-]/g, '');
+                    const encoder = new TextEncoder();
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(safeUser + ':' + newPass));
+                    const passwordHash = Array.from(new Uint8Array(hashBuffer))
+                        .map(b => b.toString(16).padStart(2, '0')).join('');
+                    await fbDb.collection('vtt_users').doc(safeUser).set({ passwordHash }, { merge: true });
+                } catch(e) {
+                    console.warn('⚠️ Could not update cloud credentials:', e.message);
+                }
+            }
             document.getElementById('dmSetupSuccess').style.display = 'block';
             document.getElementById('dmNewUser').value = '';
             document.getElementById('dmNewPass').value = '';
@@ -3936,13 +3952,15 @@
                     createRoom(roomId || null);
                     return;
                 } catch (err) {
-                    if (err.code === 'auth/operation-not-allowed') {
-                        // Anonymous auth not enabled in Firebase console — fall through
-                        // to localStorage-only mode below.
-                        console.warn('⚠️ Firebase Anonymous auth not enabled. Falling back to local credentials.');
+                    if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/wrong-password') {
+                        // auth/operation-not-allowed: Firebase anonymous auth not enabled.
+                        // auth/wrong-password: Firestore has a stale hash (credentials were
+                        //   changed via the local "Change credentials" panel without updating
+                        //   Firestore). Fall through so localStorage credentials can serve as
+                        //   the source of truth and the user isn't permanently locked out.
+                        console.warn('⚠️ Firebase auth issue (' + err.code + ') — falling back to local credentials.');
                     } else {
                         let msg = 'Login failed. Please check your credentials.';
-                        if (err.code === 'auth/wrong-password') msg = 'Wrong password.';
                         if (err.code === 'auth/too-many-requests') msg = 'Too many attempts. Try again later.';
                         if (err.code === 'permission-denied') msg = 'Firebase setup error: Firestore rules are blocking access. Deploy firestore.rules to fix this.';
                         document.getElementById('dmError').textContent = msg;
