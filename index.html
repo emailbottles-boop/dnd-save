@@ -4291,6 +4291,20 @@
                 // This is the canonical way to detect the role on refresh without
                 // being confused by another tab's localStorage writes.
                 sessionStorage.setItem('fracturedSkyTabRole', 'dm');
+
+                // Auto-reconnect to the broker if the signaling connection drops.
+                // Without this, peer.on('disconnected') goes unhandled and new players
+                // can no longer reach the DM even though the peer appears alive.
+                peer.on('disconnected', () => {
+                    if (!peer.destroyed) {
+                        updateConnectionStatus('Broker lost — reconnecting...', false);
+                        peer.reconnect();
+                    }
+                });
+                peer.on('close', () => {
+                    if (isDM && !peer.destroyed) startFreshPeer();
+                });
+
                 onDMReady();
                 document.getElementById('firebaseSection').style.display = 'flex';
                 document.getElementById('firebaseStatus').style.display = 'inline';
