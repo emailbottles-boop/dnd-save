@@ -3726,6 +3726,7 @@
                 document.getElementById('welcomeReconnectMsg').textContent = '👑 Resuming your DM session...';
                 document.getElementById('connectionTabContainer').style.display = 'block';
                 document.getElementById('startFreshBtn').style.display = 'block';
+                updateConnectionStatus('Reconnecting...', false);
                 try {
                     const saved = localStorage.getItem('fracturedSkyApprovedNames');
                     if (saved) JSON.parse(saved).forEach(n => approvedPlayerNames.add(n));
@@ -4036,6 +4037,8 @@
                         localStorage.setItem('fracturedSkySessionId', roomId);
                     }
                     closeDMModal();
+                    document.getElementById('welcomeScreen').classList.add('hidden');
+                    document.getElementById('connectionTabContainer').style.display = 'block';
                     createRoom(roomId || null);
                     return;
                 } catch (err) {
@@ -4068,6 +4071,8 @@
                 closeDMModal();
                 btn.disabled = false;
                 btn.textContent = 'LOGIN & CREATE ROOM';
+                document.getElementById('welcomeScreen').classList.add('hidden');
+                document.getElementById('connectionTabContainer').style.display = 'block';
                 createRoom(manualSessionId || null);
                 return;
             }
@@ -4075,6 +4080,8 @@
                 closeDMModal();
                 btn.disabled = false;
                 btn.textContent = 'LOGIN & CREATE ROOM';
+                document.getElementById('welcomeScreen').classList.add('hidden');
+                document.getElementById('connectionTabContainer').style.display = 'block';
                 createRoom(manualSessionId || localStorage.getItem('fracturedSkySessionId') || null);
             } else {
                 document.getElementById('dmError').textContent = 'Invalid credentials';
@@ -4256,6 +4263,7 @@
             isDM = true;
             isCoDM = false;
             myName = 'Dungeon Master';
+            updateConnectionStatus('Connecting...', false);
             // NOTE: do NOT clear fracturedSkyPlayerRoom / fracturedSkyPlayerName here.
             // Both tabs share localStorage; wiping those keys kills the player tab's
             // ability to reconnect whenever the DM refreshes in the same browser.
