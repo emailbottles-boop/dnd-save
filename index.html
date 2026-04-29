@@ -3173,8 +3173,81 @@
         let coDMReconnectTimer = null;
 
         // === CONNECTION RESILIENCE STATE ===
-        let playerFirebaseWatcher = null; // Firestore onSnapshot unsubscribe fn
+        let playerFirebaseWatcher = null; // Firestore onSnapshot unsubscribe fn (direct msgs)
+        let playerBroadcastWatcher = null; // Firestore onSnapshot unsubscribe fn (broadcasts)
         let dmHeartbeatTimer = null;      // setInterval handle for DM Firebase keepalive
+
+        // === FIREBASE MESSAGING HELPERS ===
+        // Generates a short random ID (no PeerJS dependency)
+        function genId() {
+            return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+        }
+
+        // Mock PeerJS-style connection that routes messages through Firestore (DM side)
+        function makePlayerConn(playerId) {
+            return {
+                peer: playerId,
+                open: true,
+                send(data) {
+                    if (!fbDb || !firebaseRoomRef) return;
+                    fbDb.collection('vtt_rooms').doc(firebaseRoomRef)
+                        .collection('direct').doc(playerId)
+                        .collection('msgs')
+                        .add({ ...data, _t: Date.now() }).catch(() => {});
+                },
+                on() {}
+            };
+        }
+
+        // Mock connection used by players to send messages to the DM via the inbox
+        function makeInboxConn(roomId) {
+            return {
+                peer: 'dm',
+                open: true,
+                send(data) {
+                    if (!fbDb) return;
+                    fbDb.collection('vtt_rooms').doc(roomId)
+                        .collection('inbox')
+                        .add({ ...data, from: myId, name: myName, _t: Date.now() }).catch(() => {});
+                },
+                on() {}
+            };
+        }
+
+        // Watch for DM→player direct messages and DM→all broadcasts (player side)
+        function startPlayerRoomWatch(roomId) {
+            stopFirebaseWatch();
+            if (!fbDb) return;
+            const startTs = Date.now();
+            let lastBseq = 0;
+            let dmConn = { peer: 'dm', open: true, send() {}, on() {} };
+
+            // Direct messages from DM to this player
+            playerFirebaseWatcher = fbDb.collection('vtt_rooms').doc(roomId)
+                .collection('direct').doc(myId)
+                .collection('msgs')
+                .orderBy('_t')
+                .onSnapshot(snap => {
+                    snap.docChanges().forEach(change => {
+                        if (change.type !== 'added') return;
+                        const data = change.doc.data();
+                        if ((data._t || 0) < startTs) return;
+                        handleMessage(dmConn, data);
+                    });
+                }, () => {});
+
+            // Broadcast updates from DM to all players (via broadcast field on room doc)
+            playerBroadcastWatcher = fbDb.collection('vtt_rooms').doc(roomId)
+                .onSnapshot(doc => {
+                    if (!doc.exists) return;
+                    const bcast = doc.data()?.broadcast;
+                    if (bcast && (bcast._bseq || 0) > lastBseq) {
+                        lastBseq = bcast._bseq;
+                        if ((bcast._bseq || 0) < startTs) return; // skip old broadcasts
+                        handleMessage(dmConn, bcast);
+                    }
+                }, () => {});
+        }
 
         // === FIREBASE ===
         const firebaseConfig = {
@@ -3301,6 +3374,10 @@
                 try { playerFirebaseWatcher(); } catch(e) {}
             }
             playerFirebaseWatcher = null;
+            if (typeof playerBroadcastWatcher === 'function') {
+                try { playerBroadcastWatcher(); } catch(e) {}
+            }
+            playerBroadcastWatcher = null;
         }
 
         // DM refreshes currentPeerId + lastSeen in Firebase every 20 s so that
@@ -4105,68 +4182,39 @@
             e.preventDefault();
             myName = document.getElementById('playerName').value;
             const code = document.getElementById('roomCodeInput').value.trim();
-            // Mark THIS TAB as player in sessionStorage.
-            // Do NOT touch fracturedSkyIsDM / fracturedSkySessionId in localStorage —
-            // those belong to the DM tab. Wiping them here was the root cause of the
-            // DM being unable to auto-reconnect after a refresh in split-tab same-browser use.
             sessionStorage.setItem('fracturedSkyTabRole', 'player');
-
             roomCode = code;
             localStorage.setItem('fracturedSkyPlayerRoom', code);
             localStorage.setItem('fracturedSkyPlayerName', myName);
+            if (!myId) myId = genId();
 
-            function doConnect(targetPeerId) {
-                stopFirebaseWatch();
-                if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
-                peer = new Peer();
-                peer.on('open', (id) => {
-                    myId = id;
-                    const conn = peer.connect(targetPeerId);
-
-                    setupConnection(conn, true);
-
-                    conn.on('open', () => {
-                        // Send join request
-                        sendToPeer(conn, {
-                            type: 'playerJoinRequest',
-                            name: myName,
-                            peerId: myId
-                        });
-
-                        document.getElementById('playerSuccess').classList.add('show');
-
-                        setTimeout(() => {
-                            closePlayerModal();
-                            document.getElementById('welcomeScreen').classList.add('hidden');
-                            document.getElementById('connectionTabContainer').style.display = 'block';
-                            updateConnectionStatus('Waiting for approval...', false);
-                        }, 2000);
-                    });
-
-                    conn.on('error', (err) => {
-                        document.getElementById('playerError').textContent = 'Connection failed: ' + err.type;
-                        document.getElementById('playerError').classList.add('show');
-                    });
-                });
-                peer.on('error', (err) => {
-                    document.getElementById('playerError').textContent = 'Could not reach server: ' + err.type + '. Check room code and try again.';
-                    document.getElementById('playerError').classList.add('show');
-                });
+            if (!fbDb) {
+                document.getElementById('playerError').textContent = 'Firebase unavailable';
+                document.getElementById('playerError').classList.add('show');
+                return;
             }
 
-            // Look up the DM's current live peer ID from Firebase first —
-            // the DM may have refreshed and received a new peer ID since sharing
-            // the room code. Mirrors the same lookup done in joinAsCoDM().
-            if (fbDb) {
-                firebaseSignIn().then(() => {
-                    return fbDb.collection('vtt_rooms').doc(code).get();
-                }).then(doc => {
-                    const livePeerId = doc.exists && doc.data() && doc.data().currentPeerId;
-                    doConnect(livePeerId || code);
-                }).catch(() => doConnect(code));
-            } else {
-                doConnect(code);
-            }
+            firebaseSignIn().then(() => {
+                return fbDb.collection('vtt_rooms').doc(code).collection('inbox').add({
+                    type: 'playerJoinRequest',
+                    name: myName,
+                    from: myId,
+                    peerId: myId,
+                    _t: Date.now()
+                });
+            }).then(() => {
+                document.getElementById('playerSuccess').classList.add('show');
+                setTimeout(() => {
+                    closePlayerModal();
+                    document.getElementById('welcomeScreen').classList.add('hidden');
+                    document.getElementById('connectionTabContainer').style.display = 'block';
+                    updateConnectionStatus('Waiting for approval...', false);
+                }, 2000);
+                startPlayerRoomWatch(code);
+            }).catch(err => {
+                document.getElementById('playerError').textContent = 'Could not reach room: ' + err.message;
+                document.getElementById('playerError').classList.add('show');
+            });
         }
 
         function playerAutoReconnect() {
@@ -4175,87 +4223,26 @@
             if (!savedRoom || !savedName || isDM) return;
             myName = savedName;
             roomCode = savedRoom;
+            if (!myId) myId = genId();
 
-            // Track the peer ID we most recently tried so we don't open
-            // duplicate connections when the Firebase watcher fires multiple times.
-            let lastAttemptedPeerId = null;
-            // The latest peer ID we know about (from Firebase or savedRoom).
-            // Used by scheduleRetry so we keep knocking on the same door while
-            // waiting for the DM to come back online.
-            let currentBestPeerId = null;
-            // ONE shared timeout handle — always cancelled before starting a new
-            // connect attempt, so a stale timeout from attempt N can never reset
-            // lastAttemptedPeerId while attempt N+1 is already in flight.
-            let activeConnTimeout = null;
+            if (!fbDb) return;
 
-            // After a failed attempt, retry with the best-known peer ID after 15 s.
-            // This handles the case where the DM comes back with the SAME peer ID
-            // (the Firebase watcher won't fire again if the value didn't change).
-            function scheduleRetry() {
-                setTimeout(() => {
-                    if (isDM) return; // user switched to DM — stop retrying
-                    if (lastAttemptedPeerId === null) doConnect(currentBestPeerId || savedRoom);
-                }, 15000);
-            }
-
-            function doConnect(targetPeerId) {
-                if (isDM) return; // user switched to DM — abort
-                if (targetPeerId === lastAttemptedPeerId) return; // already trying
-                currentBestPeerId = targetPeerId;
-                lastAttemptedPeerId = targetPeerId;
-
-                // Cancel any timeout from the previous attempt before we destroy
-                // that peer — prevents the old callback from firing after we move on.
-                if (activeConnTimeout) { clearTimeout(activeConnTimeout); activeConnTimeout = null; }
-
-                if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
-                peer = new Peer();
-                peer.on('open', (id) => {
-                    myId = id;
-                    const conn = peer.connect(targetPeerId);
-                    setupConnection(conn, true);
-
-                    activeConnTimeout = setTimeout(() => {
-                        activeConnTimeout = null;
-                        if (isDM) return; // user became DM — don't overwrite DM status
-                        lastAttemptedPeerId = null;
-                        updateConnectionStatus('Waiting for DM...', false);
-                        scheduleRetry(); // keep trying every 15 s while DM is offline
-                    }, 12000);
-
-                    conn.on('open', () => {
-                        clearTimeout(activeConnTimeout); activeConnTimeout = null;
-                        sendToPeer(conn, { type: 'playerJoinRequest', name: myName, peerId: myId, isReconnect: true });
-                        updateConnectionStatus('Waiting for approval...', false);
-                    });
-                    conn.on('error', () => {
-                        clearTimeout(activeConnTimeout); activeConnTimeout = null;
-                        if (isDM) return; // user became DM — don't overwrite DM status
-                        lastAttemptedPeerId = null;
-                        updateConnectionStatus('Waiting for DM...', false);
-                        scheduleRetry(); // keep trying every 15 s while DM is offline
-                    });
+            updateConnectionStatus('Reconnecting...', false);
+            firebaseSignIn().then(() => {
+                return fbDb.collection('vtt_rooms').doc(savedRoom).collection('inbox').add({
+                    type: 'playerJoinRequest',
+                    name: myName,
+                    from: myId,
+                    peerId: myId,
+                    isReconnect: true,
+                    _t: Date.now()
                 });
-                peer.on('error', () => {
-                    lastAttemptedPeerId = null;
-                    if (!isDM) setTimeout(playerAutoReconnect, 5000);
-                });
-            }
-
-            updateConnectionStatus('Looking up room...', false);
-
-            // Prefer Firebase onSnapshot: fires immediately with current value
-            // AND fires again whenever the DM publishes a new peer ID after refresh.
-            if (fbDb) {
-                // Watch Firebase for live peer ID — fires immediately if already set,
-                // and again whenever the DM publishes a new peer ID after refresh.
-                startFirebaseWatch(savedRoom, (peerId) => doConnect(peerId));
-                // Fallback: if Firebase doesn't deliver within 4 s, try saved code directly.
-                setTimeout(() => { if (lastAttemptedPeerId === null) doConnect(savedRoom); }, 4000);
-            } else {
-                // No Firebase — connect directly to the saved peer ID
-                doConnect(savedRoom);
-            }
+            }).then(() => {
+                updateConnectionStatus('Waiting for approval...', false);
+                startPlayerRoomWatch(savedRoom);
+            }).catch(() => {
+                updateConnectionStatus('Could not reach room', false);
+            });
         }
 
         // === MULTIPLAYER ===
@@ -4263,170 +4250,70 @@
             isDM = true;
             isCoDM = false;
             myName = 'Dungeon Master';
+            myId = 'dm';
             updateConnectionStatus('Connecting...', false);
-            // NOTE: do NOT clear fracturedSkyPlayerRoom / fracturedSkyPlayerName here.
-            // Both tabs share localStorage; wiping those keys kills the player tab's
-            // ability to reconnect whenever the DM refreshes in the same browser.
-            // playerAutoReconnect already guards itself with `if (isDM) return`, so
-            // the DM tab is safe even without the removal.
+            sessionStorage.setItem('fracturedSkyTabRole', 'dm');
+            localStorage.setItem('fracturedSkyIsDM', 'true');
 
-            // Keep old room ID so we can load campaign data from Firebase
-            // even if we end up with a different peer ID
             const fbLoadId = existingId;
 
-            // --- Shared "peer is ready" logic ---
-            function onPeerReady(id) {
-                myId = id;
-                roomCode = id;
-                savedPeerId = id;
-                // Only persist the session ID on first room creation (fbLoadId is null).
-                // On reconnects fbLoadId holds the *canonical* room ID — we must NOT
-                // overwrite it with the fresh peer ID or every subsequent refresh will
-                // load from the wrong Firebase doc and the room dies.
-                if (!fbLoadId) {
-                    localStorage.setItem('fracturedSkySessionId', id);
-                }
-                localStorage.setItem('fracturedSkyIsDM', 'true');
-                // Mark THIS TAB as DM in sessionStorage (tab-isolated, survives refresh).
-                // This is the canonical way to detect the role on refresh without
-                // being confused by another tab's localStorage writes.
-                sessionStorage.setItem('fracturedSkyTabRole', 'dm');
+            // Use saved room ID or generate a new one — no PeerJS broker needed
+            const roomId = existingId
+                || localStorage.getItem('fracturedSkySessionId')
+                || genId();
+            roomCode = roomId;
+            savedPeerId = roomId;
+            if (!fbLoadId) localStorage.setItem('fracturedSkySessionId', roomId);
 
-                // Auto-reconnect to the broker if the signaling connection drops.
-                // Without this, peer.on('disconnected') goes unhandled and new players
-                // can no longer reach the DM even though the peer appears alive.
-                peer.on('disconnected', () => {
-                    if (!peer.destroyed) {
-                        updateConnectionStatus('Broker lost — reconnecting...', false);
-                        peer.once('open', () => updateConnectionStatus('Connected as DM', true));
-                        peer.reconnect();
-                    }
-                });
-
+            if (!fbDb) {
+                // Offline mode — map works, multiplayer unavailable
+                updateConnectionStatus('Connected (offline)', true);
                 onDMReady();
-                document.getElementById('firebaseSection').style.display = 'flex';
-                document.getElementById('firebaseStatus').style.display = 'inline';
-                // If already signed in via cloud DM account, skip anonymous sign-in
-                const signInPromise = firebaseUser ? Promise.resolve() : firebaseSignIn();
-                signInPromise.then(() => {
-                    const loadId = fbLoadId || roomCode;
-                    // Always save/heartbeat to the canonical room doc (loadId) so
-                    // data never splits across multiple Firestore documents when the
-                    // DM gets a new peer ID after refresh.
-                    firebaseRoomRef = loadId;
-
-                    // Publish the DM's live peer ID to the canonical room doc so
-                    // players/co-DMs watching it always learn the latest peer ID,
-                    // even when a fresh peer ID was assigned after refresh.
-                    if (fbDb) {
-                        const stamp = { currentPeerId: id, lastSeen: Date.now() };
-                        fbDb.collection('vtt_rooms').doc(loadId).set(stamp, { merge: true }).catch(() => {});
-                        // Link this campaign to the DM's cloud account so they can
-                        // recover it from any device using the same credentials.
-                        if (firebaseUser && dmUsername && !isCoDM) {
-                            saveDMCloudProfile(dmUsername, loadId);
-                        }
-                    }
-
-                    loadFromFirebase(loadId);
-                    loadAndListenDiceRolls(loadId);
-
-                    // Keep Firebase updated every 20 s so onSnapshot watchers on
-                    // players and co-DMs receive a timely wake-up call even if
-                    // they missed the first write.
-                    startDMHeartbeat();
-                });
+                return;
             }
 
-            // --- Fall back to a fresh random peer ID (with retry) ---
-            function startFreshPeer(attempt = 1) {
-                updateConnectionStatus('Getting new session...', false);
-                if (peer) { try { peer.destroy(); } catch(e) {} }
-                peer = new Peer();
-                let done = false;
-                const t = setTimeout(() => {
-                    if (done) return;
-                    done = true;
-                    if (attempt < 5) {
-                        startFreshPeer(attempt + 1);
-                    } else {
-                        updateConnectionStatus('Server not responding — try refreshing', false);
-                    }
-                }, 8000);
-                peer.on('open', id => {
-                    if (done) return;
-                    done = true;
-                    clearTimeout(t);
-                    onPeerReady(id);
-                });
-                peer.on('connection', conn => setupConnection(conn));
-                peer.on('error', e => {
-                    if (done) return;
-                    done = true;
-                    clearTimeout(t);
-                    console.error('Peer error (fresh):', e.type, 'attempt', attempt);
-                    if (attempt < 5) {
-                        const delay = Math.min(attempt * 2000, 8000);
-                        updateConnectionStatus('Reconnecting...', false);
-                        setTimeout(() => startFreshPeer(attempt + 1), delay);
-                    } else {
-                        updateConnectionStatus('Connection failed — refresh and try again', false);
-                    }
-                });
-            }
+            const signInPromise = firebaseUser ? Promise.resolve() : firebaseSignIn();
+            signInPromise.then(() => {
+                const loadId = fbLoadId || roomCode;
+                firebaseRoomRef = loadId;
 
-            // --- Try to claim a specific peer ID, with up to 3 retries ---
-            function tryClaimId(idToClaim, attempt) {
-                if (peer) { try { peer.destroy(); } catch(e) {} }
-                peer = new Peer(idToClaim);
-                // Guard so the timeout and the error event can't both call startFreshPeer
-                let alreadyDone = false;
+                // Publish room so players can look it up by code
+                fbDb.collection('vtt_rooms').doc(loadId)
+                    .set({ currentPeerId: roomId, lastSeen: Date.now() }, { merge: true })
+                    .catch(() => {});
 
-                // 4-second timeout per attempt — if the signalling server hasn't
-                // responded by then, fall through to a fresh random peer ID fast.
-                const timeout = setTimeout(() => {
-                    if (alreadyDone) return;
-                    alreadyDone = true;
-                    updateConnectionStatus('Server slow — switching to new session...', false);
-                    startFreshPeer();
-                }, 4000);
+                if (firebaseUser && dmUsername && !isCoDM) {
+                    saveDMCloudProfile(dmUsername, loadId);
+                }
 
-                peer.on('open', id => {
-                    if (alreadyDone) return;
-                    alreadyDone = true;
-                    clearTimeout(timeout);
-                    onPeerReady(id);
-                });
-                peer.on('connection', conn => setupConnection(conn));
-                peer.on('error', err => {
-                    if (alreadyDone) return;
-                    alreadyDone = true;
-                    clearTimeout(timeout);
-                    if (err.type === 'unavailable-id' && attempt < 3) {
-                        // Short delays: 500 ms, 1 s — fast fallthrough to fresh ID
-                        const delay = attempt * 500;
-                        updateConnectionStatus(`Reclaiming session... (${attempt}/3)`, false);
-                        setTimeout(() => tryClaimId(idToClaim, attempt + 1), delay);
-                    } else {
-                        // All retries exhausted or other error — fall back to fresh ID
-                        // Campaign data will still load from Firebase
-                        startFreshPeer();
-                    }
-                });
-            }
+                // Listen for player messages arriving in the inbox subcollection
+                const dmSessionStart = Date.now();
+                fbDb.collection('vtt_rooms').doc(loadId)
+                    .collection('inbox')
+                    .onSnapshot(snap => {
+                        snap.docChanges().forEach(change => {
+                            if (change.type !== 'added') return;
+                            const data = change.doc.data();
+                            if ((data._t || 0) < dmSessionStart) return; // ignore old messages
+                            const from = data.from;
+                            if (!from) return;
+                            if (!connections.has(from)) {
+                                const conn = makePlayerConn(from);
+                                connections.set(from, { conn, name: data.name || 'Unknown', role: 'player', approved: false });
+                                updateUserList();
+                            }
+                            handleMessage(connections.get(from).conn, data);
+                        });
+                    }, () => {});
 
-            if (existingId) {
-                // Tell any other tab holding this peer ID to release it
-                try {
-                    const bc = new BroadcastChannel('fracturedSky_dm');
-                    bc.postMessage({ type: 'surrender', id: existingId });
-                    bc.close();
-                } catch(e) {}
-                // Short pause for the release, then try to claim
-                setTimeout(() => tryClaimId(existingId, 1), 500);
-            } else {
-                startFreshPeer();
-            }
+                loadFromFirebase(loadId);
+                loadAndListenDiceRolls(loadId);
+                startDMHeartbeat();
+                onDMReady();
+            }).catch(err => {
+                console.error('DM room setup failed:', err);
+                updateConnectionStatus('Firebase error — try refreshing', false);
+            });
         }
 
         // Called whenever this tab successfully claims the DM role
@@ -4653,24 +4540,18 @@
                     break;
                     
                 case 'playerApproved':
-                    // Successfully joined — stop watching Firebase for peer ID changes.
-                    stopFirebaseWatch();
                     myName = data.name;
-                    // Keep roomCode as the DM's live peer ID for this session's P2P use.
-                    roomCode = conn.peer;
-                    // But persist the *canonical* room ID (sent by the DM) so that after
-                    // future DM refreshes the player watches the same Firebase doc that
-                    // the DM always writes its new peer ID to. Saving conn.peer here
-                    // caused the watch chain to drift and the room to "die" after 2 refreshes.
-                    playerFirebaseRoomId = data.canonicalRoomId || conn.peer;
+                    playerFirebaseRoomId = data.canonicalRoomId || roomCode;
                     loadAndListenDiceRolls(playerFirebaseRoomId);
-                    localStorage.setItem('fracturedSkyPlayerRoom', data.canonicalRoomId || conn.peer);
+                    localStorage.setItem('fracturedSkyPlayerRoom', playerFirebaseRoomId);
                     localStorage.setItem('fracturedSkyPlayerName', myName);
-                    // Keep sessionStorage in sync so refresh always uses the canonical room ID.
                     sessionStorage.setItem('fracturedSkyTabRole', 'player');
-                    sessionStorage.setItem('fracturedSkyPlayerRoom', data.canonicalRoomId || conn.peer);
+                    sessionStorage.setItem('fracturedSkyPlayerRoom', playerFirebaseRoomId);
+                    // Add mock DM conn so token requests and dice roll notifications reach the DM
+                    { const dmConn = makeInboxConn(playerFirebaseRoomId);
+                      connections.set('dm', { conn: dmConn, name: 'Dungeon Master', role: 'dm', approved: true }); }
                     updateConnectionStatus('Connected to room', true);
-                    requestGameState(conn);
+                    loadFromFirebase(playerFirebaseRoomId);
                     document.getElementById('welcomeScreen').classList.add('hidden');
                     document.getElementById('welcomeReconnect').style.display = 'none';
                     document.getElementById('welcomeButtons').style.display = 'none';
@@ -4708,8 +4589,11 @@
                     break;
                     
                 case 'requestState':
-                    // Player asking DM to send the full game state (sent right after playerApproved)
                     if (isDM) sendGameState(conn);
+                    break;
+
+                case 'loadFromFirebase':
+                    if (!isDM) loadFromFirebase(playerFirebaseRoomId || roomCode);
                     break;
 
                 case 'gameState':
@@ -4840,11 +4724,12 @@
             if (isCoDM && hostDMConn) {
                 // Co-DM: route through host DM who will re-broadcast to players
                 sendToPeer(hostDMConn, { type: 'coDMBroadcast', payload: data });
-            } else {
-                // Host DM: broadcast directly to approved players and co-DMs
-                connections.forEach(({ conn, approved }) => {
-                    if (approved) sendToPeer(conn, data);
-                });
+            } else if (isDM && firebaseRoomRef && fbDb) {
+                // Host DM: write to broadcast field — all players pick up via onSnapshot
+                const bseq = Date.now();
+                fbDb.collection('vtt_rooms').doc(firebaseRoomRef)
+                    .set({ broadcast: { ...data, _bseq: bseq } }, { merge: true })
+                    .catch(() => {});
             }
             scheduleSave();
         }
@@ -5040,51 +4925,13 @@
         }
 
         function sendGameState(conn) {
-            const gridData = {};
-            for (let key in gridCells) {
-                gridData[key] = gridCells[key].toDataURL();
-            }
-            
-            const fogData = {};
-            for (let group in fogGroups) {
-                fogData[group] = fogGroups[group].canvas.toDataURL();
-            }
-            
-            // Serialize placed images
-            const imagesData = placedImages.map(pi => ({
-                src: pi.img.src,
-                x: pi.x,
-                y: pi.y,
-                width: pi.width,
-                height: pi.height,
-                rotation: pi.rotation,
-                gridX: pi.gridX,
-                gridY: pi.gridY
-            }));
-            
-            // Serialize stamp sub-maps
-            const subMapsData = {};
-            for (const sid in stampSubMaps) {
-                subMapsData[sid] = stampSubMaps[sid].toDataURL();
-            }
-
-            sendToPeer(conn, {
-                type: 'gameState',
-                state: {
-                    gridCells: gridData,
-                    lockedCells,
-                    fogGroups: fogData,
-                    tokens: [...stagingTokens, ...placedTokens],
-                    placedImages: imagesData,
-                    placedStamps,
-                    stampSubMaps: subMapsData,
-                    zoom,
-                    panX,
-                    panY
-                }
+            if (!firebaseRoomRef || !fbDb) return;
+            // Save current state to Firebase then notify the player to load it
+            saveToFirebase().then(() => {
+                conn.send({ type: 'loadFromFirebase', _t: Date.now() });
+            }).catch(() => {
+                conn.send({ type: 'loadFromFirebase', _t: Date.now() });
             });
-            
-            console.log('📤 Sent game state:', stagingTokens.length + placedTokens.length, 'tokens,', imagesData.length, 'images');
         }
 
         function requestGameState(conn) {
@@ -7221,10 +7068,15 @@
                     draw();
                     updateMinimap();
                     
-                    // Broadcast complete state to all connected players
-                    connections.forEach(({conn, approved}) => {
-                        if (approved) sendGameState(conn);
-                    });
+                    // Tell all approved players to reload state from Firebase
+                    if (isDM && firebaseRoomRef && fbDb) {
+                        saveToFirebase().then(() => {
+                            const bseq = Date.now();
+                            fbDb.collection('vtt_rooms').doc(firebaseRoomRef)
+                                .set({ broadcast: { type: 'loadFromFirebase', _bseq: bseq } }, { merge: true })
+                                .catch(() => {});
+                        }).catch(() => {});
+                    }
                     
                     document.getElementById('importSuccess').classList.add('show');
                     setTimeout(() => {

@@ -9,8 +9,13 @@ service cloud.firestore {
     }
 
     // Game room state (map cells, fog, images, stamps, dice log, etc.)
-    // All sub-documents use the pattern vtt_rooms/{roomId__suffix}.
+    // Top-level room docs and sibling docs use vtt_rooms/{roomId__suffix}.
     match /vtt_rooms/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Messaging subcollections: inbox (player→DM) and direct/{playerId}/msgs (DM→player)
+    match /vtt_rooms/{docId}/{sub=**} {
       allow read, write: if request.auth != null;
     }
   }
