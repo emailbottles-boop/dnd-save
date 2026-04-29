@@ -5254,8 +5254,10 @@
         }
 
         function updateConnectionStatus(text, connected) {
-            if (_elStatusText) _elStatusText.textContent = text;
-            [_elStatusIndicator, _elTabIndicator].forEach(ind => {
+            const el = _elStatusText || document.getElementById('statusText');
+            if (el) { _elStatusText = el; el.textContent = text; }
+            [_elStatusIndicator || document.getElementById('statusIndicator'),
+             _elTabIndicator    || document.getElementById('tabIndicator')].forEach(ind => {
                 if (!ind) return;
                 if (connected) ind.classList.add('connected');
                 else ind.classList.remove('connected');
