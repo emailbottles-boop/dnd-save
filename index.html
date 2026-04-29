@@ -4298,11 +4298,9 @@
                 peer.on('disconnected', () => {
                     if (!peer.destroyed) {
                         updateConnectionStatus('Broker lost — reconnecting...', false);
+                        peer.once('open', () => updateConnectionStatus('Connected as DM', true));
                         peer.reconnect();
                     }
-                });
-                peer.on('close', () => {
-                    if (isDM && !peer.destroyed) startFreshPeer();
                 });
 
                 onDMReady();
