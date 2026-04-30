@@ -4251,7 +4251,6 @@
             isCoDM = false;
             myName = 'Dungeon Master';
             myId = 'dm';
-            updateConnectionStatus('Connecting...', false);
             sessionStorage.setItem('fracturedSkyTabRole', 'dm');
             localStorage.setItem('fracturedSkyIsDM', 'true');
 
@@ -4265,12 +4264,10 @@
             savedPeerId = roomId;
             if (!fbLoadId) localStorage.setItem('fracturedSkySessionId', roomId);
 
-            if (!fbDb) {
-                // Offline mode — map works, multiplayer unavailable
-                updateConnectionStatus('Connected (offline)', true);
-                onDMReady();
-                return;
-            }
+            // Show the DM UI immediately — Firebase setup runs in the background
+            onDMReady();
+
+            if (!fbDb) return;
 
             const signInPromise = firebaseUser ? Promise.resolve() : firebaseSignIn();
             signInPromise.then(() => {
@@ -4309,10 +4306,9 @@
                 loadFromFirebase(loadId);
                 loadAndListenDiceRolls(loadId);
                 startDMHeartbeat();
-                onDMReady();
             }).catch(err => {
-                console.error('DM room setup failed:', err);
-                updateConnectionStatus('Firebase error — try refreshing', false);
+                console.error('DM Firebase setup error:', err);
+                updateFirebaseStatus('⚠️ Firebase offline', '#ef4444');
             });
         }
 
@@ -4551,7 +4547,7 @@
                     { const dmConn = makeInboxConn(playerFirebaseRoomId);
                       connections.set('dm', { conn: dmConn, name: 'Dungeon Master', role: 'dm', approved: true }); }
                     updateConnectionStatus('Connected to room', true);
-                    loadFromFirebase(playerFirebaseRoomId);
+                    // DM will send {type:'loadFromFirebase'} after saveToFirebase completes — wait for that
                     document.getElementById('welcomeScreen').classList.add('hidden');
                     document.getElementById('welcomeReconnect').style.display = 'none';
                     document.getElementById('welcomeButtons').style.display = 'none';
@@ -4625,7 +4621,26 @@
                     break;
                     
                 case 'fogUpdate':
-                    updateFogFromNetwork(data);
+                    if (data.fogData) {
+                        // Inline fog data (co-DM PeerJS path)
+                        updateFogFromNetwork(data);
+                    } else if (!isDM && fbDb) {
+                        // Firestore path: fog was saved to dedicated doc, load it
+                        const _safeG = (data.group || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+                        const _fogRoomId = playerFirebaseRoomId || roomCode;
+                        fbDb.collection('vtt_rooms').doc(_fogRoomId + '__fog_' + _safeG).get()
+                            .then(snap => {
+                                if (!snap.exists || !fogGroups[data.group]) return;
+                                const _img = new Image();
+                                _img.onload = () => {
+                                    const ctx = fogGroups[data.group].canvas.getContext('2d');
+                                    ctx.clearRect(0, 0, fogGroups[data.group].canvas.width, fogGroups[data.group].canvas.height);
+                                    ctx.drawImage(_img, 0, 0);
+                                    draw();
+                                };
+                                _img.src = snap.data().data;
+                            }).catch(() => {});
+                    }
                     break;
                     
                 case 'imagesUpdate':
@@ -6854,18 +6869,19 @@
                 clearTimeout(fogBroadcastTimeout);
             }
             
-            // Throttle broadcasts to every 100ms for smooth real-time updates
+            // Throttle to every 100ms, save fog to its own doc then broadcast a lightweight notify
             fogBroadcastTimeout = setTimeout(() => {
-                const fogData = fogGroups[activeFogGroup].canvas.toDataURL();
-                console.log('📡 Broadcasting fog update, size:', fogData.length, 'bytes');
-                
-                broadcast({
-                    type: 'fogUpdate',
-                    group: activeFogGroup,
-                    fogData: fogData
-                });
-                
                 fogBroadcastTimeout = null;
+                if (!isDM || !firebaseRoomRef || !fbDb) return;
+                const group = activeFogGroup;
+                const fogData = fogGroups[group].canvas.toDataURL();
+                const safeGroup = group.replace(/[^a-zA-Z0-9_-]/g, '_');
+                fbDb.collection('vtt_rooms').doc(firebaseRoomRef + '__fog_' + safeGroup)
+                    .set({ name: group, data: fogData })
+                    .then(() => {
+                        // Broadcast a lightweight notification (no base64 blob in broadcast field)
+                        broadcast({ type: 'fogUpdate', group });
+                    }).catch(() => {});
             }, 100);
         }
 
