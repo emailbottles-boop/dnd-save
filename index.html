@@ -4321,7 +4321,6 @@
             document.getElementById('connectionTabContainer').style.display = 'block';
             document.getElementById('diceRollerWrapper').classList.add('visible');
             document.getElementById('diceRollLog').classList.add('visible');
-            showDiceAdvantagePanel();
             document.getElementById('roomCodeSection').style.display = 'block';
             document.getElementById('roomCode').textContent = roomCode;
             document.getElementById('dmControlsBtn').style.display = 'block';
@@ -4333,6 +4332,7 @@
             updateUserList();
             loadSavedCloudLink();
             initMusicPanel();
+            try { showDiceAdvantagePanel(); } catch(e) { console.error('showDiceAdvantagePanel:', e); }
             // Open the connection panel to show the room code — stays open until DM closes it
             const panel = document.getElementById('connectionPanel');
             if (!panel.classList.contains('open')) toggleConnectionPanel();
@@ -8336,14 +8336,17 @@
 
         function renderAdvantagePanel() {
             loadCharactersFromStorage();
+            const _charsRow = document.getElementById('advantageCharsRow');
+            const _skillsRow = document.getElementById('advantageSkillsRow');
+            if (!_charsRow || !_skillsRow) return;
             if (characters.length === 0) {
-                document.getElementById('advantageCharsRow').innerHTML = '<span class="advantage-chars-label">No characters — create one in the character sheet.</span>';
-                document.getElementById('advantageSkillsRow').innerHTML = '<button class="advantage-clear-btn" onclick="clearDiceAdvantage()">✕ Clear</button>';
+                _charsRow.innerHTML = '<span class="advantage-chars-label">No characters — create one in the character sheet.</span>';
+                _skillsRow.innerHTML = '<button class="advantage-clear-btn" onclick="clearDiceAdvantage()">✕ Clear</button>';
                 return;
             }
             if (advantageCharIdx >= characters.length) advantageCharIdx = 0;
 
-            const charRow = document.getElementById('advantageCharsRow');
+            const charRow = _charsRow;
             charRow.innerHTML = '<span class="advantage-chars-label">Character:</span>' +
                 characters.map((c, i) =>
                     `<button class="advantage-char-btn ${i === advantageCharIdx ? 'active' : ''}" onclick="selectAdvantageChar(${i})">${c.emoji || '⚔️'} ${c.name || ('Char ' + (i+1))}</button>`
@@ -8370,6 +8373,7 @@
             ];
             const charName = c.name || ('Char ' + (advantageCharIdx + 1));
             const skillsRow = document.getElementById('advantageSkillsRow');
+            if (!skillsRow) return;
             skillsRow.innerHTML = attrs.map(({ key, val }) => {
                 const mod = Math.floor((parseInt(val) - 10) / 2);
                 const modStr = (mod >= 0 ? '+' : '') + mod;
