@@ -4336,6 +4336,11 @@
             // Open the connection panel to show the room code — stays open until DM closes it
             const panel = document.getElementById('connectionPanel');
             if (!panel.classList.contains('open')) toggleConnectionPanel();
+            // Auto-open DM tools panel so map editor, tokens, fog are immediately accessible
+            const dmP = document.getElementById('dmPanel');
+            if (!dmP.classList.contains('open')) toggleDMPanel();
+            // Re-size canvas now that the DM panel is in its final position
+            resizeCanvas();
         }
 
         // === CO-DM ===
