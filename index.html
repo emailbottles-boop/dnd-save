@@ -2007,7 +2007,7 @@
             </div>
             <!-- First-time setup notice -->
             <div id="dmFirstTimeNotice" style="display:none; background:rgba(139,92,246,0.15); border:1px solid var(--accent); border-radius:8px; padding:0.65rem 0.75rem; margin-bottom:0.75rem; font-size:0.83rem; color:var(--text-dim);">
-                👋 First time? Create your DM username and password below — you'll use these every time you create a room.
+                👋 First time? Create a username and password — your campaign will auto-save to the cloud and reload every time you log back in (any device, any browser).
             </div>
             <form onsubmit="dmLogin(event)">
                 <div class="form-group">
@@ -2216,7 +2216,7 @@
         <div class="title">⚔️ FROM SUNNYVILLE</div>
         <div class="campaign-badge" id="campaignBadge" style="display: none;">Campaign Name</div>
         <div class="header-actions">
-            <div id="firebaseSection" style="display: none; align-items: center; gap: 0.4rem;">
+            <div id="firebaseSection" style="display: none; align-items: center; gap: 0.4rem;" title="Your campaign auto-saves to the cloud — safe even if you close the tab or lose your connection.">
                 <span id="firebaseStatus" style="font-size: 0.75rem; color: var(--text-dim);"></span>
             </div>
             <button class="btn" id="musicToggleBtn" onclick="toggleMusicPanel()" style="display:none;" title="Jukebox">🎵 Music</button>
@@ -2277,9 +2277,12 @@
                 <button id="startFreshBtn" onclick="confirmLeaveSession()" style="display:none; margin-top:0.6rem; width:100%; padding:0.45rem 0.75rem; background:#6b7280; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:0.85rem;">✕ Start Fresh / Change Session</button>
             </div>
             <div class="connection-section" id="firebaseStatusSection" style="display: none;">
-                <h3>🔥 Cloud Sync</h3>
+                <h3>☁️ Cloud Sync</h3>
                 <div style="padding: 0.5rem; background: var(--bg-dark); border-radius: 6px;">
                     <span id="firebaseStatusPanel" style="font-size: 0.85rem; color: var(--text-dim);">Connecting...</span>
+                </div>
+                <div style="font-size:0.72rem; color:var(--text-dim); margin-top:0.5rem; line-height:1.4;">
+                    Your map, fog, tokens and campaign data live on the cloud — not on your device. Closing this tab won't lose anything; your players keep seeing the last state until you return.
                 </div>
             </div>
             <div class="connection-section">
@@ -3210,6 +3213,7 @@
         let playerFirebaseWatcher = null; // Firestore onSnapshot unsubscribe fn (direct msgs)
         let playerBroadcastWatcher = null; // Firestore onSnapshot unsubscribe fn (broadcasts)
         let dmHeartbeatTimer = null;      // setInterval handle for DM Firebase keepalive
+        let dmBackstopSaveTimer = null;   // periodic save every 60s (catches missed scheduleSave calls)
 
         // === FIREBASE MESSAGING HELPERS ===
         // Generates a short random ID (no PeerJS dependency)
@@ -3432,10 +3436,18 @@
                     .set({ currentPeerId: myId, lastSeen: Date.now() }, { merge: true })
                     .catch(e => console.error('🔥 Heartbeat error:', e));
             }, 20000);
+            // Backstop save every 60s — catches any edits whose scheduleSave()
+            // call was somehow missed (browser idle, missed event, etc.) and
+            // ensures the cloud copy is never more than ~1 minute stale.
+            dmBackstopSaveTimer = setInterval(() => {
+                if (!isDM || isCoDM || !firebaseRoomRef || !firebaseUser || !fbDb) return;
+                saveToFirebase();
+            }, 60000);
         }
 
         function stopDMHeartbeat() {
             if (dmHeartbeatTimer) { clearInterval(dmHeartbeatTimer); dmHeartbeatTimer = null; }
+            if (dmBackstopSaveTimer) { clearInterval(dmBackstopSaveTimer); dmBackstopSaveTimer = null; }
         }
 
         // Re-connect a co-DM to the host using the latest Firebase peer ID.
@@ -3455,8 +3467,10 @@
         function scheduleSave() {
             if (!isDM || !firebaseRoomRef || !firebaseUser) return;
             clearTimeout(firebaseSaveTimeout);
-            updateFirebaseStatus('☁️ Unsaved...', '#fbbf24');
-            firebaseSaveTimeout = setTimeout(saveToFirebase, 1500);
+            updateFirebaseStatus('☁️ Saving...', '#fbbf24');
+            // 800ms keeps the UI snappy but gives time for rapid edits (e.g.
+            // continuous brush strokes) to batch into a single Firestore write.
+            firebaseSaveTimeout = setTimeout(saveToFirebase, 800);
         }
 
         async function saveToFirebase() {
@@ -4489,6 +4503,11 @@
             document.getElementById('musicToggleBtn').style.display = 'block';
             document.getElementById('stagingZone').style.display = 'flex';
             document.getElementById('editCampaignBtn').style.display = 'inline-block';
+            // Reveal the cloud-save badge in the header so the DM can see at
+            // a glance that their work is being saved to the cloud.
+            const fbSection = document.getElementById('firebaseSection');
+            if (fbSection) fbSection.style.display = 'flex';
+            updateFirebaseStatus('☁️ Cloud sync active', '#10b981');
             updateCampaignNameDisplay();
             updateConnectionStatus('Connected as DM', true);
             updateUserList();
