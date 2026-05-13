@@ -8287,14 +8287,14 @@
         // DICE ROLL FIREBASE PERSISTENCE
         // =============================================
 
-        function saveDiceRollToFirebase(result, rollerName, rollId) {
+        function saveDiceRollToFirebase(result, rollerName, rollId, diceSides) {
             const roomId = firebaseRoomRef || playerFirebaseRoomId;
             if (!roomId || !fbDb) return;
             firebaseSignIn().then(() => {
                 fbDb.collection('vtt_rooms').doc(roomId + '__dice_log')
                     .set({
                         rolls: firebase.firestore.FieldValue.arrayUnion(
-                            { result, rollerName, rollId, timestamp: Date.now() }
+                            { result, rollerName, rollId, diceSides: diceSides || 20, timestamp: Date.now() }
                         )
                     }, { merge: true })
                     .catch(e => console.error('🎲 Dice log save error:', e));
@@ -8444,7 +8444,7 @@
             } else {
                 broadcast(msg);
             }
-            saveDiceRollToFirebase(result, myName || 'Anonymous', rollId);
+            saveDiceRollToFirebase(result, myName || 'Anonymous', rollId, sides);
             // Close dropdown if open
             document.getElementById('diceTypeDropdown').classList.remove('open');
         }
