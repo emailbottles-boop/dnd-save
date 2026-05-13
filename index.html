@@ -2213,7 +2213,7 @@
 
     <!-- HEADER -->
     <div class="header">
-        <div class="title">⚔️ FROM SUNNYVILLE</div>
+        <div class="title" id="headerTitle" onclick="onHeaderTitleClick()" title="">⚔️ FROM SUNNYVILLE</div>
         <div class="campaign-badge" id="campaignBadge" style="display: none;">Campaign Name</div>
         <div class="header-actions">
             <div id="firebaseSection" style="display: none; align-items: center; gap: 0.4rem;" title="Your campaign auto-saves to the cloud — safe even if you close the tab or lose your connection.">
@@ -3675,13 +3675,36 @@
         function updateCampaignNameDisplay() {
             const el = document.getElementById('sessionNameDisplay');
             if (el) el.textContent = campaignName;
+            // Also reflect the campaign name in the big header. When the user
+            // is in a session, the header reads "⚔️ <Campaign Name>"; otherwise
+            // it falls back to the brand title "FROM SUNNYVILLE".
+            const title = document.getElementById('headerTitle');
+            if (title) {
+                const inSession = !!(isDM || playerFirebaseRoomId);
+                if (inSession && campaignName) {
+                    title.textContent = '⚔️ ' + campaignName;
+                    title.setAttribute('title', isDM ? 'Click to rename campaign' : campaignName);
+                    title.style.cursor = isDM ? 'pointer' : 'default';
+                } else {
+                    title.textContent = '⚔️ FROM SUNNYVILLE';
+                    title.setAttribute('title', '');
+                    title.style.cursor = 'default';
+                }
+            }
+        }
+        function onHeaderTitleClick() {
+            if (isDM) editCampaignName();
         }
         function editCampaignName() {
+            if (!isDM) return;
             const newName = prompt('Campaign name:', campaignName);
             if (newName !== null && newName.trim()) {
                 campaignName = newName.trim();
                 localStorage.setItem('fracturedSkyCampaignName', campaignName);
                 updateCampaignNameDisplay();
+                // Broadcast to players so the header updates instantly for
+                // everyone in the session — no refresh needed.
+                broadcast({ type: 'campaignNameChange', name: campaignName });
                 scheduleSave();
             }
         }
@@ -4809,6 +4832,15 @@
                     draw();
                     break;
                     
+                case 'campaignNameChange':
+                    if (data.name) {
+                        campaignName = data.name;
+                        try { localStorage.setItem('fracturedSkyCampaignName', campaignName); } catch(e) {}
+                        updateCampaignNameDisplay();
+                        if (!isDM) showLoadingToast('🏷️ Campaign renamed to "' + campaignName + '"', 3000);
+                    }
+                    break;
+
                 case 'fogUpdate':
                     if (data.fogData) {
                         // Inline fog data (co-DM PeerJS path)
