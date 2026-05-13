@@ -882,6 +882,7 @@
 
         /* On phones, float the DM panel over the canvas instead of stealing layout width */
         @media (max-width: 767px) {
+            /* DM panel floats over canvas instead of stealing layout width */
             .dm-panel {
                 position: fixed;
                 top: 0;
@@ -889,6 +890,76 @@
                 bottom: 0;
                 width: min(92vw, 420px);
                 z-index: 600;
+            }
+            /* Header: smaller title, tighter spacing, allow wrap */
+            .header {
+                padding: 0.6rem 0.75rem;
+                flex-wrap: wrap;
+                gap: 0.4rem;
+            }
+            .title {
+                font-size: 1.05rem;
+                flex: 1 1 auto;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .header-actions {
+                gap: 0.35rem;
+                flex-wrap: wrap;
+            }
+            .header-actions .btn {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.78rem;
+            }
+            /* Hide the cloud-save text on phones — too much for a small header.
+               Replaced with a subtle dot indicator (see #firebaseSection below). */
+            #firebaseSection #firebaseStatus { display: none; }
+            #firebaseSection::before {
+                content: '☁️';
+                font-size: 0.85rem;
+                opacity: 0.9;
+            }
+            /* Smaller minimap so it doesn't eat half the screen */
+            .minimap {
+                width: 130px;
+                padding: 0.5rem;
+            }
+            .minimap-container {
+                bottom: 70px; /* lift above the dice advantage / OS bottom bar */
+                left: 8px;
+            }
+            /* Compact staging zone */
+            .staging-zone {
+                bottom: 8px;
+                padding: 0.4rem 0.6rem;
+                gap: 0.4rem;
+                max-width: calc(100vw - 16px);
+                font-size: 0.8rem;
+            }
+            /* Dice advantage panel — narrower and smaller */
+            .dice-advantage-panel {
+                width: calc(100vw - 16px);
+                font-size: 0.85rem;
+            }
+            /* Connection panel takes the whole top portion on mobile */
+            .connection-panel.open {
+                max-height: 70vh;
+                padding: 0.85rem;
+                overflow-y: auto;
+            }
+            /* Dice roller wrapper sits above the staging zone */
+            .dice-roller-wrapper {
+                bottom: 75px !important;
+            }
+            /* Floating mobile DM Controls FAB — easier to find than header btn */
+            #dmControlsBtn {
+                position: fixed;
+                right: 12px;
+                bottom: 75px;
+                z-index: 550;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
             }
         }
 
@@ -3830,6 +3901,13 @@
 
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
+
+            // On phones, start the Navigator (minimap) collapsed so it doesn't
+            // eat half the screen. User can tap to expand any time.
+            if (window.innerWidth < 768) {
+                const mm = document.getElementById('minimap');
+                if (mm && !mm.classList.contains('collapsed')) mm.classList.add('collapsed');
+            }
 
             // Load char tray on startup
             try { loadCharactersFromStorage(); renderCharTray(); } catch(e) {}
@@ -6877,6 +6955,79 @@
             document.getElementById('zoomSlider').value = sliderVal;
             document.getElementById('zoomValue').textContent = sliderVal + '%';
             draw();
+        }, { passive: false });
+
+        // === TOUCH GESTURES (pan + pinch-zoom for mobile) ===
+        // Single finger: pan. Two fingers: pinch to zoom (toward midpoint).
+        // Single quick tap with no drag: dispatch as mousedown→mouseup so
+        // token taps, cell clicks, and tool interactions still work.
+        let _touchMode = null;             // 'pan' | 'pinch' | null
+        let _touchLastX = 0, _touchLastY = 0;
+        let _touchStartX = 0, _touchStartY = 0;
+        let _touchStartT = 0;
+        let _pinchStartDist = 0;
+        let _pinchStartZoom = 1;
+        function _touchDistance(t1, t2) {
+            const dx = t2.clientX - t1.clientX;
+            const dy = t2.clientY - t1.clientY;
+            return Math.sqrt(dx*dx + dy*dy);
+        }
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                _touchMode = 'pan';
+                _touchLastX = _touchStartX = e.touches[0].clientX;
+                _touchLastY = _touchStartY = e.touches[0].clientY;
+                _touchStartT = Date.now();
+            } else if (e.touches.length === 2) {
+                _touchMode = 'pinch';
+                _pinchStartDist = _touchDistance(e.touches[0], e.touches[1]);
+                _pinchStartZoom = zoom;
+            }
+            e.preventDefault();
+        }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => {
+            if (_touchMode === 'pan' && e.touches.length === 1) {
+                const t = e.touches[0];
+                panX += (t.clientX - _touchLastX);
+                panY += (t.clientY - _touchLastY);
+                _touchLastX = t.clientX;
+                _touchLastY = t.clientY;
+                draw();
+            } else if (_touchMode === 'pinch' && e.touches.length === 2) {
+                const rect = canvas.getBoundingClientRect();
+                const t1 = e.touches[0], t2 = e.touches[1];
+                const dist = _touchDistance(t1, t2);
+                const midX = (t1.clientX + t2.clientX) / 2 - rect.left;
+                const midY = (t1.clientY + t2.clientY) / 2 - rect.top;
+                // Map midpoint to world coords using the OLD zoom/pan
+                const worldX = (midX - panX) / zoom;
+                const worldY = (midY - panY) / zoom;
+                const newZoom = Math.min(3.0, Math.max(0.25, _pinchStartZoom * (dist / _pinchStartDist)));
+                panX = midX - worldX * newZoom;
+                panY = midY - worldY * newZoom;
+                zoom = newZoom;
+                const sliderVal = Math.round(zoom * 100);
+                const sl = document.getElementById('zoomSlider');
+                const sv = document.getElementById('zoomValue');
+                if (sl) sl.value = sliderVal;
+                if (sv) sv.textContent = sliderVal + '%';
+                draw();
+            }
+            e.preventDefault();
+        }, { passive: false });
+        canvas.addEventListener('touchend', (e) => {
+            // If it was a single quick tap (< 250ms, < 8px movement), treat as a
+            // click so tools (eraser/select/etc.) still work via touch.
+            if (_touchMode === 'pan' && Date.now() - _touchStartT < 250) {
+                const dx = Math.abs(_touchLastX - _touchStartX);
+                const dy = Math.abs(_touchLastY - _touchStartY);
+                if (dx < 8 && dy < 8) {
+                    canvas.dispatchEvent(new MouseEvent('mousedown', { clientX: _touchStartX, clientY: _touchStartY, button: 0 }));
+                    canvas.dispatchEvent(new MouseEvent('mouseup',   { clientX: _touchStartX, clientY: _touchStartY, button: 0 }));
+                }
+            }
+            _touchMode = null;
+            e.preventDefault();
         }, { passive: false });
 
         // === FOG ===
