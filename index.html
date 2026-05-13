@@ -2189,6 +2189,28 @@
         </div>
     </div>
 
+    <!-- CONTINUE-OR-START-FRESH MODAL (shown to returning DMs after login) -->
+    <div class="modal" id="continueCampaignModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">📂</div>
+                <div class="modal-title">Welcome Back!</div>
+            </div>
+            <p style="text-align:center; color:var(--text-dim); margin-bottom:0.5rem; font-size:0.92rem;">
+                You have a saved campaign linked to this account:
+            </p>
+            <p style="text-align:center; font-family:'Cinzel',serif; font-size:1.15rem; color:var(--gold); margin-bottom:1.25rem;" id="continueCampaignName">My Campaign</p>
+            <div style="display:flex; flex-direction:column; gap:0.55rem;">
+                <button class="btn btn-primary" onclick="confirmContinueCampaign()" style="width:100%; padding:0.7rem;">▶ Continue Campaign</button>
+                <button class="btn" onclick="confirmStartFreshCampaign()" style="width:100%; padding:0.55rem; background:rgba(239,68,68,0.12); border-color:#ef4444; color:#ef4444;">🆕 Start a New Campaign (keeps old saved)</button>
+                <button class="btn" onclick="closeContinueCampaignModal()" style="width:100%; padding:0.45rem; font-size:0.82rem;">Cancel</button>
+            </div>
+            <div style="font-size:0.72rem; color:var(--text-dim); margin-top:0.85rem; text-align:center;">
+                Starting a new campaign won't delete your old one — it's still saved in your account.
+            </div>
+        </div>
+    </div>
+
     <!-- HEADER -->
     <div class="header">
         <div class="title">⚔️ FROM SUNNYVILLE</div>
@@ -4027,6 +4049,57 @@
             document.getElementById('dmCreatePanel').style.display = 'none';
         }
 
+        // === Continue Campaign vs Start Fresh prompt (returning DMs) ===
+        let _pendingContinueRoomId = null;
+        let _pendingContinueName = null;
+        function showContinueCampaignModal(roomId, name) {
+            _pendingContinueRoomId = roomId;
+            _pendingContinueName = name || 'Saved Campaign';
+            document.getElementById('continueCampaignName').textContent = _pendingContinueName;
+            document.getElementById('continueCampaignModal').classList.add('active');
+        }
+        function closeContinueCampaignModal() {
+            document.getElementById('continueCampaignModal').classList.remove('active');
+            _pendingContinueRoomId = null;
+            _pendingContinueName = null;
+            // User cancelled — reopen the login modal so they can try a different account
+            showDMLogin();
+        }
+        function confirmContinueCampaign() {
+            const roomId = _pendingContinueRoomId;
+            const name = _pendingContinueName;
+            document.getElementById('continueCampaignModal').classList.remove('active');
+            _pendingContinueRoomId = null;
+            _pendingContinueName = null;
+            if (!roomId) return;
+            localStorage.setItem('fracturedSkySessionId', roomId);
+            if (name) {
+                campaignName = name;
+                localStorage.setItem('fracturedSkyCampaignName', name);
+            }
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('connectionTabContainer').style.display = 'block';
+            showLoadingToast('📂 Loading ' + name + '…');
+            createRoom(roomId);
+        }
+        function confirmStartFreshCampaign() {
+            // Don't delete the old room — just generate a new ID. The user's
+            // saveDMCloudProfile on next save will repoint their account to
+            // the new room; the old room data remains in Firestore (orphaned
+            // but recoverable if needed).
+            document.getElementById('continueCampaignModal').classList.remove('active');
+            _pendingContinueRoomId = null;
+            _pendingContinueName = null;
+            // Wipe any local pointer to the old room so createRoom generates fresh
+            localStorage.removeItem('fracturedSkySessionId');
+            localStorage.removeItem('fracturedSkyCampaignName');
+            campaignName = 'New Campaign';
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('connectionTabContainer').style.display = 'block';
+            showLoadingToast('🆕 Starting a new campaign…');
+            createRoom(null);
+        }
+
         function toggleDMSetup() {
             const panel = document.getElementById('dmSetupPanel');
             panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
@@ -4157,25 +4230,25 @@
                     // Look up their cloud-saved campaign first; manual session
                     // ID overrides only if the DM explicitly typed one in.
                     const profile = manualSessionId ? null : await getDMCloudProfile(dmUsername);
-                    const roomId = manualSessionId || (profile && profile.roomId) || null;
-                    if (roomId) {
-                        localStorage.setItem('fracturedSkySessionId', roomId);
-                    }
-                    if (profile && profile.campaignName) {
-                        // Restore the campaign name immediately so the header
-                        // reflects "Welcome back" rather than the placeholder.
-                        campaignName = profile.campaignName;
-                        localStorage.setItem('fracturedSkyCampaignName', campaignName);
-                    }
+                    const savedRoomId = profile && profile.roomId;
+                    const savedName = profile && profile.campaignName;
+
                     closeDMModal();
+
+                    // Returning DM with a saved campaign: ask Continue vs Start Fresh.
+                    // Skip prompt if the DM explicitly typed a session ID (power user).
+                    if (savedRoomId && !manualSessionId) {
+                        showContinueCampaignModal(savedRoomId, savedName);
+                        return;
+                    }
+
+                    // First-time DM or manual session override: go straight in.
+                    const roomId = manualSessionId || null;
+                    if (roomId) localStorage.setItem('fracturedSkySessionId', roomId);
                     document.getElementById('welcomeScreen').classList.add('hidden');
                     document.getElementById('connectionTabContainer').style.display = 'block';
-                    if (roomId && profile && profile.campaignName) {
-                        showLoadingToast('📂 Loading ' + profile.campaignName + '…');
-                    } else if (!roomId) {
-                        showLoadingToast('🆕 Starting a new campaign…');
-                    }
-                    createRoom(roomId || null);
+                    showLoadingToast('🆕 Starting a new campaign…');
+                    createRoom(roomId);
                     return;
                 } catch (err) {
                     if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/wrong-password') {
@@ -4237,6 +4310,25 @@
             document.getElementById('playerSuccess').classList.remove('show');
         }
 
+        // Timer set when player sends a join request. If 20s pass without
+        // playerApproved arriving (DM is offline / hasn't approved), show a
+        // clear retry prompt instead of leaving them hanging on "Waiting…".
+        let _playerApprovalTimer = null;
+        function armPlayerApprovalTimeout() {
+            clearTimeout(_playerApprovalTimer);
+            _playerApprovalTimer = setTimeout(() => {
+                // Only trip if we haven't been approved yet
+                const dm = connections.get('dm');
+                if (dm && dm.approved) return;
+                updateConnectionStatus('DM offline — tap Refresh', false);
+                showLoadingToast('⏳ DM has not responded. Tap Refresh in your browser to try again.', 8000);
+            }, 20000);
+        }
+        function clearPlayerApprovalTimeout() {
+            clearTimeout(_playerApprovalTimer);
+            _playerApprovalTimer = null;
+        }
+
         function playerLogin(e) {
             e.preventDefault();
             myName = document.getElementById('playerName').value;
@@ -4245,7 +4337,12 @@
             roomCode = code;
             localStorage.setItem('fracturedSkyPlayerRoom', code);
             localStorage.setItem('fracturedSkyPlayerName', myName);
-            if (!myId) myId = genId();
+            // Persist myId across refreshes so the DM sees the same connection
+            // entry instead of treating each tab refresh as a brand-new player.
+            if (!myId) {
+                myId = localStorage.getItem('fracturedSkyPlayerId') || genId();
+                localStorage.setItem('fracturedSkyPlayerId', myId);
+            }
 
             if (!fbDb) {
                 document.getElementById('playerError').textContent = 'Firebase unavailable';
@@ -4270,6 +4367,7 @@
                     updateConnectionStatus('Waiting for approval...', false);
                 }, 2000);
                 startPlayerRoomWatch(code);
+                armPlayerApprovalTimeout();
             }).catch(err => {
                 document.getElementById('playerError').textContent = 'Could not reach room: ' + err.message;
                 document.getElementById('playerError').classList.add('show');
@@ -4282,7 +4380,11 @@
             if (!savedRoom || !savedName || isDM) return;
             myName = savedName;
             roomCode = savedRoom;
-            if (!myId) myId = genId();
+            // Persist myId across refreshes so the DM sees the same connection
+            if (!myId) {
+                myId = localStorage.getItem('fracturedSkyPlayerId') || genId();
+                localStorage.setItem('fracturedSkyPlayerId', myId);
+            }
 
             if (!fbDb) return;
 
@@ -4299,6 +4401,7 @@
             }).then(() => {
                 updateConnectionStatus('Waiting for approval...', false);
                 startPlayerRoomWatch(savedRoom);
+                armPlayerApprovalTimeout();
             }).catch(() => {
                 updateConnectionStatus('Could not reach room', false);
             });
@@ -4602,6 +4705,7 @@
                     break;
                     
                 case 'playerApproved':
+                    clearPlayerApprovalTimeout();
                     myName = data.name;
                     playerFirebaseRoomId = data.canonicalRoomId || roomCode;
                     loadAndListenDiceRolls(playerFirebaseRoomId);
