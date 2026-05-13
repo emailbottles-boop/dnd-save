@@ -3351,17 +3351,25 @@
             } catch(e) { return null; }
         }
 
-        // Persists the DM's canonical room ID to their user record so they can
-        // recover the campaign from any device using the same credentials.
-        async function saveDMCloudProfile(username, roomId) {
+        // Persists the DM's canonical room ID + campaign metadata to their user
+        // record. The metadata is shown on next login as a "Welcome back, loading
+        // <campaignName>..." preview so the user knows their data is safe.
+        async function saveDMCloudProfile(username, roomId, meta) {
             if (!fbDb || !username || !roomId) return;
             try {
-                await fbDb.collection('vtt_users').doc(username).set(
-                    { roomId, savedAt: Date.now() },
-                    { merge: true }
-                );
-                console.log('☁️ DM profile saved:', username, '->', roomId);
+                const data = { roomId, savedAt: Date.now() };
+                if (meta && meta.campaignName) data.campaignName = meta.campaignName;
+                await fbDb.collection('vtt_users').doc(username).set(data, { merge: true });
             } catch(e) { console.error('☁️ Failed to save DM profile:', e); }
+        }
+
+        // Reads the DM's full saved profile (roomId + campaign metadata).
+        async function getDMCloudProfile(username) {
+            if (!fbDb || !username) return null;
+            try {
+                const doc = await fbDb.collection('vtt_users').doc(username).get();
+                return (doc.exists && doc.data()) ? doc.data() : null;
+            } catch(e) { return null; }
         }
 
         // Watch Firestore for DM peer ID changes; fires callback immediately with the
@@ -3495,6 +3503,11 @@
                 }
                 updateFirebaseStatus('☁️ Saved', '#10b981');
                 console.log('🔥 Saved to Firestore');
+                // Keep the user→campaign link fresh on every save so the DM can
+                // always log in from any device and see their latest campaign.
+                if (dmUsername && !isCoDM) {
+                    saveDMCloudProfile(dmUsername, firebaseRoomRef, { campaignName });
+                }
             } catch (err) {
                 console.error('🔥 Firebase save error:', err);
                 updateFirebaseStatus('⚠️ Save failed', '#ef4444');
@@ -3511,6 +3524,7 @@
                 if (!mainSnap.exists) {
                     updateFirebaseStatus('☁️ New room', '#9ca3af');
                     console.log('🔥 No saved state — starting fresh');
+                    if (isDM) showLoadingToast('🆕 New campaign — your work auto-saves to your account', 4000);
                     return;
                 }
 
@@ -3581,10 +3595,34 @@
                 }
                 updateFirebaseStatus('☁️ Loaded', '#10b981');
                 console.log('🔥 Loaded from Firestore');
+                if (isDM) {
+                    showLoadingToast('📂 Loaded ' + (campaignName || 'your campaign'), 3500);
+                }
             } catch (err) {
                 console.error('🔥 Firebase load error:', err);
                 updateFirebaseStatus('⚠️ Load failed', '#ef4444');
+                if (isDM) showLoadingToast('⚠️ Could not load campaign — try refreshing', 5000);
             }
+        }
+
+        // Lightweight toast notification anchored top-center, used for login
+        // and campaign load feedback so the user knows their data is loading
+        // (or that they're starting fresh). Multiple calls replace the prior toast.
+        let _loadingToastTimer = null;
+        function showLoadingToast(text, durationMs) {
+            let el = document.getElementById('loadingToast');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'loadingToast';
+                el.style.cssText = 'position:fixed;top:90px;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--accent);color:var(--text);padding:0.6rem 1.1rem;border-radius:8px;font-size:0.9rem;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.4);transition:opacity 0.3s;pointer-events:none;';
+                document.body.appendChild(el);
+            }
+            el.textContent = text;
+            el.style.opacity = '1';
+            clearTimeout(_loadingToastTimer);
+            _loadingToastTimer = setTimeout(() => {
+                el.style.opacity = '0';
+            }, durationMs || 2500);
         }
 
         function updateFirebaseStatus(text, color) {
@@ -3747,7 +3785,7 @@
                     // Keep DM cloud profile link up-to-date so the campaign is
                     // always recoverable from any device with the same credentials.
                     if (dmUsername && !isCoDM) {
-                        saveDMCloudProfile(dmUsername, firebaseRoomRef);
+                        saveDMCloudProfile(dmUsername, firebaseRoomRef, { campaignName });
                     }
                 }
             }
@@ -4116,18 +4154,27 @@
                     localStorage.setItem('fracturedSkyDMUser', user);
                     localStorage.setItem('fracturedSkyDMPass', pass);
 
-                    // Look up their cloud-saved room ID (campaign) first;
-                    // manual session ID overrides if the DM typed one in.
-                    let roomId = manualSessionId || null;
-                    if (!roomId) {
-                        roomId = await getDMCloudRoomId(dmUsername);
-                    }
+                    // Look up their cloud-saved campaign first; manual session
+                    // ID overrides only if the DM explicitly typed one in.
+                    const profile = manualSessionId ? null : await getDMCloudProfile(dmUsername);
+                    const roomId = manualSessionId || (profile && profile.roomId) || null;
                     if (roomId) {
                         localStorage.setItem('fracturedSkySessionId', roomId);
+                    }
+                    if (profile && profile.campaignName) {
+                        // Restore the campaign name immediately so the header
+                        // reflects "Welcome back" rather than the placeholder.
+                        campaignName = profile.campaignName;
+                        localStorage.setItem('fracturedSkyCampaignName', campaignName);
                     }
                     closeDMModal();
                     document.getElementById('welcomeScreen').classList.add('hidden');
                     document.getElementById('connectionTabContainer').style.display = 'block';
+                    if (roomId && profile && profile.campaignName) {
+                        showLoadingToast('📂 Loading ' + profile.campaignName + '…');
+                    } else if (!roomId) {
+                        showLoadingToast('🆕 Starting a new campaign…');
+                    }
                     createRoom(roomId || null);
                     return;
                 } catch (err) {
@@ -4292,7 +4339,7 @@
                     .catch(() => {});
 
                 if (firebaseUser && dmUsername && !isCoDM) {
-                    saveDMCloudProfile(dmUsername, loadId);
+                    saveDMCloudProfile(dmUsername, loadId, { campaignName });
                 }
 
                 // Listen for player messages arriving in the inbox subcollection
