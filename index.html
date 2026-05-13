@@ -880,6 +880,18 @@
             transform: translateX(0);
         }
 
+        /* On phones, float the DM panel over the canvas instead of stealing layout width */
+        @media (max-width: 767px) {
+            .dm-panel {
+                position: fixed;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: min(92vw, 420px);
+                z-index: 600;
+            }
+        }
+
         .dm-header {
             position: sticky;
             top: 0;
@@ -4336,11 +4348,13 @@
             // Open the connection panel to show the room code — stays open until DM closes it
             const panel = document.getElementById('connectionPanel');
             if (!panel.classList.contains('open')) toggleConnectionPanel();
-            // Auto-open DM tools panel so map editor, tokens, fog are immediately accessible
-            const dmP = document.getElementById('dmPanel');
-            if (!dmP.classList.contains('open')) toggleDMPanel();
-            // Re-size canvas now that the DM panel is in its final position
-            resizeCanvas();
+            // Auto-open DM tools panel on desktop only (mobile users tap the DM Controls button)
+            try {
+                const dmP = document.getElementById('dmPanel');
+                if (window.innerWidth >= 768 && !dmP.classList.contains('open')) toggleDMPanel();
+            } catch(e) { console.error('auto-open DM panel:', e); }
+            // Re-size canvas now that panels are in their final positions
+            try { resizeCanvas(); } catch(e) { console.error('resizeCanvas:', e); }
         }
 
         // === CO-DM ===
@@ -5869,7 +5883,7 @@
 
         // ── Sub-map canvas drawing events (set up once) ──
         // Deferred to window 'load' because the sub-map modal HTML sits after
-        // the </script> tag, so the canvas doesn't exist during script parse.
+        // the closing script tag, so the canvas doesn't exist during script parse.
         window.addEventListener('load', function setupSubMapCanvasEvents() {
             const smc = document.getElementById('subMapCanvas');
             if (!smc) return;
