@@ -913,6 +913,9 @@
                 padding: 0.4rem 0.6rem;
                 font-size: 0.78rem;
             }
+            /* Logout btn: icon-only on mobile to save header space */
+            #logoutBtn { font-size: 0; padding: 0.4rem 0.55rem; }
+            #logoutBtn::before { content: '🚪'; font-size: 1rem; }
             /* Hide the cloud-save text on phones — too much for a small header.
                Replaced with a subtle dot indicator (see #firebaseSection below). */
             #firebaseSection #firebaseStatus { display: none; }
@@ -949,11 +952,17 @@
                 padding: 0.85rem;
                 overflow-y: auto;
             }
-            /* Dice roller wrapper sits above the staging zone */
+            /* Dice roller — pin to bottom-left so it never covers content */
             .dice-roller-wrapper {
-                bottom: 75px !important;
+                right: auto !important;
+                left: 12px !important;
+                bottom: 80px !important;
             }
-            /* Floating mobile DM Controls FAB — easier to find than header btn */
+            /* Flip dice dropdown so it opens rightward, not off-screen */
+            .dice-type-dropdown {
+                align-items: flex-start;
+            }
+            /* Floating mobile DM Controls FAB — stays at bottom-right */
             #dmControlsBtn {
                 position: fixed;
                 right: 12px;
@@ -2293,6 +2302,7 @@
             <button class="btn" id="musicToggleBtn" onclick="toggleMusicPanel()" style="display:none;" title="Jukebox">🎵 Music</button>
             <button class="btn" id="charSheetBtn" onclick="showCharSheet()" title="Character Sheet">📜 Characters</button>
             <button class="btn" id="dmControlsBtn" onclick="toggleDMPanel()" style="display: none;">🎭 DM Controls</button>
+            <button class="btn" id="logoutBtn" onclick="doLogout()" style="display:none; background:rgba(220,38,38,0.15); border-color:#dc2626; color:#ef4444;" title="Leave session">🚪 Logout</button>
         </div>
     </div>
 
@@ -4118,6 +4128,16 @@
             const advPanel = document.getElementById('diceAdvantagePanel');
             if (advPanel) advPanel.classList.remove('panel-visible');
             document.getElementById('editCampaignBtn').style.display = 'none';
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) logoutBtn.style.display = 'none';
+        }
+
+        function doLogout() {
+            if (isDM) {
+                confirmLeaveSession();
+            } else {
+                cancelAutoReconnect();
+            }
         }
 
         function resizeCanvas() {
@@ -4604,6 +4624,8 @@
             document.getElementById('musicToggleBtn').style.display = 'block';
             document.getElementById('stagingZone').style.display = 'flex';
             document.getElementById('editCampaignBtn').style.display = 'inline-block';
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) logoutBtn.style.display = 'inline-block';
             // Reveal the cloud-save badge in the header so the DM can see at
             // a glance that their work is being saved to the cloud.
             const fbSection = document.getElementById('firebaseSection');
@@ -4845,6 +4867,7 @@
                     document.getElementById('playerPanelContainer').style.display = 'block';
                     document.getElementById('diceRollerWrapper').classList.add('visible');
                     document.getElementById('diceRollLog').classList.add('visible');
+                    { const lb = document.getElementById('logoutBtn'); if (lb) lb.style.display = 'inline-block'; }
                     showDiceAdvantagePanel();
                     savePlayerState();
                     break;
