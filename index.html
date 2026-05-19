@@ -4151,6 +4151,14 @@
             // Reset approved-names set so a brand-new session doesn't silently
             // re-approve players from a previous campaign
             approvedPlayerNames = new Set();
+            // Close any modals still hanging open (continue-campaign, leave-confirm,
+            // co-dm, etc.) so the welcome screen isn't covered by a stale overlay
+            document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
+            // Drop continue-campaign pending state so the next login starts clean
+            _pendingContinueRoomId = null;
+            _pendingContinueName = null;
+            // Player approval timer must not fire after logout
+            try { clearPlayerApprovalTimeout(); } catch(e) {}
         }
 
         function doLogout() {
@@ -4249,9 +4257,15 @@
             // Wipe any local pointer to the old room so createRoom generates fresh
             localStorage.removeItem('fracturedSkySessionId');
             localStorage.removeItem('fracturedSkyCampaignName');
+            localStorage.removeItem('fracturedSkyApprovedNames');
             campaignName = 'New Campaign';
             // Hard-reset the canvas so the previous campaign's art doesn't carry over
             resetMapState();
+            // Don't carry approvals across campaigns — DM should re-screen players
+            approvedPlayerNames = new Set();
+            // Drop any lingering player connections from the prior campaign
+            connections.clear();
+            updateUserList();
             document.getElementById('welcomeScreen').classList.add('hidden');
             document.getElementById('connectionTabContainer').style.display = 'block';
             showLoadingToast('🆕 Starting a new campaign…');
@@ -4559,6 +4573,7 @@
             }).then(() => {
                 updateConnectionStatus('Waiting for approval...', false);
                 startPlayerRoomWatch(savedRoom);
+                clearPlayerApprovalTimeout();
                 armPlayerApprovalTimeout();
             }).catch(() => {
                 updateConnectionStatus('Could not reach room', false);
@@ -4583,6 +4598,11 @@
             roomCode = roomId;
             savedPeerId = roomId;
             if (!fbLoadId) localStorage.setItem('fracturedSkySessionId', roomId);
+
+            // Set firebaseRoomRef synchronously so any draw / scheduleSave
+            // triggered by onDMReady() doesn't silently no-op (scheduleSave
+            // gates on `if (!firebaseRoomRef) return`).
+            firebaseRoomRef = fbLoadId || roomCode;
 
             // Show the DM UI immediately — Firebase setup runs in the background
             onDMReady();
@@ -5309,22 +5329,50 @@
             placedImages = [];
             stagingTokens = [];
             placedTokens = [];
-            // Wipe fog canvases but keep the 'everyone' group structure
             for (const g in fogGroups) {
                 const fg = fogGroups[g];
                 if (fg && fg.canvas) {
-                    const ctx = fg.canvas.getContext('2d');
-                    ctx.clearRect(0, 0, fg.canvas.width, fg.canvas.height);
+                    fg.canvas.getContext('2d').clearRect(0, 0, fg.canvas.width, fg.canvas.height);
                 }
                 if (g !== 'everyone') delete fogGroups[g];
             }
             activeFogGroup = 'everyone';
+            fogMode = false;
+            fogPaintMode = 'brush';
+            fogBrushSize = 60;
+            fogRectStart = null;
+            fogTriangleStart = null;
+            isFogDrawing = false;
+            // Drawing tools back to defaults so a new campaign doesn't
+            // inherit "eraser mode" or a tiny brush from the last session
+            tool = 'brush';
+            color = '#4a7c59';
+            size = 8;
+            currentAsset = 'Brush';
+            eraserMode = 'content';
+            currentStamp = '🏰';
+            // Sub-map editor
+            activeSubMapId = null;
+            subMapTool = 'brush';
+            subMapColor = '#4a7c59';
+            subMapSize = 8;
+            isSubMapDrawing = false;
+            // Pending player requests — phantom approvals from prior session
+            // would crash the approve handler when clicked
+            pendingRequests = [];
+            // Panel dock state so layout doesn't carry over
+            minimapDocked = false;
+            stampLibraryDocked = false;
+            playerPanelDocked = false;
+            // Stop any music that was playing in the prior session
+            try { stopMusic(); } catch(e) {}
             zoom = 1; panX = 0; panY = 0;
             const zs = document.getElementById('zoomSlider');
             const zv = document.getElementById('zoomValue');
             if (zs) zs.value = 100;
             if (zv) zv.textContent = '100%';
             try { renderStagingTokens(); } catch(e) {}
+            try { renderPendingRequests(); } catch(e) {}
             try { draw(); } catch(e) {}
         }
 
