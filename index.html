@@ -3641,6 +3641,8 @@
                 if (!mainSnap.exists) {
                     updateFirebaseStatus('☁️ New room', '#9ca3af');
                     console.log('🔥 No saved state — starting fresh');
+                    // Wipe any stale in-memory map so a fresh room actually looks fresh
+                    if (isDM) resetMapState();
                     if (isDM) showLoadingToast('🆕 New campaign — your work auto-saves to your account', 4000);
                     return;
                 }
@@ -4130,6 +4132,25 @@
             document.getElementById('editCampaignBtn').style.display = 'none';
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) logoutBtn.style.display = 'none';
+            // Also reset campaign name back to brand default so the header
+            // doesn't briefly flash the old campaign before next login
+            campaignName = 'From Sunnyville';
+            updateCampaignNameDisplay();
+            // Wipe in-memory map so the next session starts clean
+            resetMapState();
+            // Clear the Firebase room pointer so the next createRoom doesn't
+            // accidentally reuse the prior session's room reference
+            firebaseRoomRef = null;
+            playerFirebaseRoomId = null;
+            // Drop the user list so old usernames don't leak into the new session
+            connections.clear();
+            updateUserList();
+            // Clear visible dice log so the next session's log doesn't pile on top
+            const dLog = document.getElementById('diceRollLog');
+            if (dLog) dLog.innerHTML = '';
+            // Reset approved-names set so a brand-new session doesn't silently
+            // re-approve players from a previous campaign
+            approvedPlayerNames = new Set();
         }
 
         function doLogout() {
@@ -4229,6 +4250,8 @@
             localStorage.removeItem('fracturedSkySessionId');
             localStorage.removeItem('fracturedSkyCampaignName');
             campaignName = 'New Campaign';
+            // Hard-reset the canvas so the previous campaign's art doesn't carry over
+            resetMapState();
             document.getElementById('welcomeScreen').classList.add('hidden');
             document.getElementById('connectionTabContainer').style.display = 'block';
             showLoadingToast('🆕 Starting a new campaign…');
@@ -5273,6 +5296,36 @@
 
         function requestGameState(conn) {
             sendToPeer(conn, { type: 'requestState' });
+        }
+
+        // Wipe all in-memory map state. Called when starting a brand-new
+        // session (so the old map doesn't bleed into the new room) and when
+        // logging out (so the welcome screen doesn't peek at stale art).
+        function resetMapState() {
+            gridCells = {};
+            lockedCells = {};
+            placedStamps = [];
+            stampSubMaps = {};
+            placedImages = [];
+            stagingTokens = [];
+            placedTokens = [];
+            // Wipe fog canvases but keep the 'everyone' group structure
+            for (const g in fogGroups) {
+                const fg = fogGroups[g];
+                if (fg && fg.canvas) {
+                    const ctx = fg.canvas.getContext('2d');
+                    ctx.clearRect(0, 0, fg.canvas.width, fg.canvas.height);
+                }
+                if (g !== 'everyone') delete fogGroups[g];
+            }
+            activeFogGroup = 'everyone';
+            zoom = 1; panX = 0; panY = 0;
+            const zs = document.getElementById('zoomSlider');
+            const zv = document.getElementById('zoomValue');
+            if (zs) zs.value = 100;
+            if (zv) zv.textContent = '100%';
+            try { renderStagingTokens(); } catch(e) {}
+            try { draw(); } catch(e) {}
         }
 
         function loadGameState(state) {
