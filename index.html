@@ -6360,10 +6360,15 @@
         function startGlowAnimation() {
             if (glowAnimating) return;
             glowAnimating = true;
-            function frame() {
+            let lastGlowFrame = 0;
+            function frame(ts) {
                 const hasGlow = placedStamps.some(s => stampSubMaps[s.id]);
                 if (!hasGlow) { glowAnimating = false; return; }
-                draw();
+                // Throttle to ~10fps to save CPU — glow pulse is slow enough that this is imperceptible
+                if (ts - lastGlowFrame >= 100) {
+                    draw();
+                    lastGlowFrame = ts;
+                }
                 requestAnimationFrame(frame);
             }
             requestAnimationFrame(frame);
@@ -7695,9 +7700,17 @@
                 }
             });
             
+            // Serialize stamp sub-maps (landmark illustrations)
+            const subMapsData = {};
+            for (const stampId in stampSubMaps) {
+                const c = stampSubMaps[stampId];
+                if (c && c.toDataURL) subMapsData[stampId] = c.toDataURL();
+            }
+
             const campaignData = {
                 version: '4.0',
                 name: campaignName,
+                campaignTheme: activeTheme,
                 sessionId: roomCode,
                 exported: new Date().toISOString(),
                 gridCells: gridData,
@@ -7707,6 +7720,8 @@
                 stagingTokens: stagingTokens,
                 placedTokens: placedTokens,
                 placedImages: imagesData,
+                placedStamps: placedStamps,
+                stampSubMaps: subMapsData,
                 playerData: playerData,
                 zoom: zoom,
                 panX: panX,
@@ -7823,12 +7838,31 @@
                         });
                     }
                     
-                    // Restore campaign name
+                    // Restore stamps and their illustrations
+                    placedStamps = data.placedStamps || [];
+                    stampSubMaps = {};
+                    if (data.stampSubMaps) {
+                        let pending = Object.keys(data.stampSubMaps).length;
+                        for (const stampId in data.stampSubMaps) {
+                            const img = new Image();
+                            img.onload = () => {
+                                const c = document.createElement('canvas');
+                                c.width = 800; c.height = 500;
+                                c.getContext('2d').drawImage(img, 0, 0);
+                                stampSubMaps[stampId] = c;
+                                if (--pending === 0) { startGlowAnimation(); draw(); }
+                            };
+                            img.src = data.stampSubMaps[stampId];
+                        }
+                    }
+
+                    // Restore campaign name and theme
                     if (data.name) {
                         campaignName = data.name;
                         localStorage.setItem('fracturedSkyCampaignName', campaignName);
                         updateCampaignNameDisplay();
                     }
+                    if (data.campaignTheme) applyColorTheme(data.campaignTheme);
 
                     // Load other data
                     lockedCells = data.lockedCells || {};
@@ -9043,14 +9077,18 @@
         function saveDiceRollToFirebase(result, rollerName, rollId, diceSides) {
             const roomId = firebaseRoomRef || playerFirebaseRoomId;
             if (!roomId || !fbDb) return;
+            const MAX_DICE_LOG = 100;
             firebaseSignIn().then(() => {
-                fbDb.collection('vtt_rooms').doc(roomId + '__dice_log')
-                    .set({
-                        rolls: firebase.firestore.FieldValue.arrayUnion(
-                            { result, rollerName, rollId, diceSides: diceSides || 20, timestamp: Date.now() }
-                        )
-                    }, { merge: true })
-                    .catch(e => console.error('🎲 Dice log save error:', e));
+                const docRef = fbDb.collection('vtt_rooms').doc(roomId + '__dice_log');
+                // Read-then-write to keep the array bounded (prevents hitting 1MB document limit)
+                docRef.get().then(snap => {
+                    let rolls = snap.exists ? (snap.data().rolls || []) : [];
+                    rolls.push({ result, rollerName, rollId, diceSides: diceSides || 20, timestamp: Date.now() });
+                    if (rolls.length > MAX_DICE_LOG) {
+                        rolls = rolls.sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_DICE_LOG);
+                    }
+                    docRef.set({ rolls }, { merge: true }).catch(e => console.error('🎲 Dice log save error:', e));
+                }).catch(e => console.error('🎲 Dice log read error:', e));
             });
         }
 
