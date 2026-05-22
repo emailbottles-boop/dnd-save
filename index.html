@@ -2052,6 +2052,34 @@
             padding: 0.15rem 0.5rem;
             margin-top: 0.3rem;
         }
+
+        /* === PLAYER MODE: hide all DM-only interface elements === */
+        body.player-mode #dmControlsBtn { display: none !important; }
+        body.player-mode #musicToggleBtn { display: none !important; }
+        body.player-mode #firebaseSection { display: none !important; }
+        body.player-mode #editCampaignBtn { display: none !important; }
+        body.player-mode #roomCodeSection { display: none !important; }
+        body.player-mode #firebaseStatusSection { display: none !important; }
+        body.player-mode #stagingZone { display: none !important; }
+
+        /* === DM SETTINGS: COLOR THEME SWATCHES === */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+        .theme-swatch {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+            transition: transform 0.15s, border-color 0.15s;
+        }
+        .theme-swatch:hover { transform: scale(1.1); }
+        .theme-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.4); }
     </style>
 </head>
 <body>
@@ -2626,6 +2654,20 @@
                     </div>
 
                     <button class="btn btn-primary" onclick="showTokenModal()" style="width: 100%;">+ Create Token</button>
+                </div>
+
+                <!-- DM SETTINGS -->
+                <div class="section" id="dmSettingsSection">
+                    <h3>⚙️ DM Settings</h3>
+                    <div style="font-size:0.85rem;color:var(--text-dim);margin-bottom:0.4rem;">Campaign Color Theme:</div>
+                    <div class="theme-grid" id="themeGrid">
+                        <div class="theme-swatch active" id="theme-fantasy" style="background:linear-gradient(135deg,#1a1510,#c8922a);" onclick="setColorTheme('fantasy')" title="Dark Fantasy">⚔️</div>
+                        <div class="theme-swatch" id="theme-crimson" style="background:linear-gradient(135deg,#1a0808,#b22222);" onclick="setColorTheme('crimson')" title="Crimson Oath">🩸</div>
+                        <div class="theme-swatch" id="theme-forest" style="background:linear-gradient(135deg,#0a1a0f,#2d8a55);" onclick="setColorTheme('forest')" title="Emerald Wilds">🌿</div>
+                        <div class="theme-swatch" id="theme-ocean" style="background:linear-gradient(135deg,#060f1e,#1e5fb4);" onclick="setColorTheme('ocean')" title="Abyssal Blue">🌊</div>
+                        <div class="theme-swatch" id="theme-arcane" style="background:linear-gradient(135deg,#110e1c,#7c3aed);" onclick="setColorTheme('arcane')" title="Arcane Void">🌙</div>
+                    </div>
+                    <div style="font-size:0.72rem;color:var(--text-dim);margin-top:0.4rem;">All players see the theme instantly.</div>
                 </div>
             </div>
         </div>
@@ -3574,6 +3616,7 @@
                     zoom, panX, panY,
                     fogGroupNames: Object.keys(fogGroups),
                     campaignName,
+                    campaignTheme: activeTheme,
                     playerData,
                     savedAt: Date.now()
                 });
@@ -3712,6 +3755,9 @@
                     localStorage.setItem('fracturedSkyCampaignName', campaignName);
                     updateCampaignNameDisplay();
                 }
+                if (main.campaignTheme) {
+                    applyColorTheme(main.campaignTheme);
+                }
                 updateFirebaseStatus('☁️ Loaded', '#10b981');
                 console.log('🔥 Loaded from Firestore');
                 if (isDM) {
@@ -3790,6 +3836,40 @@
                 broadcast({ type: 'campaignNameChange', name: campaignName });
                 scheduleSave();
             }
+        }
+
+        const COLOR_THEMES = {
+            fantasy: { accent:'#c8922a', accentSec:'#e8b84b', gold:'#f5c518', bgDark:'#0e0b08', bgCard:'#1a1510', text:'#e8dcc8', textDim:'#9e8e72', border:'rgba(200,146,42,0.35)' },
+            crimson:  { accent:'#b22222', accentSec:'#dc143c', gold:'#ff6b6b', bgDark:'#0d0505', bgCard:'#1a0808', text:'#f0e0e0', textDim:'#b08080', border:'rgba(178,34,34,0.35)' },
+            forest:   { accent:'#2d8a55', accentSec:'#3aad6b', gold:'#7ecf7e', bgDark:'#050d08', bgCard:'#0a1a0f', text:'#d4ead8', textDim:'#7a9e82', border:'rgba(45,138,85,0.35)' },
+            ocean:    { accent:'#1e5fb4', accentSec:'#2d7dd2', gold:'#5baaff', bgDark:'#030810', bgCard:'#060f1e', text:'#d0e4f4', textDim:'#6a8fa8', border:'rgba(30,95,180,0.35)' },
+            arcane:   { accent:'#7c3aed', accentSec:'#9f5feb', gold:'#c084fc', bgDark:'#08060e', bgCard:'#110e1c', text:'#e8e0f4', textDim:'#8a7aa8', border:'rgba(124,58,237,0.35)' },
+        };
+        let activeTheme = 'fantasy';
+
+        function applyColorTheme(name) {
+            const t = COLOR_THEMES[name];
+            if (!t) return;
+            const r = document.documentElement.style;
+            r.setProperty('--accent', t.accent);
+            r.setProperty('--accent-secondary', t.accentSec);
+            r.setProperty('--gold', t.gold);
+            r.setProperty('--bg-dark', t.bgDark);
+            r.setProperty('--bg-card', t.bgCard);
+            r.setProperty('--text', t.text);
+            r.setProperty('--text-dim', t.textDim);
+            r.setProperty('--border', t.border);
+            activeTheme = name;
+            document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
+            const sw = document.getElementById('theme-' + name);
+            if (sw) sw.classList.add('active');
+        }
+
+        function setColorTheme(name) {
+            if (!isDM) return;
+            applyColorTheme(name);
+            broadcast({ type: 'colorTheme', theme: name });
+            scheduleSave();
         }
 
         // Game state
@@ -4105,6 +4185,7 @@
         }
 
         function cancelAutoReconnect() {
+            document.body.classList.remove('player-mode');
             // Abort any in-flight reconnect attempt
             stopFirebaseWatch();
             if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
@@ -4912,9 +4993,10 @@
                     document.getElementById('diceRollLog').classList.add('visible');
                     { const lb = document.getElementById('logoutBtn'); if (lb) lb.style.display = 'inline-block'; }
                     showDiceAdvantagePanel();
+                    document.body.classList.add('player-mode');
                     savePlayerState();
                     break;
-                    
+
                 case 'playerRejected':
                     alert('Your join request was denied by the DM.');
                     break;
@@ -4983,6 +5065,10 @@
                         updateCampaignNameDisplay();
                         if (!isDM) showLoadingToast('🏷️ Campaign renamed to "' + campaignName + '"', 3000);
                     }
+                    break;
+
+                case 'colorTheme':
+                    applyColorTheme(data.theme);
                     break;
 
                 case 'fogUpdate':
