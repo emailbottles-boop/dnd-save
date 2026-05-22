@@ -6869,7 +6869,19 @@
             }
             
             // Image manipulation (Select tool only)
+            // Grab cursor: show when hovering over a placed image in select mode
+            if (isDM && tool === 'select' && !imageDragStart) {
+                let overImage = false;
+                for (const pi of placedImages) {
+                    if (mx >= pi.x && mx <= pi.x + pi.width && my >= pi.y && my <= pi.y + pi.height) {
+                        overImage = true; break;
+                    }
+                }
+                canvas.style.cursor = overImage ? 'grab' : 'default';
+            }
+
             if (isDM && tool === 'select' && selectedImage && imageDragStart) {
+                canvas.style.cursor = 'grabbing';
                 if (imageResizeHandle === 'rotate') {
                     // Rotate around center
                     const centerX = selectedImage.x + selectedImage.width / 2;
@@ -6983,11 +6995,16 @@
                 tokenDragOffset = { x: 0, y: 0 };
             }
             
-            // Image manipulation complete
+            // Image manipulation complete — only broadcast if we actually moved/resized
             if (imageDragStart) {
+                const wasMoved = selectedImage && (
+                    selectedImage.x !== imageDragStart.imgX ||
+                    selectedImage.y !== imageDragStart.imgY
+                );
                 imageDragStart = null;
                 imageResizeHandle = null;
-                broadcastImages();
+                if (wasMoved) broadcastImages();
+                canvas.style.cursor = tool === 'select' ? 'default' : '';
             }
             
             if (isFogDrawing) {
@@ -7098,9 +7115,32 @@
         }
         canvas.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
+                const t = e.touches[0];
+                // In select mode, check if the touch lands inside a placed image.
+                // If so, start an image-drag instead of panning the canvas.
+                if (isDM && tool === 'select') {
+                    const rect = canvas.getBoundingClientRect();
+                    const mx = (t.clientX - rect.left - panX) / zoom;
+                    const my = (t.clientY - rect.top - panY) / zoom;
+                    for (let i = placedImages.length - 1; i >= 0; i--) {
+                        const pi = placedImages[i];
+                        if (mx >= pi.x && mx <= pi.x + pi.width && my >= pi.y && my <= pi.y + pi.height) {
+                            selectedImage = pi;
+                            imageDragStart = { x: mx, y: my, imgX: pi.x, imgY: pi.y };
+                            imageResizeHandle = null;
+                            _touchMode = 'imageDrag';
+                            _touchLastX = _touchStartX = t.clientX;
+                            _touchLastY = _touchStartY = t.clientY;
+                            _touchStartT = Date.now();
+                            draw();
+                            e.preventDefault();
+                            return;
+                        }
+                    }
+                }
                 _touchMode = 'pan';
-                _touchLastX = _touchStartX = e.touches[0].clientX;
-                _touchLastY = _touchStartY = e.touches[0].clientY;
+                _touchLastX = _touchStartX = t.clientX;
+                _touchLastY = _touchStartY = t.clientY;
                 _touchStartT = Date.now();
             } else if (e.touches.length === 2) {
                 _touchMode = 'pinch';
@@ -7110,7 +7150,17 @@
             e.preventDefault();
         }, { passive: false });
         canvas.addEventListener('touchmove', (e) => {
-            if (_touchMode === 'pan' && e.touches.length === 1) {
+            if (_touchMode === 'imageDrag' && e.touches.length === 1 && selectedImage && imageDragStart) {
+                const t = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const mx = (t.clientX - rect.left - panX) / zoom;
+                const my = (t.clientY - rect.top - panY) / zoom;
+                selectedImage.x = imageDragStart.imgX + (mx - imageDragStart.x);
+                selectedImage.y = imageDragStart.imgY + (my - imageDragStart.y);
+                _touchLastX = t.clientX;
+                _touchLastY = t.clientY;
+                draw();
+            } else if (_touchMode === 'pan' && e.touches.length === 1) {
                 const t = e.touches[0];
                 panX += (t.clientX - _touchLastX);
                 panY += (t.clientY - _touchLastY);
@@ -7140,6 +7190,15 @@
             e.preventDefault();
         }, { passive: false });
         canvas.addEventListener('touchend', (e) => {
+            if (_touchMode === 'imageDrag') {
+                // Commit the move: save + broadcast to players
+                imageDragStart = null;
+                imageResizeHandle = null;
+                broadcastImages();
+                _touchMode = null;
+                e.preventDefault();
+                return;
+            }
             // If it was a single quick tap (< 250ms, < 8px movement), treat as a
             // click so tools (eraser/select/etc.) still work via touch.
             if (_touchMode === 'pan' && Date.now() - _touchStartT < 250) {
