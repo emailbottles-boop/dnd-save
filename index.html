@@ -1121,6 +1121,28 @@
             margin: 0.75rem 0;
         }
 
+        /* Color theme swatches */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .theme-swatch {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            transition: border-color 0.15s, transform 0.15s;
+        }
+        .theme-swatch:hover { transform: scale(1.1); }
+        .theme-swatch.active { border-color: var(--gold); box-shadow: 0 0 8px var(--gold); }
+
         .tool-btn {
             padding: 0.75rem;
             background: var(--bg-dark);
@@ -2677,6 +2699,18 @@
 
                     <button class="btn btn-primary" onclick="showTokenModal()" style="width: 100%;">+ Create Token</button>
                 </div>
+
+                <div class="section" id="dmSettingsSection">
+                    <h3>⚙️ DM Settings</h3>
+                    <div style="font-size:0.8rem; color:var(--text-dim); margin-bottom:0.5rem;">Campaign Color Theme</div>
+                    <div class="theme-grid" id="themeGrid">
+                        <div class="theme-swatch active" id="theme-fantasy" style="background:linear-gradient(135deg,#1a1510,#c8922a);" onclick="setColorTheme('fantasy')" title="Fantasy">⚔️</div>
+                        <div class="theme-swatch" id="theme-crimson" style="background:linear-gradient(135deg,#1a0808,#b22222);" onclick="setColorTheme('crimson')" title="Crimson">🩸</div>
+                        <div class="theme-swatch" id="theme-forest" style="background:linear-gradient(135deg,#0a1a0f,#2d8a55);" onclick="setColorTheme('forest')" title="Forest">🌿</div>
+                        <div class="theme-swatch" id="theme-ocean" style="background:linear-gradient(135deg,#060f1e,#1e5fb4);" onclick="setColorTheme('ocean')" title="Ocean">🌊</div>
+                        <div class="theme-swatch" id="theme-arcane" style="background:linear-gradient(135deg,#110e1c,#7c3aed);" onclick="setColorTheme('arcane')" title="Arcane">🌙</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -3555,6 +3589,10 @@
                 try { playerBroadcastWatcher(); } catch(e) {}
             }
             playerBroadcastWatcher = null;
+            if (typeof diceRollsUnsubscribe === 'function') {
+                try { diceRollsUnsubscribe(); } catch(e) {}
+                diceRollsUnsubscribe = null;
+            }
         }
 
         // DM refreshes currentPeerId + lastSeen in Firebase every 20 s so that
@@ -3624,6 +3662,7 @@
                     zoom, panX, panY,
                     fogGroupNames: Object.keys(fogGroups),
                     campaignName,
+                    campaignTheme: activeTheme,
                     playerData,
                     savedAt: Date.now()
                 });
@@ -3762,6 +3801,9 @@
                     localStorage.setItem('fracturedSkyCampaignName', campaignName);
                     updateCampaignNameDisplay();
                 }
+                if (main.campaignTheme) {
+                    applyColorTheme(main.campaignTheme);
+                }
                 updateFirebaseStatus('☁️ Loaded', '#10b981');
                 console.log('🔥 Loaded from Firestore');
                 if (isDM) {
@@ -3805,6 +3847,44 @@
 
         // Campaign name
         let campaignName = localStorage.getItem('fracturedSkyCampaignName') || 'From Sunnyville';
+        // ── Color Theme System ──────────────────────────────────────────────
+        const COLOR_THEMES = {
+            fantasy: { accent:'#c8922a', accentSec:'#e8b84b', gold:'#f5c518', bgDark:'#0e0b08', bgCard:'#1a1510', bgHover:'#261e14', text:'#e8dcc8', textDim:'#9e8e72', border:'rgba(200,146,42,0.35)' },
+            crimson:  { accent:'#b22222', accentSec:'#dc143c', gold:'#ff6b6b', bgDark:'#0d0505', bgCard:'#1a0808', bgHover:'#2a0a0a', text:'#f0e0e0', textDim:'#b08080', border:'rgba(178,34,34,0.35)' },
+            forest:   { accent:'#2d8a55', accentSec:'#3aad6b', gold:'#7ecf7e', bgDark:'#050d08', bgCard:'#0a1a0f', bgHover:'#0f2a18', text:'#d4ead8', textDim:'#7a9e82', border:'rgba(45,138,85,0.35)' },
+            ocean:    { accent:'#1e5fb4', accentSec:'#2d7dd2', gold:'#5baaff', bgDark:'#030810', bgCard:'#060f1e', bgHover:'#0a172e', text:'#d0e4f4', textDim:'#6a8fa8', border:'rgba(30,95,180,0.35)' },
+            arcane:   { accent:'#7c3aed', accentSec:'#9f5feb', gold:'#c084fc', bgDark:'#08060e', bgCard:'#110e1c', bgHover:'#1a1530', text:'#e8e0f4', textDim:'#8a7aa8', border:'rgba(124,58,237,0.35)' },
+        };
+        let activeTheme = 'fantasy';
+
+        function applyColorTheme(name) {
+            const t = COLOR_THEMES[name];
+            if (!t) return;
+            activeTheme = name;
+            const root = document.documentElement;
+            root.style.setProperty('--accent', t.accent);
+            root.style.setProperty('--accent-secondary', t.accentSec);
+            root.style.setProperty('--gold', t.gold);
+            root.style.setProperty('--bg-dark', t.bgDark);
+            root.style.setProperty('--bg-card', t.bgCard);
+            root.style.setProperty('--bg-hover', t.bgHover);
+            root.style.setProperty('--text', t.text);
+            root.style.setProperty('--text-dim', t.textDim);
+            root.style.setProperty('--border', t.border);
+            // Update swatch active state
+            document.querySelectorAll('.theme-swatch').forEach(sw => sw.classList.remove('active'));
+            const active = document.getElementById('theme-' + name);
+            if (active) active.classList.add('active');
+        }
+
+        function setColorTheme(name) {
+            if (!isDM) return;
+            applyColorTheme(name);
+            broadcast({ type: 'colorTheme', theme: name });
+            scheduleSave();
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         function updateCampaignNameDisplay() {
             const el = document.getElementById('sessionNameDisplay');
             if (el) el.textContent = campaignName;
@@ -4156,6 +4236,7 @@
 
         function cancelAutoReconnect() {
             // Abort any in-flight reconnect attempt
+            stopDMHeartbeat();
             stopFirebaseWatch();
             if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
             peer = null;
@@ -5035,6 +5116,10 @@
                     }
                     break;
 
+                case 'colorTheme':
+                    if (data.theme) applyColorTheme(data.theme);
+                    break;
+
                 case 'fogUpdate':
                     if (data.fogData) {
                         // Inline fog data (co-DM PeerJS path)
@@ -5207,6 +5292,9 @@
                         };
                         img.src = data.imageData;
                     }
+                    break;
+                case 'colorTheme':
+                    if (data.theme) applyColorTheme(data.theme);
                     break;
             }
         }
@@ -5416,6 +5504,8 @@
             playerPanelDocked = false;
             // Stop any music that was playing in the prior session
             try { stopMusic(); } catch(e) {}
+            // Reset theme to default so it doesn't bleed from prior campaign
+            try { applyColorTheme('fantasy'); } catch(e) {}
             zoom = 1; panX = 0; panY = 0;
             const zs = document.getElementById('zoomSlider');
             const zv = document.getElementById('zoomValue');
