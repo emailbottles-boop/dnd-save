@@ -866,14 +866,22 @@
         }
 
         /* DM PANEL */
+        /* DM panel is always a fixed overlay — never in the flex layout.
+           This means the canvas is always full-width regardless of panel state,
+           and no horizontal scrolling happens on narrow windows. */
         .dm-panel {
-            width: 420px;
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: min(420px, 95vw);
             background: var(--bg-card);
             border-left: 1px solid var(--border);
             overflow-y: auto;
             transform: translateX(100%);
-            transition: transform 0.3s;
-            box-shadow: -4px 0 24px rgba(0,0,0,0.4);
+            transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+            box-shadow: -4px 0 32px rgba(0,0,0,0.5);
+            z-index: 600;
         }
 
         .dm-panel.open {
@@ -882,14 +890,39 @@
 
         /* On phones, float the DM panel over the canvas instead of stealing layout width */
         @media (max-width: 767px) {
-            /* DM panel floats over canvas instead of stealing layout width */
+            /* DM panel becomes a BOTTOM SHEET: slides up from the bottom edge.
+               Much easier to reach on phones than a right-side panel, and
+               it leaves the full canvas visible when closed. */
             .dm-panel {
                 position: fixed;
-                top: 0;
+                left: 0;
                 right: 0;
                 bottom: 0;
-                width: min(92vw, 420px);
-                z-index: 600;
+                top: auto;
+                width: 100%;
+                height: 78vh;
+                max-height: 78vh;
+                border-radius: 18px 18px 0 0;
+                border-left: none;
+                border-top: 1px solid var(--border);
+                box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+                transform: translateY(100%);
+                transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .dm-panel.open {
+                transform: translateY(0);
+            }
+            /* Drag handle pill at the top of the sheet */
+            .dm-panel::before {
+                content: '';
+                display: block;
+                width: 40px;
+                height: 4px;
+                background: var(--border);
+                border-radius: 2px;
+                margin: 10px auto 0;
             }
             /* Header: smaller title, tighter spacing, allow wrap */
             .header {
@@ -962,15 +995,29 @@
             .dice-type-dropdown {
                 align-items: flex-start;
             }
-            /* Floating mobile DM Controls FAB — stays at bottom-right */
+            /* Logout btn: icon-only on mobile to save header space */
+            /* Floating mobile DM Controls FAB — stays at bottom-right, above safe area */
             #dmControlsBtn {
                 position: fixed;
-                right: 12px;
-                bottom: 75px;
+                right: 14px;
+                bottom: 14px;
                 z-index: 550;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+                border-radius: 50px;
+                padding: 0.65rem 1rem;
+                font-size: 0.9rem;
             }
         }
+
+        /* Semi-transparent backdrop behind the bottom sheet */
+        .panel-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 590;
+        }
+        .panel-backdrop.active { display: block; }
 
         .dm-header {
             position: sticky;
@@ -2452,6 +2499,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- PANEL BACKDROP (closes DM panel when tapped outside) -->
+        <div class="panel-backdrop" id="panelBackdrop" onclick="toggleDMPanel()"></div>
 
         <!-- DM PANEL -->
         <div class="dm-panel" id="dmPanel">
@@ -8099,8 +8149,12 @@
         }
 
         function toggleDMPanel() {
-            document.getElementById('dmPanel').classList.toggle('open');
-            if (document.getElementById('dmPanel').classList.contains('open')) refreshMapsSection();
+            const panel = document.getElementById('dmPanel');
+            panel.classList.toggle('open');
+            const isOpen = panel.classList.contains('open');
+            const backdrop = document.getElementById('panelBackdrop');
+            if (backdrop) backdrop.classList.toggle('active', isOpen);
+            if (isOpen) refreshMapsSection();
         }
 
         // Global error handler
