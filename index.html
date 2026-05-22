@@ -3377,6 +3377,7 @@
         // === CONNECTION RESILIENCE STATE ===
         let playerFirebaseWatcher = null; // Firestore onSnapshot unsubscribe fn (direct msgs)
         let playerBroadcastWatcher = null; // Firestore onSnapshot unsubscribe fn (broadcasts)
+        let dmInboxUnsubscribe = null;    // Firestore onSnapshot unsubscribe fn (DM inbox)
         let dmHeartbeatTimer = null;      // setInterval handle for DM Firebase keepalive
         let dmBackstopSaveTimer = null;   // periodic save every 60s (catches missed scheduleSave calls)
 
@@ -3592,6 +3593,10 @@
             if (typeof diceRollsUnsubscribe === 'function') {
                 try { diceRollsUnsubscribe(); } catch(e) {}
                 diceRollsUnsubscribe = null;
+            }
+            if (typeof dmInboxUnsubscribe === 'function') {
+                try { dmInboxUnsubscribe(); } catch(e) {}
+                dmInboxUnsubscribe = null;
             }
         }
 
@@ -3839,10 +3844,13 @@
         function updateFirebaseStatus(text, color) {
             const header = document.getElementById('firebaseStatus');
             const panel = document.getElementById('firebaseStatusPanel');
-            const section = document.getElementById('firebaseStatusSection');
             if (header) { header.textContent = text; header.style.color = color; }
             if (panel)  { panel.textContent = text; panel.style.color = color; }
-            if (section) section.style.display = 'block';
+            // Only show the status section for DMs/co-DMs (not players)
+            if (isDM || isCoDM) {
+                const section = document.getElementById('firebaseStatusSection');
+                if (section) section.style.display = 'block';
+            }
         }
 
         // Campaign name
@@ -4238,6 +4246,10 @@
             // Abort any in-flight reconnect attempt
             stopDMHeartbeat();
             stopFirebaseWatch();
+            clearTimeout(coDMReconnectTimer); coDMReconnectTimer = null;
+            if (fogBroadcastTimeout) { clearTimeout(fogBroadcastTimeout); fogBroadcastTimeout = null; }
+            shownRollIds = new Set();
+            diceListenSince = 0;
             if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
             peer = null;
             isDM = false;
@@ -4756,7 +4768,7 @@
 
                 // Listen for player messages arriving in the inbox subcollection
                 const dmSessionStart = Date.now();
-                fbDb.collection('vtt_rooms').doc(loadId)
+                dmInboxUnsubscribe = fbDb.collection('vtt_rooms').doc(loadId)
                     .collection('inbox')
                     .onSnapshot(snap => {
                         snap.docChanges().forEach(change => {
@@ -5235,13 +5247,15 @@
             }
         }
 
+        let _bseqCounter = 0;
         function broadcast(data) {
             if (isCoDM && hostDMConn) {
                 // Co-DM: route through host DM who will re-broadcast to players
                 sendToPeer(hostDMConn, { type: 'coDMBroadcast', payload: data });
             } else if (isDM && firebaseRoomRef && fbDb) {
-                // Host DM: write to broadcast field — all players pick up via onSnapshot
-                const bseq = Date.now();
+                // Monotonic sequence number prevents same-millisecond collisions from
+                // dropping updates when two broadcasts arrive within 1ms of each other
+                const bseq = Date.now() * 1000 + (++_bseqCounter % 1000);
                 fbDb.collection('vtt_rooms').doc(firebaseRoomRef)
                     .set({ broadcast: { ...data, _bseq: bseq } }, { merge: true })
                     .catch(() => {});
@@ -5370,6 +5384,10 @@
             renderPendingRequests();
         }
 
+        function escapeHTML(str) {
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
         function showJoinToast(name) {
             // Persistent banner at top of screen — DM cannot miss it
             const existing = document.getElementById('joinToast');
@@ -5377,7 +5395,7 @@
             const toast = document.createElement('div');
             toast.id = 'joinToast';
             toast.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#f59e0b;color:#1a1a2e;text-align:center;padding:0.75rem 1rem;font-weight:700;font-size:1rem;z-index:99999;cursor:pointer;letter-spacing:0.05em;';
-            toast.innerHTML = `🔔 PLAYER REQUEST: <strong>${name}</strong> wants to join — click here or open DM Controls`;
+            toast.innerHTML = `🔔 PLAYER REQUEST: <strong>${escapeHTML(name)}</strong> wants to join — click here or open DM Controls`;
             toast.onclick = () => {
                 toast.remove();
                 const panel = document.getElementById('dmPanel');
@@ -5412,12 +5430,14 @@
             if (dmContent) dmContent.scrollTop = 0;
             
             container.innerHTML = pendingRequests.map((req, idx) => {
+                const safeName = escapeHTML(req.name);
                 if (req.type === 'token') {
+                    const safeIcon = escapeHTML(req.tokenData.icon || '🖼️ image');
                     return `
                         <div class="request-item">
                             <div class="request-info">
-                                <div class="request-name">${req.name}</div>
-                                <div class="request-detail">Token: ${req.tokenData.icon || '🖼️ image'}</div>
+                                <div class="request-name">${safeName}</div>
+                                <div class="request-detail">Token: ${safeIcon}</div>
                             </div>
                             <div class="request-actions">
                                 <button class="btn btn-small btn-success" onclick="approveToken(${idx})">✓</button>
@@ -5429,7 +5449,7 @@
                     return `
                         <div class="request-item">
                             <div class="request-info">
-                                <div class="request-name">${req.name}</div>
+                                <div class="request-name">${safeName}</div>
                                 <div class="request-detail">Wants to join</div>
                             </div>
                             <div class="request-actions">
@@ -5506,6 +5526,9 @@
             try { stopMusic(); } catch(e) {}
             // Reset theme to default so it doesn't bleed from prior campaign
             try { applyColorTheme('fantasy'); } catch(e) {}
+            // Clear undo history and token image cache from prior session
+            history = []; historyIndex = -1;
+            tokenImageCache.clear();
             zoom = 1; panX = 0; panY = 0;
             const zs = document.getElementById('zoomSlider');
             const zv = document.getElementById('zoomValue');
@@ -6369,6 +6392,13 @@
         }
 
         function closeSubMapEditor() {
+            // If eraser was mid-stroke when modal closed, restore ctx to prevent
+            // destination-out mode permanently corrupting the canvas
+            if (isSubMapDrawing) {
+                const smctx = document.getElementById('subMapCanvas').getContext('2d');
+                try { smctx.restore(); } catch(e) {}
+                isSubMapDrawing = false;
+            }
             activeSubMapId = null;
             document.getElementById('subMapEditorModal').classList.remove('active');
         }
@@ -7119,7 +7149,7 @@
             }
             
             // Normal panning (only when not in fog mode and not dragging anything)
-            if (!isDrawing || fogMode || (isDM && tool === 'select') || draggedPlacedToken) return;
+            if (!isDrawing || fogMode || (isDM && tool === 'select') || draggedPlacedToken || imageDragStart) return;
             panX += screenX - lastX;
             panY += screenY - lastY;
             lastX = screenX;
@@ -7257,12 +7287,33 @@
         canvas.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
                 const t = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const mx = (t.clientX - rect.left - panX) / zoom;
+                const my = (t.clientY - rect.top - panY) / zoom;
+
+                // Check if touch lands on a movable token
+                if (!fogMode) {
+                    for (let i = placedTokens.length - 1; i >= 0; i--) {
+                        const token = placedTokens[i];
+                        const tokenSize = token.size || 12;
+                        if (Math.hypot(mx - token.x, my - token.y) < tokenSize) {
+                            if (isDM || token.owner === myName) {
+                                draggedPlacedToken = token;
+                                tokenDragOffset = { x: mx - token.x, y: my - token.y };
+                                _touchMode = 'tokenDrag';
+                                _touchLastX = _touchStartX = t.clientX;
+                                _touchLastY = _touchStartY = t.clientY;
+                                _touchStartT = Date.now();
+                                e.preventDefault();
+                                return;
+                            }
+                        }
+                    }
+                }
+
                 // Check if the touch lands inside a placed image (DM, any tool, not fog mode).
                 // If so, start an image-drag instead of panning the canvas.
                 if (isDM && !fogMode) {
-                    const rect = canvas.getBoundingClientRect();
-                    const mx = (t.clientX - rect.left - panX) / zoom;
-                    const my = (t.clientY - rect.top - panY) / zoom;
                     for (let i = placedImages.length - 1; i >= 0; i--) {
                         const pi = placedImages[i];
                         if (mx >= pi.x && mx <= pi.x + pi.width && my >= pi.y && my <= pi.y + pi.height) {
@@ -7291,7 +7342,17 @@
             e.preventDefault();
         }, { passive: false });
         canvas.addEventListener('touchmove', (e) => {
-            if (_touchMode === 'imageDrag' && e.touches.length === 1 && selectedImage && imageDragStart) {
+            if (_touchMode === 'tokenDrag' && e.touches.length === 1 && draggedPlacedToken) {
+                const t = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const mx = (t.clientX - rect.left - panX) / zoom;
+                const my = (t.clientY - rect.top - panY) / zoom;
+                draggedPlacedToken.x = snapToGrid(mx - tokenDragOffset.x);
+                draggedPlacedToken.y = snapToGrid(my - tokenDragOffset.y);
+                _touchLastX = t.clientX;
+                _touchLastY = t.clientY;
+                draw();
+            } else if (_touchMode === 'imageDrag' && e.touches.length === 1 && selectedImage && imageDragStart) {
                 const t = e.touches[0];
                 const rect = canvas.getBoundingClientRect();
                 const mx = (t.clientX - rect.left - panX) / zoom;
@@ -7331,6 +7392,17 @@
             e.preventDefault();
         }, { passive: false });
         canvas.addEventListener('touchend', (e) => {
+            if (_touchMode === 'tokenDrag') {
+                // Commit token move and broadcast
+                if (draggedPlacedToken) {
+                    broadcast({ type: 'tokenUpdate', tokens: [...stagingTokens, ...placedTokens] });
+                    draggedPlacedToken = null;
+                    tokenDragOffset = { x: 0, y: 0 };
+                }
+                _touchMode = null;
+                e.preventDefault();
+                return;
+            }
             if (_touchMode === 'imageDrag') {
                 // Commit the move: save + broadcast to players
                 imageDragStart = null;
@@ -7346,8 +7418,8 @@
                 const dx = Math.abs(_touchLastX - _touchStartX);
                 const dy = Math.abs(_touchLastY - _touchStartY);
                 if (dx < 8 && dy < 8) {
-                    canvas.dispatchEvent(new MouseEvent('mousedown', { clientX: _touchStartX, clientY: _touchStartY, button: 0 }));
-                    canvas.dispatchEvent(new MouseEvent('mouseup',   { clientX: _touchStartX, clientY: _touchStartY, button: 0 }));
+                    canvas.dispatchEvent(new MouseEvent('mousedown', { clientX: _touchStartX, clientY: _touchStartY, button: 0, bubbles: true }));
+                    canvas.dispatchEvent(new MouseEvent('mouseup',   { clientX: _touchStartX, clientY: _touchStartY, button: 0, bubbles: true }));
                 }
             }
             _touchMode = null;
@@ -7880,7 +7952,7 @@
         }
 
         // Save player state periodically
-        setInterval(savePlayerState, 60000); // Every minute
+        let savePlayerStateInterval = setInterval(savePlayerState, 60000);
 
         // === PLAYER PANEL DOCKING ===
         let playerPanelDocked = false;
