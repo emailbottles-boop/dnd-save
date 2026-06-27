@@ -426,6 +426,22 @@
             border-color: var(--accent);
             transform: scale(1.02);
         }
+        .room-code.room-code-loading {
+            color: var(--text-dim);
+            font-style: italic;
+            animation: roomCodePulse 1.4s ease-in-out infinite;
+        }
+        .room-code.room-code-ready {
+            animation: roomCodeReveal 0.6s ease-out;
+        }
+        @keyframes roomCodePulse {
+            0%, 100% { opacity: 0.5; }
+            50%      { opacity: 1; }
+        }
+        @keyframes roomCodeReveal {
+            0%   { background: rgba(16,185,129,0.4); transform: scale(1.04); }
+            100% { background: var(--bg-dark);       transform: scale(1); }
+        }
 
         .user-list {
             display: flex;
@@ -2440,6 +2456,16 @@
         </div>
     </div>
 
+    <!-- PLAYER WAITING OVERLAY — visible from request-sent until approved -->
+    <div id="playerWaitingOverlay" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9000; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1.5rem 1.75rem; max-width:340px; width:calc(100vw - 32px); box-shadow:0 12px 48px rgba(0,0,0,0.6); text-align:center;">
+        <div style="font-size:2.2rem; margin-bottom:0.5rem;" id="playerWaitingIcon">⏳</div>
+        <div style="font-family:'Cinzel',serif; color:var(--gold); font-size:1.05rem; margin-bottom:0.4rem;" id="playerWaitingTitle">Waiting for DM…</div>
+        <div style="font-size:0.85rem; color:var(--text-dim); margin-bottom:0.85rem;" id="playerWaitingSub">Your request has been sent. The DM will see a notification.</div>
+        <div style="font-size:1.4rem; font-family:'Cinzel',serif; color:var(--accent); margin-bottom:0.85rem;" id="playerWaitingCountdown">0:00</div>
+        <button type="button" class="btn" id="playerResendBtn" onclick="resendPlayerJoinRequest()" style="width:100%; display:none;">📨 Resend Request</button>
+        <button type="button" class="btn" onclick="cancelPlayerWait()" style="width:100%; margin-top:0.5rem; background:none; border:1px solid var(--border); color:var(--text-dim);">Cancel</button>
+    </div>
+
     <!-- DICE ROLLER -->
     <div class="dice-roll-log" id="diceRollLog"></div>
     <div class="dice-roller-wrapper" id="diceRollerWrapper">
@@ -2469,7 +2495,7 @@
             <div class="connection-section" id="roomCodeSection" style="display: none;">
                 <h3>🎭 Room Code</h3>
                 <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Share this code with players:</p>
-                <div class="room-code" id="roomCode" onclick="copyRoomCode()" style="user-select: text; cursor: pointer;" title="Click to copy">----</div>
+                <div class="room-code room-code-loading" id="roomCode" onclick="copyRoomCode()" style="user-select: text; cursor: pointer;" title="Click to copy">Loading…</div>
                 <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; text-align: center;">
                     💡 Click to copy • Or select text manually (Ctrl+C)
                 </p>
@@ -4378,6 +4404,13 @@
             // Clear visible dice log so the next session's log doesn't pile on top
             const dLog = document.getElementById('diceRollLog');
             if (dLog) dLog.innerHTML = '';
+            // Reset room code element back to loading-state for the next session
+            const rcEl = document.getElementById('roomCode');
+            if (rcEl) {
+                rcEl.textContent = 'Loading…';
+                rcEl.classList.add('room-code-loading');
+                rcEl.classList.remove('room-code-ready');
+            }
             // Reset approved-names set so a brand-new session doesn't silently
             // re-approve players from a previous campaign
             approvedPlayerNames = new Set();
@@ -4731,6 +4764,73 @@
             _playerApprovalTimer = null;
         }
 
+        // ── Player Waiting Overlay ──
+        // Live countdown + manual Resend so a player never feels stuck on a
+        // silent "waiting" screen. Auto-hides when the DM approves us.
+        let _playerWaitTickTimer = null;
+        let _playerWaitStartedAt = 0;
+        function showPlayerWaitingOverlay() {
+            const el = document.getElementById('playerWaitingOverlay');
+            if (!el) return;
+            _playerWaitStartedAt = Date.now();
+            el.style.display = 'block';
+            document.getElementById('playerWaitingIcon').textContent = '⏳';
+            document.getElementById('playerWaitingTitle').textContent = 'Waiting for DM…';
+            document.getElementById('playerWaitingSub').textContent = 'Your request has been sent. The DM will see a notification.';
+            document.getElementById('playerResendBtn').style.display = 'none';
+            tickPlayerWaitingCountdown();
+            clearInterval(_playerWaitTickTimer);
+            _playerWaitTickTimer = setInterval(tickPlayerWaitingCountdown, 1000);
+        }
+        function tickPlayerWaitingCountdown() {
+            const el = document.getElementById('playerWaitingCountdown');
+            if (!el) return;
+            const elapsed = Math.floor((Date.now() - _playerWaitStartedAt) / 1000);
+            const mm = Math.floor(elapsed / 60), ss = elapsed % 60;
+            el.textContent = `${mm}:${ss.toString().padStart(2,'0')}`;
+            // Escalate visual after 20s — show resend, change copy
+            if (elapsed >= 20) {
+                document.getElementById('playerWaitingIcon').textContent = '👀';
+                document.getElementById('playerWaitingTitle').textContent = 'Still waiting…';
+                document.getElementById('playerWaitingSub').textContent = 'The DM may not have noticed. Try resending the request.';
+                document.getElementById('playerResendBtn').style.display = 'block';
+            }
+            // Further escalation after 60s
+            if (elapsed >= 60) {
+                document.getElementById('playerWaitingSub').textContent = 'Check that the DM is online and watching DM Controls.';
+            }
+        }
+        function hidePlayerWaitingOverlay() {
+            const el = document.getElementById('playerWaitingOverlay');
+            if (el) el.style.display = 'none';
+            clearInterval(_playerWaitTickTimer);
+            _playerWaitTickTimer = null;
+        }
+        function resendPlayerJoinRequest() {
+            if (!myName || !roomCode || !fbDb) return;
+            const btn = document.getElementById('playerResendBtn');
+            if (btn) { btn.disabled = true; btn.textContent = '📨 Sending…'; }
+            firebaseSignIn().then(() =>
+                fbDb.collection('vtt_rooms').doc(roomCode).collection('inbox').add({
+                    type: 'playerJoinRequest',
+                    name: myName, from: myId, peerId: myId,
+                    isResend: true,
+                    _t: Date.now()
+                })
+            ).then(() => {
+                _playerWaitStartedAt = Date.now(); // reset countdown
+                if (btn) { btn.disabled = false; btn.textContent = '📨 Resend Request'; }
+                document.getElementById('playerWaitingSub').textContent = '✅ Request resent — waiting for DM…';
+            }).catch(err => {
+                if (btn) { btn.disabled = false; btn.textContent = '📨 Try Again'; }
+                document.getElementById('playerWaitingSub').textContent = '⚠️ Could not resend: ' + (err.message || 'network issue');
+            });
+        }
+        function cancelPlayerWait() {
+            hidePlayerWaitingOverlay();
+            cancelAutoReconnect();
+        }
+
         function playerLogin(e) {
             e.preventDefault();
             myName = document.getElementById('playerName').value;
@@ -4761,13 +4861,11 @@
                     _t: Date.now()
                 });
             }).then(() => {
-                document.getElementById('playerSuccess').classList.add('show');
-                setTimeout(() => {
-                    closePlayerModal();
-                    document.getElementById('welcomeScreen').classList.add('hidden');
-                    document.getElementById('connectionTabContainer').style.display = 'block';
-                    updateConnectionStatus('Waiting for approval...', false);
-                }, 2000);
+                closePlayerModal();
+                document.getElementById('welcomeScreen').classList.add('hidden');
+                document.getElementById('connectionTabContainer').style.display = 'block';
+                updateConnectionStatus('Waiting for approval...', false);
+                showPlayerWaitingOverlay();
                 startPlayerRoomWatch(code);
                 armPlayerApprovalTimeout();
             }).catch(err => {
@@ -4892,7 +4990,11 @@
             document.getElementById('diceRollerWrapper').classList.add('visible');
             document.getElementById('diceRollLog').classList.add('visible');
             document.getElementById('roomCodeSection').style.display = 'block';
-            document.getElementById('roomCode').textContent = roomCode;
+            { const rc = document.getElementById('roomCode');
+              rc.textContent = roomCode;
+              rc.classList.remove('room-code-loading');
+              rc.classList.add('room-code-ready');
+              setTimeout(() => rc.classList.remove('room-code-ready'), 700); }
             document.getElementById('dmControlsBtn').style.display = 'block';
             document.getElementById('musicToggleBtn').style.display = 'block';
             document.getElementById('stagingZone').style.display = 'flex';
@@ -5064,7 +5166,11 @@
                     myName = data.name + ' (Co-DM)';
                     roomCode = data.roomCode;
                     document.getElementById('roomCodeSection').style.display = 'block';
-                    document.getElementById('roomCode').textContent = roomCode;
+                    { const rc = document.getElementById('roomCode');
+                      rc.textContent = roomCode;
+                      rc.classList.remove('room-code-loading');
+                      rc.classList.add('room-code-ready');
+                      setTimeout(() => rc.classList.remove('room-code-ready'), 700); }
                     document.getElementById('dmControlsBtn').style.display = 'block';
                     document.getElementById('musicToggleBtn').style.display = 'block';
                     document.getElementById('stagingZone').style.display = 'flex';
@@ -5121,6 +5227,7 @@
                     
                 case 'playerApproved':
                     clearPlayerApprovalTimeout();
+                    hidePlayerWaitingOverlay();
                     myName = data.name;
                     playerFirebaseRoomId = data.canonicalRoomId || roomCode;
                     loadAndListenDiceRolls(playerFirebaseRoomId);
@@ -5321,6 +5428,26 @@
                     selectedImage = null;
                     draw();
                     broadcastImages();
+                }
+            }
+            // Escape closes whichever overlay is topmost — matches user expectation,
+            // and saves a thumb-stretch on mobile.
+            if (e.key === 'Escape') {
+                const waiting = document.getElementById('playerWaitingOverlay');
+                if (waiting && waiting.style.display === 'block') {
+                    hidePlayerWaitingOverlay();
+                    return;
+                }
+                const openModals = document.querySelectorAll('.modal.active');
+                if (openModals.length > 0) {
+                    // Close the most recently opened (last in document order)
+                    openModals[openModals.length - 1].classList.remove('active');
+                    return;
+                }
+                // Close DM bottom-sheet if it's open
+                const dmPanel = document.getElementById('dmPanel');
+                if (dmPanel && dmPanel.classList.contains('open')) {
+                    dmPanel.classList.remove('open');
                 }
             }
         });
@@ -5527,8 +5654,8 @@
                                 <div class="request-detail">Token: ${safeIcon}</div>
                             </div>
                             <div class="request-actions">
-                                <button class="btn btn-small btn-success" onclick="approveToken(${idx})">✓</button>
-                                <button class="btn btn-small btn-danger" onclick="rejectToken(${idx})">✕</button>
+                                <button class="btn btn-small btn-success" onclick="handleRequestAction(this, 'approveToken', ${idx})">✓</button>
+                                <button class="btn btn-small btn-danger"  onclick="handleRequestAction(this, 'rejectToken',  ${idx})">✕</button>
                             </div>
                         </div>
                     `;
@@ -5540,13 +5667,32 @@
                                 <div class="request-detail">Wants to join</div>
                             </div>
                             <div class="request-actions">
-                                <button class="btn btn-small btn-success" onclick="approvePlayer(${idx})">✓</button>
-                                <button class="btn btn-small btn-danger" onclick="rejectPlayer(${idx})">✕</button>
+                                <button class="btn btn-small btn-success" onclick="handleRequestAction(this, 'approvePlayer', ${idx})">✓</button>
+                                <button class="btn btn-small btn-danger"  onclick="handleRequestAction(this, 'rejectPlayer',  ${idx})">✕</button>
                             </div>
                         </div>
                     `;
                 }
             }).join('');
+        }
+
+        // Wraps approve/reject calls with instant visual feedback so the DM sees
+        // the action register immediately, even before Firebase round-trips.
+        function handleRequestAction(btn, fnName, idx) {
+            const row = btn.closest('.request-item');
+            if (row) {
+                row.style.transition = 'opacity 0.2s, transform 0.2s';
+                row.style.opacity = '0.55';
+                row.style.transform = 'scale(0.97)';
+            }
+            // Disable both buttons in this row so they can't double-click
+            const sib = btn.parentElement ? btn.parentElement.querySelectorAll('button') : [btn];
+            sib.forEach(b => b.disabled = true);
+            btn.textContent = '…';
+            // Fire the real handler on the next tick so the paint happens first
+            setTimeout(() => {
+                try { window[fnName](idx); } catch(e) { console.error(e); }
+            }, 0);
         }
 
         function sendGameState(conn) {
@@ -5865,6 +6011,8 @@
                         elem.style.background = 'var(--bg-dark)';
                         elem.style.color = 'var(--accent)';
                     }, 2000);
+                    // Big visible toast so the DM is 100% sure it copied
+                    showLoadingToast('📋 Room code copied to clipboard', 2200);
                     console.log('✅ Room code copied:', roomCode);
                 }).catch(err => {
                     console.error('Clipboard API failed:', err);
@@ -9403,7 +9551,9 @@
                 }
                 toast.classList.add('show');
                 clearTimeout(diceToastTimer);
-                diceToastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+                // Touch devices get a longer hold so the result is actually readable
+                const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+                diceToastTimer = setTimeout(() => toast.classList.remove('show'), isTouch ? 4000 : 2800);
             }
             const log = document.getElementById('diceRollLog');
             const entry = document.createElement('div');
