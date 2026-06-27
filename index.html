@@ -3790,11 +3790,16 @@
                 const col = fbDb.collection('vtt_rooms');
                 const mainSnap = await col.doc(roomId).get();
 
+                // Always wipe in-memory map before loading. Skipping this when
+                // the room exists meant fog groups / sub-maps / images from a
+                // prior session would bleed into the new one. resetMapState
+                // also bumps loadGeneration so any stale in-flight Image.onload
+                // callbacks from a previous load drop their writes.
+                if (isDM) resetMapState();
+
                 if (!mainSnap.exists) {
                     updateFirebaseStatus('☁️ New room', '#9ca3af');
                     console.log('🔥 No saved state — starting fresh');
-                    // Wipe any stale in-memory map so a fresh room actually looks fresh
-                    if (isDM) resetMapState();
                     if (isDM) showLoadingToast('🆕 New campaign — your work auto-saves to your account', 4000);
                     return;
                 }
@@ -4013,6 +4018,7 @@
         // === LANDMARK STAMP TRACKING (sub-map feature) ===
         let placedStamps = [];   // [{ id, emoji, worldX, worldY }]
         let stampSubMaps = {};   // stampId -> HTMLCanvasElement (the vertical illustration)
+        let loadGeneration = 0;  // bumped on every reset/load; stale Image.onload callbacks check this before mutating state
         let activeSubMapId = null;
         let subMapTool = 'brush';
         let subMapColor = '#4a7c59';
@@ -4306,11 +4312,34 @@
             stopFirebaseWatch();
             clearTimeout(coDMReconnectTimer); coDMReconnectTimer = null;
             if (fogBroadcastTimeout) { clearTimeout(fogBroadcastTimeout); fogBroadcastTimeout = null; }
+            // Cancel any pending Firebase save so it can't fire after logout
+            if (typeof firebaseSaveTimeout !== 'undefined' && firebaseSaveTimeout) {
+                clearTimeout(firebaseSaveTimeout); firebaseSaveTimeout = null;
+            }
             shownRollIds = new Set();
             diceListenSince = 0;
+            // Close the co-DM's link to the host DM
+            if (typeof hostDMConn !== 'undefined' && hostDMConn) {
+                try { hostDMConn.close(); } catch(e) {}
+                hostDMConn = null;
+            }
+            // Host DM: close every connection to co-DMs so their handlers don't fire later
+            if (typeof coDMs !== 'undefined' && coDMs && typeof coDMs.forEach === 'function') {
+                coDMs.forEach(c => { try { c.conn && c.conn.close(); } catch(e) {} });
+                coDMs.clear();
+            }
             if (peer && !peer.destroyed) { try { peer.destroy(); } catch(e) {} }
             peer = null;
             isDM = false;
+            isCoDM = false;
+            // Drop identity fields so the next login can't accidentally inherit them
+            myId = null;
+            myName = '';
+            roomCode = '';
+            savedPeerId = null;
+            dmUsername = null;
+            coDMOriginalCode = null;
+            coDMOriginalName = null;
             // Clear all saved session data
             sessionStorage.removeItem('fracturedSkyTabRole');
             sessionStorage.removeItem('fracturedSkyPlayerRoom');
@@ -5538,6 +5567,11 @@
         // session (so the old map doesn't bleed into the new room) and when
         // logging out (so the welcome screen doesn't peek at stale art).
         function resetMapState() {
+            // Bump the load generation so any in-flight Image.onload callbacks
+            // from a previous session see the stale gen and drop their writes.
+            // Without this, switching rooms while images are still loading
+            // would re-populate the cleared collections from the prior session.
+            loadGeneration++;
             gridCells = {};
             lockedCells = {};
             placedStamps = [];
@@ -5599,23 +5633,49 @@
 
         function loadGameState(state) {
             console.log('📥 Loading game state...');
-            
-            // Load grid
+
+            // Capture the generation at the moment this load started. Every
+            // Image.onload callback re-checks loadGeneration before writing,
+            // so a load from session A that fires after session B starts is
+            // dropped instead of polluting session B's state.
+            const myGen = ++loadGeneration;
+
+            // Hard-reset every collection. Without these resets, anything from
+            // the prior session that's not in `state` survives — fog groups,
+            // sub-maps, tokens, images, stamps would all bleed across sessions.
             gridCells = {};
+            placedTokens = [];
+            stagingTokens = [];
+            placedImages = [];
+            placedStamps = [];
+            stampSubMaps = {};
+            lockedCells = state.lockedCells || {};
+            // Fog groups: drop any group not in the new state, clear canvases on those we keep
+            for (const g in fogGroups) {
+                if (!state.fogGroups || !(g in state.fogGroups)) {
+                    if (g !== 'everyone') delete fogGroups[g];
+                    else if (fogGroups[g].canvas) {
+                        const c = fogGroups[g].canvas;
+                        c.getContext('2d').clearRect(0, 0, c.width, c.height);
+                    }
+                }
+            }
+
+            // Load grid
             for (let key in state.gridCells) {
                 const img = new Image();
                 img.onload = () => {
+                    if (myGen !== loadGeneration) return; // stale: a newer load (or reset) happened
                     const canvas = document.createElement('canvas');
                     canvas.width = CELL_SIZE;
                     canvas.height = CELL_SIZE;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
+                    canvas.getContext('2d').drawImage(img, 0, 0);
                     gridCells[key] = canvas;
                     draw();
                 };
                 img.src = state.gridCells[key];
             }
-            
+
             // Load fog
             for (let group in state.fogGroups) {
                 if (!fogGroups[group]) {
@@ -5625,6 +5685,7 @@
                 }
                 const img = new Image();
                 img.onload = () => {
+                    if (myGen !== loadGeneration) return;
                     const ctx = fogGroups[group].canvas.getContext('2d');
                     ctx.clearRect(0, 0, fogGroups[group].canvas.width, fogGroups[group].canvas.height);
                     ctx.drawImage(img, 0, 0);
@@ -5632,33 +5693,26 @@
                 };
                 img.src = state.fogGroups[group];
             }
-            
-            // Load tokens (IMPORTANT!)
+
+            // Load tokens (already reset above)
             if (state.tokens) {
-                stagingTokens = [];
-                placedTokens = [];
-                
                 state.tokens.forEach(token => {
-                    // Separate staging vs placed tokens
                     if (token.x !== undefined && token.y !== undefined) {
-                        // It's a placed token
                         placedTokens.push(token);
                     } else {
-                        // It's a staging token
                         stagingTokens.push(token);
                     }
                 });
-                
                 console.log('✅ Loaded tokens:', stagingTokens.length, 'staging,', placedTokens.length, 'placed');
                 renderStagingTokens();
             }
-            
-            // Load placed images if present
+
+            // Load placed images
             if (state.placedImages) {
-                placedImages = [];
                 state.placedImages.forEach(imgData => {
                     const img = new Image();
                     img.onload = () => {
+                        if (myGen !== loadGeneration) return;
                         placedImages.push({
                             img: img,
                             x: imgData.x,
@@ -5674,17 +5728,18 @@
                     img.src = imgData.src;
                 });
             }
-            
-            // Load placed stamps
+
+            // Load placed stamps (positions only)
             if (state.placedStamps) {
                 placedStamps = state.placedStamps;
             }
 
-            // Load stamp sub-maps
+            // Load stamp sub-maps (illustrations)
             if (state.stampSubMaps) {
                 for (const sid in state.stampSubMaps) {
                     const img = new Image();
                     img.onload = () => {
+                        if (myGen !== loadGeneration) return;
                         const c = document.createElement('canvas');
                         c.width = 800; c.height = 500;
                         c.getContext('2d').drawImage(img, 0, 0);
@@ -5696,7 +5751,6 @@
                 }
             }
 
-            lockedCells = state.lockedCells || {};
             zoom = state.zoom || 1;
             panX = state.panX || 0;
             panY = state.panY || 0;
