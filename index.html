@@ -2211,6 +2211,7 @@
                 <button class="welcome-btn" style="background:linear-gradient(135deg,#f97316,#ea580c);color:white;border:none;" onclick="showCoDMLogin()">🧙 Join as Co-DM</button>
                 <button class="welcome-btn welcome-btn-secondary" onclick="showPlayerLogin()">👤 Join Room (Player)</button>
                 <button class="welcome-btn welcome-btn-secondary" onclick="showCharSheet()">📜 My Characters</button>
+                <button class="welcome-btn welcome-btn-secondary" onclick="openPastCampaignsModal()">📂 Past Campaigns</button>
             </div>
             <div id="welcomeReconnect" style="display:none; text-align:center;">
                 <p id="welcomeReconnectMsg" style="color:var(--text-dim); margin-bottom:1rem; font-size:0.95rem;"></p>
@@ -2432,7 +2433,29 @@
                 <button class="btn" onclick="closeContinueCampaignModal()" style="width:100%; padding:0.45rem; font-size:0.82rem;">Cancel</button>
             </div>
             <div style="font-size:0.72rem; color:var(--text-dim); margin-top:0.85rem; text-align:center;">
-                Starting a new campaign won't delete your old one — it's still saved in your account.
+                Starting a new campaign won't delete your old one — it'll be added to <b>📂 Past Campaigns</b> and you can re-open it from there anytime.
+            </div>
+        </div>
+    </div>
+
+    <!-- PAST CAMPAIGNS MODAL — lists archived campaigns the DM can re-open -->
+    <div class="modal" id="pastCampaignsModal">
+        <div class="modal-content" style="max-width: 520px; max-height: 85vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <div class="modal-icon">📂</div>
+                <div class="modal-title">Past Campaigns</div>
+            </div>
+            <p style="text-align:center; color:var(--text-dim); margin-bottom:0.85rem; font-size:0.88rem;">
+                Every campaign you've ever started fresh from is saved here. Tap to reopen.
+            </p>
+            <div id="pastCampaignsList" style="overflow-y:auto; flex:1; min-height:120px;">
+                <div style="text-align:center; color:var(--text-dim); padding:1.5rem 0; font-size:0.85rem;">Loading…</div>
+            </div>
+            <div style="font-size:0.72rem; color:var(--text-dim); margin-top:0.85rem; text-align:center;">
+                💡 If your campaign was started fresh <em>before</em> this feature was added, it isn't listed here — but you can still reopen it by pasting its room code into a fresh DM login.
+            </div>
+            <div style="display:flex; gap:0.5rem; margin-top:0.85rem;">
+                <button class="btn" onclick="closePastCampaignsModal()" style="flex:1;">Close</button>
             </div>
         </div>
     </div>
@@ -2610,6 +2633,11 @@
                             <button class="btn" onclick="document.getElementById('importFile').click()" style="flex: 1;">📤 Import .JSON</button>
                         </div>
                         <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importCampaign(event)">
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Past Campaigns (every campaign you've started fresh from):</div>
+                        <button class="btn" onclick="openPastCampaignsModal()" style="width:100%;">📂 Open Past Campaigns</button>
                     </div>
 
                     <div style="margin-bottom: 1rem;">
@@ -3651,6 +3679,132 @@
             } catch(e) { return null; }
         }
 
+        // ── Past-Campaigns Archive ──────────────────────────────────────
+        // Whenever a DM clicks "Start a New Campaign (KEEPS OLD SAVED)",
+        // we stash the old room ID + name + date here so they can re-open
+        // it later. Without this the cloud profile got overwritten on the
+        // next save and the old campaign was effectively orphaned.
+        const ARCHIVE_KEY = 'fracturedSkyArchivedCampaigns';
+
+        function getLocalArchive() {
+            try { return JSON.parse(localStorage.getItem(ARCHIVE_KEY)) || []; }
+            catch(e) { return []; }
+        }
+        function setLocalArchive(list) {
+            // Cap at 30 most-recent entries so localStorage can't grow forever
+            const trimmed = list.slice(-30);
+            try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(trimmed)); } catch(e) {}
+        }
+        function addToLocalArchive(roomId, campaignName) {
+            if (!roomId) return;
+            const list = getLocalArchive();
+            // Avoid duplicates — if the same roomId is already archived, just refresh its date
+            const existing = list.findIndex(e => e.roomId === roomId);
+            const entry = { roomId, campaignName: campaignName || 'Untitled campaign', archivedAt: Date.now() };
+            if (existing >= 0) list[existing] = entry;
+            else list.push(entry);
+            setLocalArchive(list);
+        }
+        function removeFromLocalArchive(roomId) {
+            setLocalArchive(getLocalArchive().filter(e => e.roomId !== roomId));
+        }
+
+        // Cloud-side: mirror the archive into vtt_users/<username>.archives so it
+        // works across devices, not just the browser where Start Fresh was clicked.
+        async function addToCloudArchive(roomId, campaignName) {
+            if (!fbDb || !dmUsername || !roomId) return;
+            try {
+                const entry = { roomId, campaignName: campaignName || 'Untitled campaign', archivedAt: Date.now() };
+                await fbDb.collection('vtt_users').doc(dmUsername).set({
+                    archives: firebase.firestore.FieldValue.arrayUnion(entry)
+                }, { merge: true });
+            } catch(e) { console.error('☁️ Failed to archive campaign:', e); }
+        }
+        async function getCloudArchive() {
+            const profile = dmUsername ? await getDMCloudProfile(dmUsername) : null;
+            return (profile && Array.isArray(profile.archives)) ? profile.archives : [];
+        }
+        async function removeFromCloudArchive(entry) {
+            if (!fbDb || !dmUsername || !entry) return;
+            try {
+                await fbDb.collection('vtt_users').doc(dmUsername).set({
+                    archives: firebase.firestore.FieldValue.arrayRemove(entry)
+                }, { merge: true });
+            } catch(e) { console.error('☁️ Failed to remove archived campaign:', e); }
+        }
+
+        // Merge local + cloud, dedupe by roomId, newest first
+        async function getMergedArchive() {
+            const local = getLocalArchive();
+            const cloud = await getCloudArchive();
+            const byId = new Map();
+            [...cloud, ...local].forEach(e => {
+                if (!e || !e.roomId) return;
+                const prev = byId.get(e.roomId);
+                if (!prev || (e.archivedAt || 0) > (prev.archivedAt || 0)) byId.set(e.roomId, e);
+            });
+            return [...byId.values()].sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
+        }
+
+        function openPastCampaignsModal() {
+            document.getElementById('pastCampaignsModal').classList.add('active');
+            renderPastCampaignsList();
+        }
+        function closePastCampaignsModal() {
+            document.getElementById('pastCampaignsModal').classList.remove('active');
+        }
+        async function renderPastCampaignsList() {
+            const el = document.getElementById('pastCampaignsList');
+            if (!el) return;
+            el.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:1.5rem 0; font-size:0.85rem;">Loading…</div>';
+            const list = await getMergedArchive();
+            if (list.length === 0) {
+                el.innerHTML = `<div style="text-align:center; color:var(--text-dim); padding:1.5rem 0; font-size:0.88rem;">
+                    No past campaigns yet.<br><br>
+                    <span style="font-size:0.78rem;">When you "Start a New Campaign" from the Welcome Back screen, the old one will appear here.</span>
+                </div>`;
+                return;
+            }
+            const fmtDate = ts => {
+                const d = new Date(ts || 0);
+                return d.toLocaleDateString() + ' · ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            };
+            el.innerHTML = list.map(e => `
+                <div class="past-campaign-row" style="display:flex; align-items:center; gap:0.5rem; padding:0.7rem 0.6rem; border-bottom:1px solid var(--border);">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-family:'Cinzel',serif; color:var(--gold); font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(e.campaignName || 'Untitled')}</div>
+                        <div style="font-size:0.72rem; color:var(--text-dim); margin-top:0.2rem;">📅 ${escapeHTML(fmtDate(e.archivedAt))}</div>
+                        <div style="font-size:0.66rem; color:var(--text-dim); margin-top:0.15rem; font-family:monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">ID: ${escapeHTML(e.roomId)}</div>
+                    </div>
+                    <button class="btn btn-small btn-success" onclick="loadArchivedCampaign('${e.roomId.replace(/'/g, "\\'")}', '${(e.campaignName || '').replace(/'/g, "\\'")}')">▶ Open</button>
+                    <button class="btn btn-small" onclick="forgetArchivedCampaign('${e.roomId.replace(/'/g, "\\'")}')" title="Remove from list (does NOT delete the saved data in cloud)">✕</button>
+                </div>
+            `).join('');
+        }
+        async function loadArchivedCampaign(roomId, name) {
+            closePastCampaignsModal();
+            // If we're already in a session, cleanly leave it first so state can't bleed
+            if (isDM || playerFirebaseRoomId) {
+                try { cancelAutoReconnect(); } catch(e) {}
+            }
+            localStorage.setItem('fracturedSkySessionId', roomId);
+            if (name) {
+                campaignName = name;
+                localStorage.setItem('fracturedSkyCampaignName', name);
+            }
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('connectionTabContainer').style.display = 'block';
+            showLoadingToast('📂 Reopening "' + (name || roomId) + '"…', 3000);
+            createRoom(roomId);
+        }
+        async function forgetArchivedCampaign(roomId) {
+            const list = getLocalArchive();
+            const entry = list.find(e => e.roomId === roomId);
+            removeFromLocalArchive(roomId);
+            if (entry) await removeFromCloudArchive(entry).catch(() => {});
+            renderPastCampaignsList();
+        }
+
         // Watch Firestore for DM peer ID changes; fires callback immediately with the
         // current value then on every future change. Stores the unsubscribe fn in
         // playerFirebaseWatcher so the watcher can be torn down cleanly.
@@ -4517,8 +4671,18 @@
         function confirmStartFreshCampaign() {
             // Don't delete the old room — just generate a new ID. The user's
             // saveDMCloudProfile on next save will repoint their account to
-            // the new room; the old room data remains in Firestore (orphaned
-            // but recoverable if needed).
+            // the new room; the old room data remains in Firestore.
+            //
+            // Archive the old room BEFORE wiping pointers, so it shows up in
+            // Past Campaigns and can be reopened later. The modal already
+            // captured the room ID + name in _pendingContinueRoomId/Name.
+            const archiveRoomId = _pendingContinueRoomId || firebaseRoomRef;
+            const archiveName = _pendingContinueName || campaignName;
+            if (archiveRoomId) {
+                addToLocalArchive(archiveRoomId, archiveName);
+                addToCloudArchive(archiveRoomId, archiveName).catch(() => {});
+                showLoadingToast('📂 "' + (archiveName || 'Old campaign') + '" saved to Past Campaigns', 3500);
+            }
             document.getElementById('continueCampaignModal').classList.remove('active');
             _pendingContinueRoomId = null;
             _pendingContinueName = null;
