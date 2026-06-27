@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0e0b08">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -999,14 +1003,66 @@
             /* Floating mobile DM Controls FAB — stays at bottom-right, above safe area */
             #dmControlsBtn {
                 position: fixed;
-                right: 14px;
-                bottom: 14px;
+                right: calc(14px + env(safe-area-inset-right, 0px));
+                bottom: calc(14px + env(safe-area-inset-bottom, 0px));
                 z-index: 550;
                 box-shadow: 0 4px 16px rgba(0,0,0,0.6);
                 border-radius: 50px;
-                padding: 0.65rem 1rem;
+                padding: 0.7rem 1.05rem;
                 font-size: 0.9rem;
+                min-height: 44px; /* iOS recommended tap target */
             }
+            /* DM panel sheet — respect iOS bottom safe area */
+            .dm-panel {
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+                height: calc(78vh + env(safe-area-inset-bottom, 0px));
+            }
+            /* Connection panel — let it grow with its content, allow horizontal scroll cleanly */
+            .connection-panel.open {
+                top: calc(60px + env(safe-area-inset-top, 0px));
+            }
+            .connection-content {
+                grid-template-columns: 1fr;
+                gap: 0.85rem;
+            }
+            /* Dice toast — smaller font/padding so it fits on phones */
+            .dice-result-toast {
+                padding: 1.1rem 1.5rem;
+                min-width: 0;
+                max-width: calc(100vw - 32px);
+                border-radius: 16px;
+            }
+            .toast-num { font-size: 3rem; }
+            .toast-roller { font-size: 0.78rem; }
+            .toast-label { font-size: 0.7rem; }
+            /* Secondary minimap-style panels (stamp library, player panel) — narrower default */
+            #stampLibraryPanel, #playerPanelDock {
+                width: calc(100vw - 24px) !important;
+                max-width: 320px;
+            }
+            /* Header tap targets — at least 40px tall */
+            .header-actions .btn { min-height: 40px; }
+            /* Larger emoji/icon buttons in DM panel for finger taps */
+            .dm-content .btn { min-height: 40px; }
+            /* Player join toast — leave room for the system status bar */
+            #joinToast {
+                top: calc(env(safe-area-inset-top, 0px)) !important;
+                font-size: 0.85rem !important;
+                padding: 0.6rem 0.5rem !important;
+            }
+            /* Map canvas — prevent body horizontal scroll from accidental drags */
+            body { overflow-x: hidden; overscroll-behavior: none; }
+            /* Hide the Zoom slider on very narrow screens — pinch handles it on touch */
+            .zoom-controls { display: none; }
+            /* When DM bottom-sheet is open, hide floating panels that would overlap */
+            body:has(.dm-panel.open) #minimap,
+            body:has(.dm-panel.open) #stampLibraryPanel,
+            body:has(.dm-panel.open) #playerPanelDock,
+            body:has(.dm-panel.open) #dmControlsBtn { display: none; }
+        }
+        /* Very narrow phones (<360px) — collapse Characters button to icon */
+        @media (max-width: 360px) {
+            .header-actions .btn { font-size: 0.72rem; padding: 0.35rem 0.5rem; }
         }
 
         /* Semi-transparent backdrop behind the bottom sheet */
@@ -3704,14 +3760,16 @@
 
                 await batch.commit();
 
-                // Stamp sub-maps are large (dataURLs) — save each as its own doc outside the batch
-                for (const sid in stampSubMaps) {
+                // Stamp sub-maps are large (dataURLs) — save each as its own doc outside the batch.
+                // Fire in parallel to narrow the data-loss window if the tab closes mid-save.
+                const subMapSaves = Object.entries(stampSubMaps).map(([sid, canvas]) => {
                     const safeId = sid.replace(/[^a-zA-Z0-9_-]/g, '_');
-                    await col.doc(firebaseRoomRef + '__submap_' + safeId).set({
+                    return col.doc(firebaseRoomRef + '__submap_' + safeId).set({
                         stampId: sid,
-                        imageData: stampSubMaps[sid].toDataURL()
-                    }).catch(() => {});
-                }
+                        imageData: canvas.toDataURL()
+                    }).catch(e => console.error('🔥 Sub-map save failed for', sid, e));
+                });
+                await Promise.all(subMapSaves);
                 updateFirebaseStatus('☁️ Saved', '#10b981');
                 console.log('🔥 Saved to Firestore');
                 // Keep the user→campaign link fresh on every save so the DM can
