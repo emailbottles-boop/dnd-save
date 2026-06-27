@@ -6474,6 +6474,11 @@
         }
 
         function setTool(t) {
+            // Guarantee a clean canvas-context state on every tool switch.
+            // Without this, a stranded destination-out from an interrupted
+            // eraser stroke would make the brush silently erase. This was the
+            // "brush stops working after double-clicking icons" regression.
+            try { mapCtx.globalCompositeOperation = 'source-over'; } catch(e) {}
             // Track last tool before switching to eraser
             if (tool !== 'eraser' && t === 'eraser') {
                 lastToolBeforeEraser = tool;
@@ -6917,7 +6922,7 @@
         function importImageToCanvas(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
@@ -6925,18 +6930,18 @@
                     // Place image at center of current cell
                     const cellX = currentCellX * GRID_SIZE + GRID_SIZE / 2;
                     const cellY = currentCellY * GRID_SIZE + GRID_SIZE / 2;
-                    
-                    // Scale image to fit within cell
-                    const maxSize = GRID_SIZE * 0.8;
-                    let width = img.width;
-                    let height = img.height;
-                    
-                    if (width > maxSize || height > maxSize) {
-                        const scale = Math.min(maxSize / width, maxSize / height);
-                        width *= scale;
-                        height *= scale;
-                    }
-                    
+
+                    // Always normalize the laid-down size to roughly half a cell.
+                    // Previously a small icon (e.g. 50×50) stayed at 50×50 — too tiny
+                    // to see — and the DM had to manually resize every image.
+                    // Now every image lands at a predictable, visible size and the
+                    // DM can scale up/down from there.
+                    const targetMaxDim = GRID_SIZE * 0.5; // 200px on a 400px cell
+                    const longestSide = Math.max(img.width, img.height) || 1;
+                    const scale = targetMaxDim / longestSide;
+                    const width = img.width * scale;
+                    const height = img.height * scale;
+
                     const placedImg = {
                         img: img,
                         x: cellX - width / 2,
@@ -7161,20 +7166,27 @@
             if (isDrawing) {
                 isDrawing = false;
                 if (tool === 'eraser') {
-                    mapCtx.restore(); // Restore composite operation
+                    try { mapCtx.restore(); } catch(e) {}
                 }
                 saveHistory();
             }
+            // Defensive: always force the composite op back to source-over after a
+            // pointer release. If isDrawing got flipped elsewhere mid-stroke (the
+            // mainCanvas/mapCanvas share that flag), the eraser's restore() would
+            // be skipped and the canvas would stay in destination-out forever —
+            // every subsequent brush stroke would silently erase instead of paint.
+            mapCtx.globalCompositeOperation = 'source-over';
         });
 
         mapCanvas.addEventListener('mouseleave', () => {
             if (isDrawing) {
                 isDrawing = false;
                 if (tool === 'eraser') {
-                    mapCtx.restore(); // Restore composite operation
+                    try { mapCtx.restore(); } catch(e) {}
                 }
                 saveHistory();
             }
+            mapCtx.globalCompositeOperation = 'source-over';
         });
 
         document.getElementById('colorPicker').addEventListener('change', (e) => {
