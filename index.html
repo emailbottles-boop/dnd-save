@@ -10,7 +10,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>From Sunnyville VTT v4.0</title>
+    <title>Noodlednd.me</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- Firebase v9 compat (matches existing firebase.X() call style) -->
@@ -163,15 +163,21 @@
             text-align: center;
             padding: 3rem;
         }
+        @media (max-width: 480px) {
+            .welcome-content { padding: 1.5rem 0.75rem; }
+        }
 
         .welcome-title {
             font-family: 'Cinzel', serif;
-            font-size: 4rem;
+            font-size: clamp(1.3rem, 6vw, 2.6rem);
             font-weight: 700;
             background: linear-gradient(135deg, var(--gold), var(--accent));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 1rem;
+            line-height: 1.1;
+            padding: 0 0.5rem;
+            white-space: nowrap;
         }
 
         .welcome-subtitle {
@@ -2199,8 +2205,7 @@
     <!-- WELCOME SCREEN -->
     <div class="welcome-screen" id="welcomeScreen">
         <div class="welcome-content" style="max-width: 520px; width: 90%;">
-            <div class="welcome-title">⚔️ FROM SUNNYVILLE</div>
-            <div class="welcome-subtitle">Ultimate Virtual Tabletop v4.0 FINAL</div>
+            <div class="welcome-title">⚔️ NOODLEDND.ME</div>
             <div class="welcome-buttons" id="welcomeButtons" style="flex-wrap: wrap; gap: 0.75rem; justify-content: center;">
                 <button class="welcome-btn welcome-btn-primary" onclick="showDMLogin()">🎭 Create Room (DM)</button>
                 <button class="welcome-btn" style="background:linear-gradient(135deg,#f97316,#ea580c);color:white;border:none;" onclick="showCoDMLogin()">🧙 Join as Co-DM</button>
@@ -2434,7 +2439,7 @@
 
     <!-- HEADER -->
     <div class="header">
-        <div class="title" id="headerTitle" onclick="onHeaderTitleClick()" title="">⚔️ FROM SUNNYVILLE</div>
+        <div class="title" id="headerTitle" onclick="onHeaderTitleClick()" title="">⚔️ NOODLEDND.ME</div>
         <div class="campaign-badge" id="campaignBadge" style="display: none;">Campaign Name</div>
         <div class="header-actions">
             <div id="firebaseSection" style="display: none; align-items: center; gap: 0.4rem;" title="Your campaign auto-saves to the cloud — safe even if you close the tab or lose your connection.">
@@ -3943,7 +3948,7 @@
         }
 
         // Campaign name
-        let campaignName = localStorage.getItem('fracturedSkyCampaignName') || 'From Sunnyville';
+        let campaignName = localStorage.getItem('fracturedSkyCampaignName') || 'Noodlednd.me';
         // ── Color Theme System ──────────────────────────────────────────────
         const COLOR_THEMES = {
             fantasy: { accent:'#c8922a', accentSec:'#e8b84b', gold:'#f5c518', bgDark:'#0e0b08', bgCard:'#1a1510', bgHover:'#261e14', text:'#e8dcc8', textDim:'#9e8e72', border:'rgba(200,146,42,0.35)' },
@@ -3987,7 +3992,7 @@
             if (el) el.textContent = campaignName;
             // Also reflect the campaign name in the big header. When the user
             // is in a session, the header reads "⚔️ <Campaign Name>"; otherwise
-            // it falls back to the brand title "FROM SUNNYVILLE".
+            // it falls back to the brand title "NOODLEDND.ME".
             const title = document.getElementById('headerTitle');
             if (title) {
                 const inSession = !!(isDM || playerFirebaseRoomId);
@@ -3996,7 +4001,7 @@
                     title.setAttribute('title', isDM ? 'Click to rename campaign' : campaignName);
                     title.style.cursor = isDM ? 'pointer' : 'default';
                 } else {
-                    title.textContent = '⚔️ FROM SUNNYVILLE';
+                    title.textContent = '⚔️ NOODLEDND.ME';
                     title.setAttribute('title', '');
                     title.style.cursor = 'default';
                 }
@@ -4390,7 +4395,7 @@
             if (logoutBtn) logoutBtn.style.display = 'none';
             // Also reset campaign name back to brand default so the header
             // doesn't briefly flash the old campaign before next login
-            campaignName = 'From Sunnyville';
+            campaignName = 'Noodlednd.me';
             updateCampaignNameDisplay();
             // Wipe in-memory map so the next session starts clean
             resetMapState();
@@ -9885,7 +9890,5 @@
         </div>
     </div>
 
-    <!-- FOOTER -->
-    <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:0.3rem 0;background:rgba(0,0,0,0.7);color:#a855f7;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;z-index:9999;pointer-events:none;">CREATED BY ROBERT FOR WIZZY</div>
 </body>
 </html>
