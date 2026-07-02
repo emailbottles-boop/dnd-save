@@ -1126,14 +1126,20 @@
             /* Hide toolbar on the welcome screen and under the DM sheet */
             body:has(#welcomeScreen:not(.hidden)) #mobileToolbar,
             body:has(.dm-panel.open) #mobileToolbar { display: none; }
-            /* Players don't get the token-staging toggle */
-            body.player-mode .mtb-tokens { display: none; }
 
-            /* The toggled widgets: hidden unless opened from the toolbar */
+            /* The toggled widgets: hidden unless opened from the toolbar.
+               (Token staging is NOT here — it's a tray that auto-appears below
+               the map when tokens are staged, restored per user request.) */
             #minimapContainer:not(.m-open),
             #diceAdvantagePanel:not(.m-open),
-            #stagingZone:not(.m-open),
             #diceRollLog:not(.m-open) { display: none !important; }
+            /* Token staging tray: sits above the toolbar/dice roller so tokens
+               aren't hidden behind them; only shown when renderStagingTokens
+               sets display:flex (i.e. when tokens exist). */
+            .staging-zone {
+                bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+                z-index: 600;
+            }
             /* Opened widgets sit just above the toolbar; the navigator clears
                the dice roller which lives in the same bottom-left corner */
             #minimapContainer.m-open {
@@ -1141,10 +1147,6 @@
                 left: 8px;
             }
             #diceAdvantagePanel.m-open {
-                bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-            }
-            #stagingZone.m-open {
-                display: flex !important;
                 bottom: calc(64px + env(safe-area-inset-bottom, 0px));
             }
             #diceRollLog.m-open {
@@ -2694,7 +2696,6 @@
     <div id="mobileToolbar">
         <button class="mtb-nav"    onclick="mobileTogglePanel('nav', this)"    title="Navigator">🗺️</button>
         <button class="mtb-adv"    onclick="mobileTogglePanel('adv', this)"    title="Dice Advantage">🎯</button>
-        <button class="mtb-tokens" onclick="mobileTogglePanel('tokens', this)" title="Token Staging">🎒</button>
         <button class="mtb-log"    onclick="mobileTogglePanel('log', this)"    title="Roll Log">📜</button>
         <button class="mtb-chat"   onclick="toggleChat()"                      title="Chat">💬</button>
     </div>
@@ -6261,6 +6262,7 @@
             // float over the welcome screen after logout
             document.querySelectorAll('.m-open').forEach(el => el.classList.remove('m-open'));
             document.querySelectorAll('#mobileToolbar button').forEach(b => b.classList.remove('active'));
+            _armedToken = null;
             zoom = 1; panX = 0; panY = 0;
             const zs = document.getElementById('zoomSlider');
             const zv = document.getElementById('zoomValue');
@@ -6648,18 +6650,38 @@
             }
         }
 
+        // Tap-to-place: HTML5 drag-and-drop doesn't exist on touch screens, so
+        // tapping a staged token "arms" it — the next tap on the map places it.
+        // Works with mouse too (click token, click map).
+        let _armedToken = null;
+        function armToken(tokenId) {
+            const t = stagingTokens.find(t => t.id === tokenId);
+            if (!t) return;
+            if (_armedToken && _armedToken.id === tokenId) {
+                _armedToken = null; // tap again to cancel
+                renderStagingTokens();
+                showLoadingToast('Placement cancelled', 1500);
+                return;
+            }
+            _armedToken = t;
+            renderStagingTokens();
+            showLoadingToast(`👆 Tap the map to place ${t.icon || t.owner || 'token'}`, 4000);
+        }
+
         function renderStagingTokens() {
             const container = document.getElementById('stagingTokens');
             container.innerHTML = stagingTokens.map(t => {
+                const armed = _armedToken && _armedToken.id === t.id;
+                const armedStyle = armed ? 'outline: 3px solid var(--gold); outline-offset: 2px; transform: scale(1.08);' : '';
                 if (t.type === 'image') {
                     return `
-                        <div class="token-item" draggable="true" ondragstart="dragTokenStart(event, ${t.id})" style="background: ${t.color}; background-image: url('${t.imageData}'); background-size: cover; background-position: center;">
+                        <div class="token-item" draggable="true" ondragstart="dragTokenStart(event, ${t.id})" onclick="armToken(${t.id})" style="background: ${t.color}; background-image: url('${t.imageData}'); background-size: cover; background-position: center; ${armedStyle}">
                             <div class="token-owner">${t.owner}</div>
                         </div>
                     `;
                 } else {
                     return `
-                        <div class="token-item" draggable="true" ondragstart="dragTokenStart(event, ${t.id})" style="background: ${t.color};">
+                        <div class="token-item" draggable="true" ondragstart="dragTokenStart(event, ${t.id})" onclick="armToken(${t.id})" style="background: ${t.color}; ${armedStyle}">
                             ${t.icon}
                             <div class="token-owner">${t.owner}</div>
                         </div>
@@ -6667,15 +6689,9 @@
                 }
             }).join('');
             
-            if (stagingTokens.length > 0) {
-                document.getElementById('stagingZone').style.display = 'flex';
-            }
-            // Mobile toolbar: show a count badge on the 🎒 button so the DM
-            // knows tokens are waiting in the tray even while it's closed
-            const tokBtn = document.querySelector('#mobileToolbar .mtb-tokens');
-            if (tokBtn) {
-                tokBtn.textContent = stagingTokens.length > 0 ? `🎒${stagingTokens.length}` : '🎒';
-            }
+            // Tray auto-appears when tokens are staged, hides when empty
+            document.getElementById('stagingZone').style.display =
+                stagingTokens.length > 0 ? 'flex' : 'none';
         }
 
         function dragTokenStart(e, tokenId) {
@@ -7700,6 +7716,19 @@
             const screenY = e.clientY;
             const mx = (screenX - rect.left - panX) / zoom;
             const my = (screenY - rect.top - panY) / zoom;
+
+            // === ARMED TOKEN PLACEMENT (tap token in tray, tap map to place) ===
+            if (_armedToken && !fogMode) {
+                const px = snapToGrid(mx);
+                const py = snapToGrid(my);
+                placedTokens.push({ ..._armedToken, x: px, y: py });
+                stagingTokens = stagingTokens.filter(t => t.id !== _armedToken.id);
+                _armedToken = null;
+                renderStagingTokens();
+                draw();
+                broadcast({ type: 'tokenUpdate', tokens: [...stagingTokens, ...placedTokens] });
+                return;
+            }
 
             // === LANDMARK STAMP CLICK (players open sub-map viewer) ===
             if (!isDM && !fogMode) {
@@ -9281,7 +9310,6 @@
         const MOBILE_PANELS = {
             nav:    'minimapContainer',
             adv:    'diceAdvantagePanel',
-            tokens: 'stagingZone',
             log:    'diceRollLog',
         };
         function mobileTogglePanel(key, btn) {
