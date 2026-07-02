@@ -3947,13 +3947,20 @@
 
         // Cloud-side: mirror the archive into vtt_users/<username>.archives so it
         // works across devices, not just the browser where Start Fresh was clicked.
+        // Read-dedupe-write (not arrayUnion): fresh timestamps make every entry
+        // unique to arrayUnion, so re-archiving the same room would append
+        // duplicates forever and bloat the user doc.
         async function addToCloudArchive(roomId, campaignName) {
             if (!fbDb || !dmUsername || !roomId) return;
             try {
                 const entry = { roomId, campaignName: campaignName || 'Untitled campaign', archivedAt: Date.now() };
-                await fbDb.collection('vtt_users').doc(dmUsername).set({
-                    archives: firebase.firestore.FieldValue.arrayUnion(entry)
-                }, { merge: true });
+                const docRef = fbDb.collection('vtt_users').doc(dmUsername);
+                const snap = await docRef.get();
+                let archives = (snap.exists && Array.isArray(snap.data().archives)) ? snap.data().archives : [];
+                archives = archives.filter(a => a && a.roomId !== roomId);
+                archives.push(entry);
+                if (archives.length > 30) archives = archives.slice(-30);
+                await docRef.set({ archives }, { merge: true });
             } catch(e) { console.error('☁️ Failed to archive campaign:', e); }
         }
         async function getCloudArchive() {
@@ -3961,11 +3968,14 @@
             return (profile && Array.isArray(profile.archives)) ? profile.archives : [];
         }
         async function removeFromCloudArchive(entry) {
-            if (!fbDb || !dmUsername || !entry) return;
+            // Filter by roomId — arrayRemove needs an exact object match, which
+            // fails when the local and cloud copies differ by timestamp.
+            if (!fbDb || !dmUsername || !entry || !entry.roomId) return;
             try {
-                await fbDb.collection('vtt_users').doc(dmUsername).set({
-                    archives: firebase.firestore.FieldValue.arrayRemove(entry)
-                }, { merge: true });
+                const docRef = fbDb.collection('vtt_users').doc(dmUsername);
+                const snap = await docRef.get();
+                const archives = ((snap.exists && snap.data().archives) || []).filter(a => a && a.roomId !== entry.roomId);
+                await docRef.set({ archives }, { merge: true });
             } catch(e) { console.error('☁️ Failed to remove archived campaign:', e); }
         }
 
@@ -3989,11 +3999,13 @@
         function closePastCampaignsModal() {
             document.getElementById('pastCampaignsModal').classList.remove('active');
         }
+        let _archiveDisplayCache = []; // list backing the rendered rows — buttons reference by index, never by interpolated strings
         async function renderPastCampaignsList() {
             const el = document.getElementById('pastCampaignsList');
             if (!el) return;
             el.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:1.5rem 0; font-size:0.85rem;">Loading…</div>';
             const list = await getMergedArchive();
+            _archiveDisplayCache = list;
             if (list.length === 0) {
                 el.innerHTML = `<div style="text-align:center; color:var(--text-dim); padding:1.5rem 0; font-size:0.88rem;">
                     No past campaigns yet.<br><br>
@@ -4005,17 +4017,27 @@
                 const d = new Date(ts || 0);
                 return d.toLocaleDateString() + ' · ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             };
-            el.innerHTML = list.map(e => `
+            // Buttons pass an INDEX into _archiveDisplayCache — interpolating
+            // names/ids into onclick attributes allowed attribute injection.
+            el.innerHTML = list.map((e, idx) => `
                 <div class="past-campaign-row" style="display:flex; align-items:center; gap:0.5rem; padding:0.7rem 0.6rem; border-bottom:1px solid var(--border);">
                     <div style="flex:1; min-width:0;">
                         <div style="font-family:'Cinzel',serif; color:var(--gold); font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(e.campaignName || 'Untitled')}</div>
                         <div style="font-size:0.72rem; color:var(--text-dim); margin-top:0.2rem;">📅 ${escapeHTML(fmtDate(e.archivedAt))}</div>
                         <div style="font-size:0.66rem; color:var(--text-dim); margin-top:0.15rem; font-family:monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">ID: ${escapeHTML(e.roomId)}</div>
                     </div>
-                    <button class="btn btn-small btn-success" onclick="loadArchivedCampaign('${e.roomId.replace(/'/g, "\\'")}', '${(e.campaignName || '').replace(/'/g, "\\'")}')">▶ Open</button>
-                    <button class="btn btn-small" onclick="forgetArchivedCampaign('${e.roomId.replace(/'/g, "\\'")}')" title="Remove from list (does NOT delete the saved data in cloud)">✕</button>
+                    <button class="btn btn-small btn-success" onclick="openArchivedByIndex(${idx})">▶ Open</button>
+                    <button class="btn btn-small" onclick="forgetArchivedByIndex(${idx})" title="Remove from list (does NOT delete the saved data in cloud)">✕</button>
                 </div>
             `).join('');
+        }
+        function openArchivedByIndex(idx) {
+            const e = _archiveDisplayCache[idx];
+            if (e) loadArchivedCampaign(e.roomId, e.campaignName || '');
+        }
+        function forgetArchivedByIndex(idx) {
+            const e = _archiveDisplayCache[idx];
+            if (e) forgetArchivedCampaign(e.roomId);
         }
         async function loadArchivedCampaign(roomId, name) {
             closePastCampaignsModal();
@@ -5788,10 +5810,27 @@
 
                 case 'musicCue':
                     if (isCoDM) {
-                        // Co-DM relays musicCue to its own approved players
+                        // Co-DM relays musicCue to its own approved players AND
+                        // hears it locally — they're at the table too.
                         connections.forEach(({ conn: c, approved, role }) => {
                             if (approved && role === 'player') sendToPeer(c, data);
                         });
+                        const coTrack = MUSIC_TRACKS.find(t => t.id === data.trackId);
+                        const coAudio = document.getElementById('musicAudio');
+                        if (coTrack) {
+                            stopAmbience();
+                            coAudio.volume = 0.6;
+                            const coChain = [data.src, ...resolveTrackSources(coTrack)].filter(Boolean)
+                                .filter((s, i, a) => a.indexOf(s) === i);
+                            tryPlaySources(coAudio, coChain, () => {}, () => {
+                                coAudio.removeAttribute('src');
+                                startAmbience(coTrack.id);
+                            });
+                        } else {
+                            coAudio.pause();
+                            coAudio.removeAttribute('src');
+                            stopAmbience();
+                        }
                     } else if (!isDM) {
                         // Player plays the cued track. Try the DM's winning source
                         // first, then the local/default chain, then synth.
@@ -6196,6 +6235,10 @@
             // Clear undo history and token image cache from prior session
             history = []; historyIndex = -1;
             tokenImageCache.clear();
+            // Close any mobile-toolbar panels so e.g. the staging zone doesn't
+            // float over the welcome screen after logout
+            document.querySelectorAll('.m-open').forEach(el => el.classList.remove('m-open'));
+            document.querySelectorAll('#mobileToolbar button').forEach(b => b.classList.remove('active'));
             zoom = 1; panX = 0; panY = 0;
             const zs = document.getElementById('zoomSlider');
             const zv = document.getElementById('zoomValue');
@@ -10071,6 +10114,7 @@
             if (chatUnsubscribe) { try { chatUnsubscribe(); } catch(e) {} chatUnsubscribe = null; }
             chatRoomId = null;
             chatUnread = 0;
+            _chatLastSeenId = null;
             const panel = document.getElementById('chatPanel');
             if (panel) panel.classList.remove('visible');
             const btn = document.getElementById('chatToggleBtn');
@@ -10095,15 +10139,20 @@
                 id: 'c' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
             };
             const docRef = fbDb.collection('vtt_rooms').doc(chatRoomId + '__chat');
-            // Read-trim-write keeps the doc bounded (same pattern as the dice log)
-            firebaseSignIn().then(() => docRef.get()).then(snap => {
-                let messages = (snap.exists && snap.data().messages) || [];
-                messages.push(msg);
-                if (messages.length > MAX_CHAT_MESSAGES) messages = messages.slice(-MAX_CHAT_MESSAGES);
-                return docRef.set({ messages }, { merge: true });
-            }).catch(e => console.error('💬 Chat send error:', e));
+            // Transaction (not read-then-write) so two players sending at the
+            // same moment can't overwrite each other's message.
+            firebaseSignIn().then(() =>
+                fbDb.runTransaction(tx => tx.get(docRef).then(snap => {
+                    let messages = (snap.exists && snap.data().messages) || [];
+                    messages.push(msg);
+                    if (messages.length > MAX_CHAT_MESSAGES) messages = messages.slice(-MAX_CHAT_MESSAGES);
+                    tx.set(docRef, { messages }, { merge: true });
+                }))
+            ).catch(e => console.error('💬 Chat send error:', e));
         }
 
+        let _chatLastSeenId = null; // id of the newest message already counted — count-based
+                                    // deltas break once the array is pinned at the 100 cap
         function renderChat(msgs) {
             const box = document.getElementById('chatMessages');
             if (!box) return;
@@ -10120,10 +10169,16 @@
                 </div>`;
             }).join('');
             if (wasAtBottom || prevCount === 0) box.scrollTop = box.scrollHeight;
-            // Unread badge when the panel is closed and messages grew
-            if (!panel.classList.contains('visible') && msgs.length > prevCount && prevCount > 0) {
-                chatUnread += msgs.length - prevCount;
-                updateChatBadges();
+            // Unread: count messages newer than the last one we've seen (id-based,
+            // so it keeps working after the array hits MAX_CHAT_MESSAGES)
+            if (msgs.length > 0) {
+                const lastIdx = _chatLastSeenId ? msgs.findIndex(m => m.id === _chatLastSeenId) : msgs.length - 1;
+                const fresh = lastIdx === -1 ? msgs.length : msgs.length - 1 - lastIdx;
+                if (!panel.classList.contains('visible') && fresh > 0 && _chatLastSeenId !== null) {
+                    chatUnread += fresh;
+                    updateChatBadges();
+                }
+                _chatLastSeenId = msgs[msgs.length - 1].id || _chatLastSeenId;
             }
         }
 
