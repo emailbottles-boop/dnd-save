@@ -1156,6 +1156,19 @@
                 transform: scale(0.82);
                 transform-origin: bottom left;
             }
+            /* Dice-type selector: finger-sized on touch (32×13 was unusable).
+               !important needed — the base .dice-select-btn rule is declared
+               later in the stylesheet and would win the cascade otherwise. */
+            .dice-select-btn {
+                width: 60px !important;
+                height: 26px !important;
+                font-size: 0.75rem !important;
+                border-radius: 0 0 10px 10px !important;
+            }
+            .dice-type-option {
+                padding: 0.55rem 1.1rem !important;
+                font-size: 0.95rem !important;
+            }
             /* DM Controls FAB: above the toolbar right */
             #dmControlsBtn {
                 bottom: calc(64px + env(safe-area-inset-bottom, 0px));
@@ -6491,6 +6504,12 @@
             
             if (stagingTokens.length > 0) {
                 document.getElementById('stagingZone').style.display = 'flex';
+            }
+            // Mobile toolbar: show a count badge on the 🎒 button so the DM
+            // knows tokens are waiting in the tray even while it's closed
+            const tokBtn = document.querySelector('#mobileToolbar .mtb-tokens');
+            if (tokBtn) {
+                tokBtn.textContent = stagingTokens.length > 0 ? `🎒${stagingTokens.length}` : '🎒';
             }
         }
 
