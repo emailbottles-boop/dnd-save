@@ -1,5 +1,5 @@
 /**
- * Campaign Generator for "From Sunnyville VTT v4.0"
+ * Campaign Generator for "Noodlednd.me VTT v4.0"
  * Creates "The Ruins of Ashenvale" - improved edge connectivity & river continuity
  */
 
