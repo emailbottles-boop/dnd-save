@@ -5594,15 +5594,16 @@
                             if (approved && role === 'player') sendToPeer(c, data);
                         });
                     } else if (!isDM) {
-                        // Player plays the cued track. Prefer the DM's resolved src
-                        // (may be a streaming link); fall back to synth on failure.
+                        // Player plays the cued track. Try the DM's winning source
+                        // first, then the local/default chain, then synth.
                         const track = MUSIC_TRACKS.find(t => t.id === data.trackId);
                         const audio = document.getElementById('musicAudio');
                         if (track) {
                             stopAmbience();
-                            audio.src = data.src || track.file;
                             audio.volume = 0.6;
-                            audio.play().catch(() => {
+                            const chain = [data.src, ...resolveTrackSources(track)].filter(Boolean)
+                                .filter((s, i, a) => a.indexOf(s) === i); // dedupe
+                            tryPlaySources(audio, chain, () => {}, () => {
                                 audio.removeAttribute('src');
                                 startAmbience(track.id);
                             });
@@ -8775,15 +8776,20 @@
         // =============================================
         // === MUSIC PLAYER ===
         // =============================================
+        // Each mood: local file (if the repo ships one) > default streaming link
+        // (Kevin MacLeod tracks on Wikimedia Commons, CC-BY 3.0 — credit
+        // "Kevin MacLeod, incompetech.com" wherever you publish recordings)
+        // > synth ambience. Special:FilePath is Commons' stable direct-file URL.
+        const _WM = 'https://commons.wikimedia.org/wiki/Special:FilePath/';
         const MUSIC_TRACKS = [
-            { id: 'combat',      label: 'Combat',      emoji: '⚔️',  file: 'music/combat.mp3' },
-            { id: 'boss',        label: 'Boss Battle', emoji: '💀',  file: 'music/boss.mp3' },
-            { id: 'exploration', label: 'Exploration', emoji: '🗺️', file: 'music/exploration.mp3' },
-            { id: 'dungeon',     label: 'Dungeon',     emoji: '🕯️', file: 'music/dungeon.mp3' },
-            { id: 'tavern',      label: 'Tavern',      emoji: '🍺',  file: 'music/tavern.mp3' },
-            { id: 'town',        label: 'Town',        emoji: '🏘️', file: 'music/town.mp3' },
-            { id: 'rest',        label: 'Rest',        emoji: '🌙',  file: 'music/rest.mp3' },
-            { id: 'mystery',     label: 'Mystery',     emoji: '🔮',  file: 'music/mystery.mp3' },
+            { id: 'combat',      label: 'Combat',      emoji: '⚔️',  file: 'music/combat.mp3',      url: _WM + 'MacLeod%2C_Kevin_-_Faceoff.ogg' },
+            { id: 'boss',        label: 'Boss Battle', emoji: '💀',  file: 'music/boss.mp3',        url: _WM + 'Scp_x1x_(Gateway_to_Hell)_by_Kevin_MacLeod.ogg' },
+            { id: 'exploration', label: 'Exploration', emoji: '🗺️', file: 'music/exploration.mp3', url: _WM + 'Kevin_MacLeod_-_Enchanted_Journey.ogg' },
+            { id: 'dungeon',     label: 'Dungeon',     emoji: '🕯️', file: 'music/dungeon.mp3',     url: _WM + 'The_Descent_by_Kevin_MacLeod.ogg' },
+            { id: 'tavern',      label: 'Tavern',      emoji: '🍺',  file: 'music/tavern.mp3',      url: _WM + 'Kevin_MacLeod_-_Master_of_the_Feast.ogg' },
+            { id: 'town',        label: 'Town',        emoji: '🏘️', file: 'music/town.mp3',        url: _WM + 'Kevin_MacLeod_-_Call_to_Adventure.ogg' },
+            { id: 'rest',        label: 'Rest',        emoji: '🌙',  file: 'music/rest.mp3',        url: _WM + 'Kevin_MacLeod_-_Tranquility.ogg' },
+            { id: 'mystery',     label: 'Mystery',     emoji: '🔮',  file: 'music/mystery.mp3',     url: _WM + 'Kevin_MacLeod_-_Ghost_Dance.ogg' },
         ];
         let currentTrack = null;
         let musicPanelDragOffset = null;
@@ -8804,8 +8810,32 @@
             scheduleSave(); // persist to Firestore so links survive across devices
         }
 
+        function resolveTrackSources(track) {
+            // Priority: DM's custom link > local repo file > default Commons link
+            return [customTrackUrls[track.id], track.file, track.url].filter(Boolean);
+        }
+        // Back-compat helper (tests + older callers): first source in the chain
         function resolveTrackSrc(track) {
-            return customTrackUrls[track.id] || track.file;
+            return resolveTrackSources(track)[0];
+        }
+        // Try each source in order; call onSuccess(src) on the first that plays,
+        // onFail() if none do. _playSeq invalidates in-flight chains: if the user
+        // stops or switches tracks while a chain is still probing sources, its
+        // late callbacks must not fire — otherwise a slow failure would revive
+        // audio after Stop.
+        let _playSeq = 0;
+        function tryPlaySources(audio, sources, onSuccess, onFail) {
+            const mySeq = ++_playSeq;
+            const next = (i) => {
+                if (mySeq !== _playSeq) return; // superseded by stop/another play
+                if (i >= sources.length) { onFail(); return; }
+                audio.src = sources[i];
+                audio.play().then(() => {
+                    if (mySeq !== _playSeq) { audio.pause(); return; }
+                    onSuccess(sources[i]);
+                }).catch(() => next(i + 1));
+            };
+            next(0);
         }
 
         function toggleTrackLinks() {
@@ -8991,31 +9021,34 @@
             document.querySelectorAll('.music-btn').forEach(b => b.classList.remove('playing'));
             const btn = document.getElementById('mBtn_' + trackId);
             if (btn) btn.classList.add('playing');
-            // Priority: custom URL > local music/*.mp3 > synth ambience
-            const src = resolveTrackSrc(track);
-            audio.src = src;
+            // Source chain: custom link > local music/*.mp3 > default Commons
+            // link > synth ambience. Broadcast whichever source actually played
+            // so players stream the same thing.
+            const doBroadcast = (src) => {
+                if (document.getElementById('musicBroadcast').checked) {
+                    broadcast({ type: 'musicCue', trackId, trackLabel: track.label, emoji: track.emoji, src });
+                }
+            };
             audio.volume = document.getElementById('musicVolume').value / 100;
-            audio.play().then(() => {
-                const viaLink = customTrackUrls[trackId] ? ' <span style="font-size:0.7rem;color:var(--text-dim);">(streaming)</span>' : '';
+            tryPlaySources(audio, resolveTrackSources(track), (src) => {
+                const isRemote = /^https?:/.test(src);
+                const viaLink = isRemote ? ' <span style="font-size:0.7rem;color:var(--text-dim);">(streaming)</span>' : '';
                 document.getElementById('musicNowPlaying').innerHTML =
                     `Now Playing: <span class="track-name">${track.emoji} ${track.label}</span>${viaLink}`;
-            }).catch(() => {
+                doBroadcast(src);
+            }, () => {
                 audio.removeAttribute('src');
                 const ok = startAmbience(trackId);
-                const hint = customTrackUrls[trackId] ? 'link failed — check the URL' : `drop music/${track.id}.mp3 in for a real track`;
                 document.getElementById('musicNowPlaying').innerHTML = ok
-                    ? `Now Playing: <span class="track-name">${track.emoji} ${track.label}</span> <span style="font-size:0.7rem;color:var(--text-dim);">(synth ambience — ${hint})</span>`
+                    ? `Now Playing: <span class="track-name">${track.emoji} ${track.label}</span> <span style="font-size:0.7rem;color:var(--text-dim);">(synth ambience — no source reachable)</span>`
                     : `<span style="color:var(--danger)">⚠ Could not play "${track.label}"</span>`;
+                doBroadcast(null); // players run their own chain, may still succeed
             });
             currentTrack = trackId;
-            // Optionally broadcast music cue to players (include the resolved src
-            // so players stream the exact same source, custom link included)
-            if (document.getElementById('musicBroadcast').checked) {
-                broadcast({ type: 'musicCue', trackId, trackLabel: track.label, emoji: track.emoji, src });
-            }
         }
 
         function stopMusic() {
+            _playSeq++; // invalidate any source chain still probing
             const audio = document.getElementById('musicAudio');
             audio.pause();
             audio.removeAttribute('src');
