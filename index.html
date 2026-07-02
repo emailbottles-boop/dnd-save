@@ -5578,13 +5578,17 @@
                             if (approved && role === 'player') sendToPeer(c, data);
                         });
                     } else if (!isDM) {
-                        // Player plays the cued track
+                        // Player plays the cued track (MP3 if present, synth ambience otherwise)
                         const track = MUSIC_TRACKS.find(t => t.id === data.trackId);
                         const audio = document.getElementById('musicAudio');
                         if (track) {
+                            stopAmbience();
                             audio.src = track.file;
                             audio.volume = 0.6;
-                            audio.play().catch(() => {});
+                            audio.play().catch(() => {
+                                audio.removeAttribute('src');
+                                startAmbience(track.id);
+                            });
                             const notice = document.createElement('div');
                             notice.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--accent);padding:0.5rem 1rem;border-radius:8px;font-size:0.8rem;z-index:9999;pointer-events:none;';
                             notice.textContent = `${track.emoji} DM playing: ${track.label}`;
@@ -5592,6 +5596,8 @@
                             setTimeout(() => notice.remove(), 4500);
                         } else {
                             audio.pause();
+                            audio.removeAttribute('src');
+                            stopAmbience();
                         }
                     }
                     break;
@@ -8765,6 +8771,138 @@
         let currentTrack = null;
         let musicPanelDragOffset = null;
 
+        // === SYNTH AMBIENCE ENGINE ===
+        // If a track's MP3 is missing (music/ folder ships empty), we synthesize
+        // a looping ambience for that mood with WebAudio instead of erroring.
+        // Drop real MP3s into music/ any time — files always take priority.
+        let ambienceCtx = null;      // lazy AudioContext
+        let ambienceNodes = [];      // active nodes for teardown
+        let ambienceGain = null;     // master gain (volume slider drives this)
+        let ambienceTimer = null;    // interval for sparse random events (drips, blips)
+        let ambienceActive = null;   // preset id currently sounding, or null
+
+        // Each preset: drones = [{freq, detune, type, gain}], noise = {filterFreq, filterQ, gain},
+        // lfo = {rate, depth} breathing on the master, events = optional sparse random pings
+        const AMBIENCE_PRESETS = {
+            combat:      { drones: [{f:110,d:0,t:'sawtooth',g:.05},{f:164.8,d:6,t:'sawtooth',g:.04},{f:55,d:0,t:'square',g:.05}], noise: {ff:220,q:1.2,g:.05},  lfo:{r:2.4,dp:.35}, events:{minMs:400, maxMs:800, f:[880,660], dur:.06, g:.12, type:'square'} },
+            boss:        { drones: [{f:55,d:0,t:'sawtooth',g:.09},{f:58,d:0,t:'sawtooth',g:.07},{f:82.4,d:5,t:'triangle',g:.05}], noise: {ff:120,q:.8,g:.07},  lfo:{r:.15,dp:.3},  events:{minMs:2500,maxMs:6000, f:[41.2,49], dur:1.2, g:.18, type:'sine'} },
+            exploration: { drones: [{f:130.8,d:0,t:'sine',g:.07},{f:196,d:3,t:'sine',g:.06},{f:329.6,d:-4,t:'triangle',g:.03}],   noise: {ff:1200,q:.4,g:.025}, lfo:{r:.08,dp:.4} },
+            dungeon:     { drones: [{f:61.7,d:0,t:'sawtooth',g:.08},{f:92.5,d:4,t:'triangle',g:.04}],                              noise: {ff:150,q:1,g:.05},   lfo:{r:.06,dp:.35}, events:{minMs:3000,maxMs:9000, f:[1760,2093,1568], dur:.35, g:.06, type:'sine'} },
+            tavern:      { drones: [{f:146.8,d:0,t:'triangle',g:.06},{f:220,d:5,t:'triangle',g:.05},{f:293.7,d:-5,t:'sine',g:.04}],noise: {ff:500,q:.7,g:.06},  lfo:{r:.5,dp:.25},  events:{minMs:900, maxMs:2600, f:[523,587,659,494], dur:.12, g:.05, type:'triangle'} },
+            town:        { drones: [{f:146.8,d:0,t:'sine',g:.07},{f:220,d:2,t:'sine',g:.06},{f:370,d:-3,t:'triangle',g:.03}],      noise: {ff:900,q:.5,g:.03},  lfo:{r:.12,dp:.3} },
+            rest:        { drones: [{f:174.6,d:0,t:'sine',g:.06},{f:261.6,d:2,t:'sine',g:.05}],                                    noise: {ff:600,q:.3,g:.02},  lfo:{r:.05,dp:.5} },
+            mystery:     { drones: [{f:207.7,d:0,t:'sine',g:.05},{f:311.1,d:8,t:'sine',g:.04},{f:415.3,d:-8,t:'sine',g:.03}],      noise: {ff:2000,q:.6,g:.03}, lfo:{r:.1,dp:.45},  events:{minMs:1800,maxMs:5000, f:[1244.5,1046.5,932.3], dur:.8, g:.07, type:'sine'} },
+        };
+
+        function _makeNoiseBuffer(ctx) {
+            const len = ctx.sampleRate * 2;
+            const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            let last = 0;
+            for (let i = 0; i < len; i++) {
+                // Brown-ish noise: integrate white noise for a warm rumble
+                const white = Math.random() * 2 - 1;
+                last = (last + 0.02 * white) / 1.02;
+                data[i] = last * 3.5;
+            }
+            return buf;
+        }
+
+        function startAmbience(trackId) {
+            const preset = AMBIENCE_PRESETS[trackId];
+            if (!preset) return false;
+            stopAmbience();
+            try {
+                if (!ambienceCtx) ambienceCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (ambienceCtx.state === 'suspended') ambienceCtx.resume().catch(() => {});
+                const ctx = ambienceCtx;
+                const master = ctx.createGain();
+                const vol = (document.getElementById('musicVolume')?.value ?? 60) / 100;
+                master.gain.value = 0;
+                master.gain.linearRampToValueAtTime(vol, ctx.currentTime + 1.5); // fade in
+                master.connect(ctx.destination);
+                ambienceGain = master;
+
+                // Breathing LFO on the master gain
+                if (preset.lfo) {
+                    const lfo = ctx.createOscillator();
+                    const lfoGain = ctx.createGain();
+                    lfo.frequency.value = preset.lfo.r;
+                    lfoGain.gain.value = vol * preset.lfo.dp * 0.5;
+                    lfo.connect(lfoGain); lfoGain.connect(master.gain);
+                    lfo.start();
+                    ambienceNodes.push(lfo, lfoGain);
+                }
+
+                // Drone layers
+                preset.drones.forEach(d => {
+                    const osc = ctx.createOscillator();
+                    const g = ctx.createGain();
+                    osc.type = d.t; osc.frequency.value = d.f; osc.detune.value = d.d;
+                    g.gain.value = d.g;
+                    osc.connect(g); g.connect(master);
+                    osc.start();
+                    ambienceNodes.push(osc, g);
+                });
+
+                // Filtered noise bed
+                if (preset.noise) {
+                    const src = ctx.createBufferSource();
+                    src.buffer = _makeNoiseBuffer(ctx);
+                    src.loop = true;
+                    const filt = ctx.createBiquadFilter();
+                    filt.type = 'lowpass'; filt.frequency.value = preset.noise.ff; filt.Q.value = preset.noise.q;
+                    const g = ctx.createGain();
+                    g.gain.value = preset.noise.g;
+                    src.connect(filt); filt.connect(g); g.connect(master);
+                    src.start();
+                    ambienceNodes.push(src, filt, g);
+                }
+
+                // Sparse random events (drips, blips, distant horns)
+                if (preset.events) {
+                    const ev = preset.events;
+                    const scheduleNext = () => {
+                        ambienceTimer = setTimeout(() => {
+                            try {
+                                const osc = ctx.createOscillator();
+                                const g = ctx.createGain();
+                                osc.type = ev.type;
+                                osc.frequency.value = ev.f[Math.floor(Math.random() * ev.f.length)];
+                                g.gain.setValueAtTime(ev.g, ctx.currentTime);
+                                g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + ev.dur);
+                                osc.connect(g); g.connect(master);
+                                osc.start(); osc.stop(ctx.currentTime + ev.dur + 0.05);
+                            } catch(e) {}
+                            scheduleNext();
+                        }, ev.minMs + Math.random() * (ev.maxMs - ev.minMs));
+                    };
+                    scheduleNext();
+                }
+
+                ambienceActive = trackId;
+                return true;
+            } catch(e) {
+                console.error('🎵 Ambience engine failed:', e);
+                return false;
+            }
+        }
+
+        function stopAmbience() {
+            clearTimeout(ambienceTimer); ambienceTimer = null;
+            if (ambienceGain && ambienceCtx) {
+                // Quick fade to avoid a click
+                try { ambienceGain.gain.linearRampToValueAtTime(0, ambienceCtx.currentTime + 0.3); } catch(e) {}
+            }
+            const nodes = ambienceNodes; ambienceNodes = [];
+            const gainRef = ambienceGain; ambienceGain = null;
+            ambienceActive = null;
+            setTimeout(() => {
+                nodes.forEach(n => { try { n.stop && n.stop(); } catch(e) {} try { n.disconnect(); } catch(e) {} });
+                try { gainRef && gainRef.disconnect(); } catch(e) {}
+            }, 350);
+        }
+
         function initMusicPanel() {
             const grid = document.getElementById('musicGrid');
             grid.innerHTML = MUSIC_TRACKS.map(t => `
@@ -8786,22 +8924,27 @@
             const track = MUSIC_TRACKS.find(t => t.id === trackId);
             if (!track) return;
             const audio = document.getElementById('musicAudio');
-            // Toggle off if same track playing
-            if (currentTrack === trackId && !audio.paused) { stopMusic(); return; }
+            // Toggle off if same track playing (file OR synth)
+            if (currentTrack === trackId && (!audio.paused || ambienceActive === trackId)) { stopMusic(); return; }
+            stopAmbience();
             // Update UI buttons
             document.querySelectorAll('.music-btn').forEach(b => b.classList.remove('playing'));
             const btn = document.getElementById('mBtn_' + trackId);
             if (btn) btn.classList.add('playing');
-            // Play audio
+            // Try the MP3 first; if it's missing, fall back to the synth ambience engine
             audio.src = track.file;
             audio.volume = document.getElementById('musicVolume').value / 100;
-            audio.play().catch(() => {
+            audio.play().then(() => {
                 document.getElementById('musicNowPlaying').innerHTML =
-                    `<span style="color:var(--danger)">⚠ No MP3 file yet for "${track.label}" — add music/${track.id}.mp3</span>`;
+                    `Now Playing: <span class="track-name">${track.emoji} ${track.label}</span>`;
+            }).catch(() => {
+                audio.removeAttribute('src');
+                const ok = startAmbience(trackId);
+                document.getElementById('musicNowPlaying').innerHTML = ok
+                    ? `Now Playing: <span class="track-name">${track.emoji} ${track.label}</span> <span style="font-size:0.7rem;color:var(--text-dim);">(synth ambience — drop music/${track.id}.mp3 in for a real track)</span>`
+                    : `<span style="color:var(--danger)">⚠ Could not play "${track.label}"</span>`;
             });
             currentTrack = trackId;
-            document.getElementById('musicNowPlaying').innerHTML =
-                `Now Playing: <span class="track-name">${track.emoji} ${track.label}</span>`;
             // Optionally broadcast music cue to players
             if (document.getElementById('musicBroadcast').checked) {
                 broadcast({ type: 'musicCue', trackId, trackLabel: track.label, emoji: track.emoji });
@@ -8811,7 +8954,8 @@
         function stopMusic() {
             const audio = document.getElementById('musicAudio');
             audio.pause();
-            audio.src = '';
+            audio.removeAttribute('src');
+            stopAmbience();
             currentTrack = null;
             document.querySelectorAll('.music-btn').forEach(b => b.classList.remove('playing'));
             document.getElementById('musicNowPlaying').textContent = 'Nothing playing';
@@ -8823,6 +8967,9 @@
         function setMusicVolume(val) {
             const audio = document.getElementById('musicAudio');
             audio.volume = val / 100;
+            if (ambienceGain && ambienceCtx) {
+                try { ambienceGain.gain.linearRampToValueAtTime(val / 100, ambienceCtx.currentTime + 0.1); } catch(e) {}
+            }
         }
 
 
