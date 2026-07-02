@@ -324,7 +324,7 @@
         /* CONNECTION TAB */
         .connection-tab-container {
             position: fixed;
-            top: 70px;
+            top: var(--header-h, 70px); /* measured live — survives header wrap */
             left: 20px;
             z-index: 501;
             display: none;
@@ -375,7 +375,7 @@
         /* CONNECTION PANEL */
         .connection-panel {
             position: fixed;
-            top: 70px;
+            top: var(--header-h, 70px);
             left: 0;
             right: 0;
             background: var(--bg-card);
@@ -972,9 +972,16 @@
                 padding: 0.4rem 0.6rem;
                 font-size: 0.78rem;
             }
-            /* Logout btn: icon-only on mobile to save header space */
-            #logoutBtn { font-size: 0; padding: 0.4rem 0.55rem; }
+            /* Icon-only header buttons on mobile — with Music/Chat/Characters/
+               Logout all present, text labels wrap the header to two rows and
+               the Connection tab (positioned below a one-row header) lands on
+               top of the second row. Icons keep it to one row. */
+            #logoutBtn, #musicToggleBtn, #charSheetBtn { font-size: 0; padding: 0.4rem 0.55rem; }
             #logoutBtn::before { content: '🚪'; font-size: 1rem; }
+            #musicToggleBtn::before { content: '🎵'; font-size: 1rem; }
+            #charSheetBtn::before { content: '📜'; font-size: 1rem; }
+            .header { flex-wrap: nowrap; }
+            .header-actions { flex-wrap: nowrap; }
             /* Hide the cloud-save text on phones — too much for a small header.
                Replaced with a subtle dot indicator (see #firebaseSection below). */
             #firebaseSection #firebaseStatus { display: none; }
@@ -1041,7 +1048,7 @@
             }
             /* Connection panel — let it grow with its content, allow horizontal scroll cleanly */
             .connection-panel.open {
-                top: calc(60px + env(safe-area-inset-top, 0px));
+                top: var(--header-h, 60px);
             }
             .connection-content {
                 grid-template-columns: 1fr;
@@ -4342,7 +4349,7 @@
             if (!el) {
                 el = document.createElement('div');
                 el.id = 'loadingToast';
-                el.style.cssText = 'position:fixed;top:90px;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--accent);color:var(--text);padding:0.6rem 1.1rem;border-radius:8px;font-size:0.9rem;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.4);transition:opacity 0.3s;pointer-events:none;';
+                el.style.cssText = 'position:fixed;top:calc(var(--header-h, 70px) + 20px);left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--accent);color:var(--text);padding:0.6rem 1.1rem;border-radius:8px;font-size:0.9rem;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.4);transition:opacity 0.3s;pointer-events:none;';
                 document.body.appendChild(el);
             }
             el.textContent = text;
@@ -4855,6 +4862,21 @@
                 cancelAutoReconnect();
             }
         }
+
+        // Keep --header-h synced to the real header height so fixed elements
+        // (connection tab/panel, loading toast) sit below it even if the
+        // header ever wraps to two rows or buttons appear/disappear.
+        (function syncHeaderHeight() {
+            const header = document.querySelector('.header');
+            if (!header) return;
+            const apply = () => document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+            apply();
+            if (typeof ResizeObserver === 'function') {
+                new ResizeObserver(apply).observe(header);
+            } else {
+                window.addEventListener('resize', apply);
+            }
+        })();
 
         function resizeCanvas() {
             const container = document.querySelector('.canvas-container');
