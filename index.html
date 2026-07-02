@@ -3050,6 +3050,17 @@
             </label>
             <button class="music-stop-btn" onclick="stopMusic()">■ Stop</button>
         </div>
+        <div style="border-top:1px solid var(--border); margin-top:0.4rem; padding-top:0.35rem;">
+            <button onclick="toggleTrackLinks()" style="background:none;border:none;color:var(--text-dim);font-size:0.72rem;cursor:pointer;width:100%;text-align:left;padding:0.15rem 0;">
+                🔗 Track Links <span id="trackLinksArrow">▸</span>
+            </button>
+            <div id="trackLinksEditor" style="display:none; max-height:180px; overflow-y:auto;">
+                <div style="font-size:0.66rem;color:var(--text-dim);margin:0.25rem 0 0.4rem;">
+                    Paste a direct MP3/OGG link per mood (archive.org, freepd.com…). Players stream the same link. If a link fails, synth ambience plays instead.
+                </div>
+                <div id="trackLinksList"><!-- filled by JS --></div>
+            </div>
+        </div>
         <audio id="musicAudio" loop></audio>
     </div>
 
@@ -3939,6 +3950,7 @@
                     fogGroupNames: Object.keys(fogGroups),
                     campaignName,
                     campaignTheme: activeTheme,
+                    musicUrls: customTrackUrls,
                     playerData,
                     savedAt: Date.now()
                 });
@@ -4086,6 +4098,10 @@
                 }
                 if (main.campaignTheme) {
                     applyColorTheme(main.campaignTheme);
+                }
+                if (main.musicUrls && typeof main.musicUrls === 'object') {
+                    customTrackUrls = main.musicUrls;
+                    try { localStorage.setItem('fracturedSkyMusicUrls', JSON.stringify(customTrackUrls)); } catch(e) {}
                 }
                 updateFirebaseStatus('☁️ Loaded', '#10b981');
                 console.log('🔥 Loaded from Firestore');
@@ -5578,12 +5594,13 @@
                             if (approved && role === 'player') sendToPeer(c, data);
                         });
                     } else if (!isDM) {
-                        // Player plays the cued track (MP3 if present, synth ambience otherwise)
+                        // Player plays the cued track. Prefer the DM's resolved src
+                        // (may be a streaming link); fall back to synth on failure.
                         const track = MUSIC_TRACKS.find(t => t.id === data.trackId);
                         const audio = document.getElementById('musicAudio');
                         if (track) {
                             stopAmbience();
-                            audio.src = track.file;
+                            audio.src = data.src || track.file;
                             audio.volume = 0.6;
                             audio.play().catch(() => {
                                 audio.removeAttribute('src');
@@ -8771,6 +8788,49 @@
         let currentTrack = null;
         let musicPanelDragOffset = null;
 
+        // === CUSTOM TRACK LINKS ===
+        // The DM can paste a direct audio URL per mood — streamed straight from
+        // the web, no downloads needed. Priority: custom URL > local music/*.mp3
+        // > synth ambience. The resolved URL rides along in the musicCue
+        // broadcast so players stream the exact same source.
+        let customTrackUrls = {};
+        try { customTrackUrls = JSON.parse(localStorage.getItem('fracturedSkyMusicUrls')) || {}; } catch(e) {}
+
+        function setTrackUrl(trackId, url) {
+            url = (url || '').trim();
+            if (url) customTrackUrls[trackId] = url;
+            else delete customTrackUrls[trackId];
+            try { localStorage.setItem('fracturedSkyMusicUrls', JSON.stringify(customTrackUrls)); } catch(e) {}
+            scheduleSave(); // persist to Firestore so links survive across devices
+        }
+
+        function resolveTrackSrc(track) {
+            return customTrackUrls[track.id] || track.file;
+        }
+
+        function toggleTrackLinks() {
+            const ed = document.getElementById('trackLinksEditor');
+            const arrow = document.getElementById('trackLinksArrow');
+            const open = ed.style.display === 'none';
+            ed.style.display = open ? 'block' : 'none';
+            arrow.textContent = open ? '▾' : '▸';
+            if (open) renderTrackLinks();
+        }
+
+        function renderTrackLinks() {
+            const list = document.getElementById('trackLinksList');
+            if (!list) return;
+            list.innerHTML = MUSIC_TRACKS.map(t => `
+                <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem;">
+                    <span style="font-size:0.8rem; width:1.4rem; text-align:center;">${t.emoji}</span>
+                    <input type="url" placeholder="${t.label} — paste link or leave empty for synth"
+                        value="${escapeHTML(customTrackUrls[t.id] || '')}"
+                        onchange="setTrackUrl('${t.id}', this.value)"
+                        style="flex:1; padding:0.3rem 0.4rem; background:var(--bg-dark); border:1px solid var(--border); border-radius:5px; color:var(--text); font-size:0.68rem;">
+                </div>
+            `).join('');
+        }
+
         // === SYNTH AMBIENCE ENGINE ===
         // If a track's MP3 is missing (music/ folder ships empty), we synthesize
         // a looping ambience for that mood with WebAudio instead of erroring.
@@ -8931,23 +8991,27 @@
             document.querySelectorAll('.music-btn').forEach(b => b.classList.remove('playing'));
             const btn = document.getElementById('mBtn_' + trackId);
             if (btn) btn.classList.add('playing');
-            // Try the MP3 first; if it's missing, fall back to the synth ambience engine
-            audio.src = track.file;
+            // Priority: custom URL > local music/*.mp3 > synth ambience
+            const src = resolveTrackSrc(track);
+            audio.src = src;
             audio.volume = document.getElementById('musicVolume').value / 100;
             audio.play().then(() => {
+                const viaLink = customTrackUrls[trackId] ? ' <span style="font-size:0.7rem;color:var(--text-dim);">(streaming)</span>' : '';
                 document.getElementById('musicNowPlaying').innerHTML =
-                    `Now Playing: <span class="track-name">${track.emoji} ${track.label}</span>`;
+                    `Now Playing: <span class="track-name">${track.emoji} ${track.label}</span>${viaLink}`;
             }).catch(() => {
                 audio.removeAttribute('src');
                 const ok = startAmbience(trackId);
+                const hint = customTrackUrls[trackId] ? 'link failed — check the URL' : `drop music/${track.id}.mp3 in for a real track`;
                 document.getElementById('musicNowPlaying').innerHTML = ok
-                    ? `Now Playing: <span class="track-name">${track.emoji} ${track.label}</span> <span style="font-size:0.7rem;color:var(--text-dim);">(synth ambience — drop music/${track.id}.mp3 in for a real track)</span>`
+                    ? `Now Playing: <span class="track-name">${track.emoji} ${track.label}</span> <span style="font-size:0.7rem;color:var(--text-dim);">(synth ambience — ${hint})</span>`
                     : `<span style="color:var(--danger)">⚠ Could not play "${track.label}"</span>`;
             });
             currentTrack = trackId;
-            // Optionally broadcast music cue to players
+            // Optionally broadcast music cue to players (include the resolved src
+            // so players stream the exact same source, custom link included)
             if (document.getElementById('musicBroadcast').checked) {
-                broadcast({ type: 'musicCue', trackId, trackLabel: track.label, emoji: track.emoji });
+                broadcast({ type: 'musicCue', trackId, trackLabel: track.label, emoji: track.emoji, src });
             }
         }
 
