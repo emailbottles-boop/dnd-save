@@ -700,7 +700,10 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.6);
             max-width: 80%;
             overflow-x: auto;
-            z-index: 50;
+            /* Above the Dice Advantage panel (7600) so tokens are always
+               tappable — the two overlap at the bottom-center, and a lower
+               z-index left the tray buried behind the panel. */
+            z-index: 7700;
         }
 
         .staging-label {
@@ -1102,7 +1105,7 @@
                roller) when tokens are staged; hidden when empty. */
             .staging-zone {
                 bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-                z-index: 600;
+                /* z-index inherited from base (7700) — always above everything */
             }
 
             /* Dice roller: always visible, compact, bottom-left */
@@ -1134,6 +1137,14 @@
         /* Very narrow phones (<360px) — collapse Characters button to icon */
         @media (max-width: 360px) {
             .header-actions .btn { font-size: 0.72rem; padding: 0.35rem 0.5rem; }
+        }
+        /* Landscape phones are wider than the 768px "mobile" breakpoint, so the
+           desktop widgets would reappear and cover the token tray. A short
+           viewport (<=500px tall) means a phone in landscape — hide them. */
+        @media (max-height: 500px) {
+            #minimapContainer,
+            #diceAdvantagePanel,
+            #diceRollLog { display: none !important; }
         }
 
         /* Semi-transparent backdrop behind the bottom sheet */
