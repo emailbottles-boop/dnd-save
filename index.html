@@ -1089,79 +1089,27 @@
             body:has(.dm-panel.open) #playerPanelDock,
             body:has(.dm-panel.open) #dmControlsBtn { display: none; }
 
-            /* ── MOBILE TOOLBAR: one bar replaces the pile of floating widgets ──
-               Navigator, dice advantage, token staging, and the roll log are
-               hidden until toggled from the toolbar — ONE panel open at a time. */
-            #mobileToolbar {
-                display: flex;
-                position: fixed;
-                left: 50%;
-                transform: translateX(-50%);
-                bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-                z-index: 560;
-                background: var(--bg-card);
-                border: 1px solid var(--border);
-                border-radius: 26px;
-                padding: 0.3rem 0.45rem;
-                gap: 0.25rem;
-                box-shadow: 0 4px 18px rgba(0,0,0,0.55);
-            }
-            #mobileToolbar button {
-                background: none;
-                border: none;
-                color: var(--text-dim);
-                font-size: 1.15rem;
-                padding: 0.45rem 0.6rem;
-                border-radius: 20px;
-                cursor: pointer;
-                line-height: 1;
-                min-width: 44px;
-                min-height: 40px;
-            }
-            #mobileToolbar button.active {
-                background: var(--bg-hover);
-                color: var(--accent);
-                box-shadow: inset 0 0 0 1px var(--border);
-            }
-            /* Hide toolbar on the welcome screen and under the DM sheet */
-            body:has(#welcomeScreen:not(.hidden)) #mobileToolbar,
-            body:has(.dm-panel.open) #mobileToolbar { display: none; }
-
-            /* The toggled widgets: hidden unless opened from the toolbar.
-               (Token staging is NOT here — it's a tray that auto-appears below
-               the map when tokens are staged, restored per user request.) */
-            #minimapContainer:not(.m-open),
-            #diceAdvantagePanel:not(.m-open),
-            #diceRollLog:not(.m-open) { display: none !important; }
-            /* Token staging tray: sits above the toolbar/dice roller so tokens
-               aren't hidden behind them; only shown when renderStagingTokens
-               sets display:flex (i.e. when tokens exist). */
+            /* ── MOBILE: keep it simple ──
+               No floating toolbar. The Navigator, Dice Advantage, and Roll Log
+               are desktop power-widgets — on a phone they just clutter the map,
+               so they're hidden. The essentials stay: the map, the token tray
+               (below the map, empty until tokens exist), the dice roller, DM
+               Controls, and chat via the 💬 button in the top header. */
+            #minimapContainer,
+            #diceAdvantagePanel,
+            #diceRollLog { display: none !important; }
+            /* Token staging tray auto-appears below the map (above the dice
+               roller) when tokens are staged; hidden when empty. */
             .staging-zone {
-                bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+                bottom: calc(88px + env(safe-area-inset-bottom, 0px));
                 z-index: 600;
             }
-            /* Opened widgets sit just above the toolbar; the navigator clears
-               the dice roller which lives in the same bottom-left corner */
-            #minimapContainer.m-open {
-                bottom: calc(160px + env(safe-area-inset-bottom, 0px));
-                left: 8px;
-            }
-            #diceAdvantagePanel.m-open {
-                bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-            }
-            #diceRollLog.m-open {
-                display: block !important;
-                bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-                top: auto;
-                max-height: 40vh;
-                overflow-y: auto;
-            }
 
-            /* Dice roller: always visible, compact, pinned above the toolbar left */
+            /* Dice roller: always visible, compact, bottom-left */
             .dice-roller-wrapper {
                 left: 10px !important;
                 right: auto !important;
-                bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+                bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important;
                 transform: scale(0.82);
                 transform-origin: bottom left;
             }
@@ -1178,14 +1126,10 @@
                 padding: 0.55rem 1.1rem !important;
                 font-size: 0.95rem !important;
             }
-            /* DM Controls FAB: above the toolbar right */
+            /* DM Controls FAB: bottom-right, above the safe area */
             #dmControlsBtn {
-                bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+                bottom: calc(14px + env(safe-area-inset-bottom, 0px));
             }
-        }
-        /* Toolbar is mobile-only */
-        @media (min-width: 768px) {
-            #mobileToolbar { display: none; }
         }
         /* Very narrow phones (<360px) — collapse Characters button to icon */
         @media (max-width: 360px) {
@@ -2692,13 +2636,6 @@
         </div>
     </div>
 
-    <!-- MOBILE TOOLBAR — collapses the floating widgets into one bar (phone only) -->
-    <div id="mobileToolbar">
-        <button class="mtb-nav"    onclick="mobileTogglePanel('nav', this)"    title="Navigator">🗺️</button>
-        <button class="mtb-adv"    onclick="mobileTogglePanel('adv', this)"    title="Dice Advantage">🎯</button>
-        <button class="mtb-log"    onclick="mobileTogglePanel('log', this)"    title="Roll Log">📜</button>
-        <button class="mtb-chat"   onclick="toggleChat()"                      title="Chat">💬</button>
-    </div>
 
     <!-- LIVE CHAT — floating panel on desktop, swipe-in page on mobile -->
     <button id="chatToggleBtn" onclick="toggleChat()" title="Chat">💬<span class="chat-badge" id="chatBadge">0</span></button>
@@ -6260,8 +6197,6 @@
             tokenImageCache.clear();
             // Close any mobile-toolbar panels so e.g. the staging zone doesn't
             // float over the welcome screen after logout
-            document.querySelectorAll('.m-open').forEach(el => el.classList.remove('m-open'));
-            document.querySelectorAll('#mobileToolbar button').forEach(b => b.classList.remove('active'));
             _armedToken = null;
             zoom = 1; panX = 0; panY = 0;
             const zs = document.getElementById('zoomSlider');
@@ -9306,29 +9241,6 @@
             `).join('');
         }
 
-        // ── Mobile toolbar: one floating panel at a time ──
-        const MOBILE_PANELS = {
-            nav:    'minimapContainer',
-            adv:    'diceAdvantagePanel',
-            log:    'diceRollLog',
-        };
-        function mobileTogglePanel(key, btn) {
-            const targetId = MOBILE_PANELS[key];
-            const target = document.getElementById(targetId);
-            if (!target) return;
-            const opening = !target.classList.contains('m-open');
-            // Close all panels + clear all button highlights (accordion behavior)
-            Object.values(MOBILE_PANELS).forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.classList.remove('m-open');
-            });
-            document.querySelectorAll('#mobileToolbar button').forEach(b => b.classList.remove('active'));
-            if (opening) {
-                target.classList.add('m-open');
-                if (btn) btn.classList.add('active');
-            }
-        }
-
         function toggleMusicPanel() {
             const panel = document.getElementById('musicPanel');
             panel.classList.toggle('visible');
@@ -10238,8 +10150,6 @@
                 badge.textContent = chatUnread > 9 ? '9+' : chatUnread;
                 badge.classList.toggle('show', chatUnread > 0);
             }
-            const mtb = document.querySelector('#mobileToolbar .mtb-chat');
-            if (mtb) mtb.textContent = chatUnread > 0 ? `💬${chatUnread > 9 ? '9+' : chatUnread}` : '💬';
             const hb = document.getElementById('chatHeaderBtn');
             if (hb) hb.textContent = chatUnread > 0 ? `💬 ${chatUnread > 9 ? '9+' : chatUnread}` : '💬';
         }
