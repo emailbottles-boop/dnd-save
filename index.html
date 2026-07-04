@@ -169,15 +169,27 @@
 
         .welcome-title {
             font-family: 'Cinzel', serif;
-            font-size: clamp(1.3rem, 6vw, 2.6rem);
+            /* Sized so the real Cinzel font (wider than the serif fallback)
+               fits "NOODLEDND.ME" on one line without the last letters being
+               clipped by -webkit-background-clip:text. */
+            font-size: clamp(1.15rem, 5vw, 2.1rem);
             font-weight: 700;
             background: linear-gradient(135deg, var(--gold), var(--accent));
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 1rem;
-            line-height: 1.1;
-            padding: 0 0.5rem;
-            white-space: nowrap;
+            line-height: 1.15;
+            /* fit-content + auto margins wrap the gradient box tightly to the
+               text so the clip can't cut a glyph; extra right padding covers
+               the last glyph's side bearing. overflow-wrap lets it drop to a
+               second line rather than clip if a viewport is truly tiny. */
+            width: fit-content;
+            max-width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 0 0.6rem 0 0.4rem;
+            overflow-wrap: anywhere;
         }
 
         .welcome-subtitle {
