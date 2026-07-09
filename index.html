@@ -2827,6 +2827,12 @@
                     </div>
 
                     <div style="margin-bottom: 1rem;">
+                        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Player Characters (drop a player's .character.json to add their token):</div>
+                        <button class="btn" onclick="document.getElementById('campaignCharInput').click()" style="width:100%;">🎭 Import Player Character</button>
+                        <input type="file" id="campaignCharInput" accept=".json,.character.json,application/json" style="display:none;" onchange="importCampaignCharacterFile(event)">
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
                         <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Past Campaigns (every campaign you've started fresh from):</div>
                         <button class="btn" onclick="openPastCampaignsModal()" style="width:100%;">📂 Open Past Campaigns</button>
                     </div>
@@ -4140,6 +4146,7 @@
                     campaignName,
                     campaignTheme: activeTheme,
                     musicUrls: customTrackUrls,
+                    campaignCharacters,
                     playerData,
                     savedAt: Date.now()
                 });
@@ -4292,6 +4299,7 @@
                     customTrackUrls = main.musicUrls;
                     try { localStorage.setItem('fracturedSkyMusicUrls', JSON.stringify(customTrackUrls)); } catch(e) {}
                 }
+                campaignCharacters = (main.campaignCharacters && typeof main.campaignCharacters === 'object') ? main.campaignCharacters : {};
                 updateFirebaseStatus('☁️ Loaded', '#10b981');
                 console.log('🔥 Loaded from Firestore');
                 if (isDM) {
@@ -4473,6 +4481,8 @@
         let draggedToken = null;
         let draggedPlacedToken = null; // For moving tokens already on the map
         let tokenDragOffset = { x: 0, y: 0 };
+        let _tokenPressX = 0, _tokenPressY = 0, _tokenPressId = null; // tap-vs-drag detection
+        let _viewOnlyTapToken = null; // a non-movable but linked token the user pressed
 
         // Fog
         let activeFogGroup = 'everyone';
@@ -5746,6 +5756,16 @@
                     }
                     break;
 
+                case 'campaignCharacters':
+                    // DM imported/updated characters bound to the campaign — mirror
+                    // them so linked tokens open the right sheet and Phase-3
+                    // advantage rows can find the character.
+                    if (data.characters && typeof data.characters === 'object') {
+                        campaignCharacters = data.characters;
+                        try { renderAdvantagePanel(); } catch(e) {}
+                    }
+                    break;
+
                 case 'colorTheme':
                     if (data.theme) applyColorTheme(data.theme);
                     break;
@@ -6224,6 +6244,7 @@
             // Close any mobile-toolbar panels so e.g. the staging zone doesn't
             // float over the welcome screen after logout
             _armedToken = null;
+            campaignCharacters = {};
             zoom = 1; panX = 0; panY = 0;
             const zs = document.getElementById('zoomSlider');
             const zv = document.getElementById('zoomValue');
@@ -7709,6 +7730,9 @@
                     const tokenSize = token.size || 12;
                     const dist = Math.hypot(mx - token.x, my - token.y);
                     if (dist < tokenSize) {
+                        // Record press position to distinguish a tap (open the
+                        // linked character sheet) from a drag (move the token).
+                        _tokenPressX = e.clientX; _tokenPressY = e.clientY; _tokenPressId = token.id;
                         // Check permissions: DM can move any token, players can only move their own
                         if (isDM || token.owner === myName) {
                             draggedPlacedToken = token;
@@ -7716,6 +7740,8 @@
                             console.log('🎯 Selected token:', token.owner, token.icon || 'image');
                             return;
                         } else {
+                            // Non-owner: can't move, but CAN tap to view the linked sheet
+                            if (token.charId) { _viewOnlyTapToken = token; return; }
                             console.log('🚫 Cannot move token owned by:', token.owner);
                             return;
                         }
@@ -7925,15 +7951,31 @@
         });
 
         canvas.addEventListener('mouseup', (e) => {
+            // A non-owner pressed a linked token: if it was a tap (no drag),
+            // open its character sheet.
+            if (_viewOnlyTapToken) {
+                const moved = Math.hypot(e.clientX - _tokenPressX, e.clientY - _tokenPressY) > 6;
+                if (!moved) { const ch = getCharacterById(_viewOnlyTapToken.charId); if (ch) openQuickViewForChar(ch); }
+                _viewOnlyTapToken = null; _tokenPressId = null;
+                return;
+            }
             // Token movement complete - broadcast to all
             if (draggedPlacedToken) {
-                console.log('✅ Token moved:', draggedPlacedToken.owner);
-                broadcast({
-                    type: 'tokenUpdate',
-                    tokens: [...stagingTokens, ...placedTokens]
-                });
+                const moved = Math.hypot(e.clientX - _tokenPressX, e.clientY - _tokenPressY) > 6;
+                if (!moved && draggedPlacedToken.charId) {
+                    // Tap on a linked token (no drag) → open its character sheet
+                    const ch = getCharacterById(draggedPlacedToken.charId);
+                    if (ch) openQuickViewForChar(ch);
+                } else {
+                    console.log('✅ Token moved:', draggedPlacedToken.owner);
+                    broadcast({
+                        type: 'tokenUpdate',
+                        tokens: [...stagingTokens, ...placedTokens]
+                    });
+                }
                 draggedPlacedToken = null;
                 tokenDragOffset = { x: 0, y: 0 };
+                _tokenPressId = null;
             }
             
             // Image manipulation complete — broadcast any change (move, resize, rotate)
@@ -8160,9 +8202,15 @@
         }, { passive: false });
         canvas.addEventListener('touchend', (e) => {
             if (_touchMode === 'tokenDrag') {
-                // Commit token move and broadcast
                 if (draggedPlacedToken) {
-                    broadcast({ type: 'tokenUpdate', tokens: [...stagingTokens, ...placedTokens] });
+                    const moved = Math.hypot(_touchLastX - _touchStartX, _touchLastY - _touchStartY) > 8;
+                    if (!moved && draggedPlacedToken.charId) {
+                        // Tap (no drag) on a linked token → open its character sheet
+                        const ch = getCharacterById(draggedPlacedToken.charId);
+                        if (ch) openQuickViewForChar(ch);
+                    } else {
+                        broadcast({ type: 'tokenUpdate', tokens: [...stagingTokens, ...placedTokens] });
+                    }
                     draggedPlacedToken = null;
                     tokenDragOffset = { x: 0, y: 0 };
                 }
@@ -9454,6 +9502,53 @@
             return characters.length - 1;
         }
 
+        // ── Campaign characters (Phase 2) ──
+        // Characters the DM has imported INTO the live campaign, keyed by id.
+        // These sync to Firebase + players and are what placed tokens link to
+        // via token.charId. Kept separate from the local `characters` roster.
+        let campaignCharacters = {};
+
+        function getCharacterById(id) {
+            if (!id) return null;
+            if (campaignCharacters[id]) return campaignCharacters[id];
+            const local = characters.find(c => c && c.id === id);
+            return local || null;
+        }
+
+        // DM imports a player's character file into the campaign: registers the
+        // character and stages a token linked to it, then syncs to everyone.
+        function importCampaignCharacterFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const char = parseCharacterFile(e.target.result);
+                if (!char) { alert("That doesn't look like a Noodlednd character file."); return; }
+                if (!char.id) char.id = 'char_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+                campaignCharacters[char.id] = char;
+                // Stage a token bound to this character (DM taps map to place it)
+                const token = {
+                    id: 'tok_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                    type: 'emoji',
+                    icon: char.emoji || '⚔️',
+                    color: '#6d28d9',
+                    size: 14,
+                    owner: char.player || char.name || 'Player',
+                    charId: char.id,
+                    name: char.name || 'Character',
+                    approved: true,
+                };
+                stagingTokens.push(token);
+                try { renderStagingTokens(); } catch(e2) {}
+                broadcast({ type: 'campaignCharacters', characters: campaignCharacters });
+                broadcast({ type: 'tokenUpdate', tokens: [...stagingTokens, ...placedTokens] });
+                try { scheduleSave(); } catch(e2) {}
+                try { showLoadingToast('🎭 Imported ' + (char.name || 'character') + ' — tap the map to place their token', 4500); } catch(e2) {}
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
         function exportActiveCharacter() {
             if (activeCharIdx < 0 || !characters[activeCharIdx]) {
                 alert('Open a character first, then Export.');
@@ -10083,6 +10178,19 @@
             const c = characters[idx];
             if (!c) return;
             _quickViewCharIdx = idx;
+            populateQuickView(c);
+        }
+
+        // Open the quick-view for a character OBJECT (used when tapping a
+        // token linked via charId — the character may live in campaignCharacters
+        // rather than the local roster).
+        function openQuickViewForChar(c) {
+            if (!c) return;
+            _quickViewCharIdx = characters.findIndex(x => x && x.id === c.id); // -1 if not local
+            populateQuickView(c);
+        }
+
+        function populateQuickView(c) {
             const qv = document.getElementById('charQuickView');
             document.getElementById('qvName').textContent = (c.emoji || '⚔️') + ' ' + (c.name || 'Unnamed');
             document.getElementById('qvSub').textContent = `${c.class || '?'} ${c.level || 1} • ${c.race || '?'} • ${c.alignment || ''}`;
