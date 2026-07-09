@@ -3231,9 +3231,12 @@
     <div class="char-overlay" id="charOverlay">
         <div class="char-header">
             <h1>📜 Characters</h1>
-            <div style="display:flex;gap:0.5rem;align-items:center;">
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
                 <button class="btn btn-primary btn-small" onclick="saveCharacter()">💾 Save</button>
                 <button class="btn btn-small" onclick="newCharacter()">+ New</button>
+                <button class="btn btn-small" onclick="exportActiveCharacter()" title="Download this character as a file to send to your DM">📤 Export</button>
+                <button class="btn btn-small" onclick="document.getElementById('charFileInput').click()" title="Import a character file">📥 Import</button>
+                <input type="file" id="charFileInput" accept=".json,.character.json,application/json" style="display:none;" onchange="importCharacterFile(event)">
                 <button class="btn btn-small" onclick="closeCharSheet()">✕ Close</button>
             </div>
         </div>
@@ -9393,10 +9396,88 @@
                 const saved = localStorage.getItem('fracturedSky_characters');
                 characters = saved ? JSON.parse(saved) : [];
             } catch(e) { characters = []; }
+            // Backfill stable ids for characters created before ids existed —
+            // needed so tokens can link to a character and imports can dedupe.
+            let changed = false;
+            characters.forEach(c => {
+                if (c && !c.id) { c.id = 'char_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8); changed = true; }
+            });
+            if (changed) saveCharactersToStorage();
         }
 
         function saveCharactersToStorage() {
             localStorage.setItem('fracturedSky_characters', JSON.stringify(characters));
+        }
+
+        // ── Single-character file export/import ──
+        // A player builds a character, downloads it as <name>.character.json,
+        // and sends the file to the DM. The DM (or anyone) can import it back.
+        function exportCharacter(idx) {
+            const c = characters[idx];
+            if (!c) return;
+            if (!c.id) { c.id = 'char_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8); saveCharactersToStorage(); }
+            const payload = { noodlednd_character: true, version: 1, character: c };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const safe = (c.name || 'character').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'character';
+            a.href = url;
+            a.download = safe + '.character.json';
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            try { showLoadingToast('💾 Saved ' + (c.name || 'character') + '.character.json', 3000); } catch(e) {}
+        }
+
+        // Parse a character file's contents into a character object, tolerant of
+        // a few shapes: our wrapped {noodlednd_character, character}, or a bare
+        // character object.
+        function parseCharacterFile(text) {
+            let data;
+            try { data = JSON.parse(text); } catch(e) { return null; }
+            if (data && data.noodlednd_character && data.character) return data.character;
+            if (data && typeof data === 'object' && ('str' in data || 'name' in data) && 'hpMax' in data) return data;
+            return null;
+        }
+
+        // Import into the local character roster. If a character with the same
+        // id already exists, replace it (so re-importing an updated sheet
+        // updates in place); otherwise append with a fresh id to avoid clashes.
+        // Returns the index of the imported character, or -1 on failure.
+        function importCharacterObject(char) {
+            if (!char || typeof char !== 'object') return -1;
+            loadCharactersFromStorage();
+            if (!char.id) char.id = 'char_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+            const existing = characters.findIndex(c => c.id === char.id);
+            if (existing >= 0) { characters[existing] = char; saveCharactersToStorage(); return existing; }
+            characters.push(char);
+            saveCharactersToStorage();
+            return characters.length - 1;
+        }
+
+        function exportActiveCharacter() {
+            if (activeCharIdx < 0 || !characters[activeCharIdx]) {
+                alert('Open a character first, then Export.');
+                return;
+            }
+            // Persist any unsaved edits before exporting
+            try { saveCharacter(); } catch(e) {}
+            exportCharacter(activeCharIdx);
+        }
+
+        function importCharacterFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const char = parseCharacterFile(e.target.result);
+                if (!char) { alert('That doesn\'t look like a Noodlednd character file.'); return; }
+                const idx = importCharacterObject(char);
+                if (idx < 0) { alert('Could not import that character.'); return; }
+                try { showCharSheet(); loadCharacter(idx); } catch(e2) {}
+                try { showLoadingToast('📥 Imported ' + (char.name || 'character'), 3000); } catch(e2) {}
+            };
+            reader.readAsText(file);
+            event.target.value = '';
         }
 
         function renderCharList() {
@@ -9430,6 +9511,7 @@
 
         function newCharacter() {
             const char = {
+                id: 'char_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
                 name:'', player: myName || '', class:'Fighter', level:1, race:'', background:'', alignment:'True Neutral',
                 xp:0, multiclass:'', emoji:'⚔️',
                 str:10, dex:10, con:10, int:10, wis:10, cha:10,
