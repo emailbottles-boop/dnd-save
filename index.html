@@ -1833,6 +1833,11 @@
             margin-left: auto;
         }
         .advantage-clear-btn:hover { border-color: var(--danger); color: var(--danger); }
+        /* Per-character advantage row (Phase 3) */
+        .advantage-char-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 0.3rem 0; border-top: 1px solid rgba(255,255,255,0.05); }
+        .advantage-char-row:first-child { border-top: none; }
+        .advantage-char-name { font-family: 'Cinzel', serif; font-size: 0.8rem; color: var(--gold); min-width: 90px; font-weight: 600; }
+        .advantage-char-name .adv-owner { display:block; font-size:0.62rem; color: var(--text-dim); font-family: 'Inter', sans-serif; font-weight: 400; }
 
         /* FEATURES TAB */
         .class-intro { background: linear-gradient(135deg, var(--bg-card), var(--bg-dark)); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1rem; }
@@ -3629,12 +3634,9 @@
             </div>
         </div>
         <div class="dice-advantage-body" id="diceAdvantageBody">
-            <div class="advantage-chars-row" id="advantageCharsRow">
-                <span class="advantage-chars-label">Character:</span>
-                <!-- populated by JS -->
-            </div>
-            <div class="advantage-skills-row" id="advantageSkillsRow">
-                <!-- populated by JS -->
+            <div id="advantageRows"><!-- one row per character, populated by JS --></div>
+            <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.45rem; flex-wrap:wrap;">
+                <button id="dmRollAsBtn" onclick="toggleDMRollAs()" class="advantage-clear-btn" style="display:none; margin-left:0;">🎭 Roll as anyone: OFF</button>
                 <button class="advantage-clear-btn" onclick="clearDiceAdvantage()">✕ Clear</button>
             </div>
         </div>
@@ -5766,6 +5768,11 @@
                     }
                     break;
 
+                case 'roster':
+                    // Players render the shared lobby the DM broadcasts
+                    if (data.roster && !isDM) { try { renderRoster(data.roster); } catch(e) {} }
+                    break;
+
                 case 'colorTheme':
                     if (data.theme) applyColorTheme(data.theme);
                     break;
@@ -6448,26 +6455,53 @@
             });
         }
 
+        // Which character(s) a person is playing, for the lobby roster
+        function charNamesForPlayer(playerName) {
+            return Object.values(campaignCharacters || {})
+                .filter(c => c && c.player === playerName)
+                .map(c => (c.emoji || '⚔️') + ' ' + (c.name || 'Character'));
+        }
+
         function updateUserList() {
+            // DM builds the authoritative roster (with each player's character)
+            // and broadcasts it so players see the same lobby.
+            if (isDM && !isCoDM) {
+                const roster = [{ name: myName, role: 'DM', chars: [] }];
+                connections.forEach(({ name, role, approved }) => {
+                    if (approved) {
+                        const label = role === 'co-dm' ? 'Co-DM' : role === 'dm' ? 'DM' : 'Player';
+                        roster.push({ name, role: label, chars: charNamesForPlayer(name) });
+                    }
+                });
+                renderRoster(roster);
+                try { broadcast({ type: 'roster', roster }); } catch(e) {}
+            } else {
+                // Co-DM / fallback: render from local connections without broadcasting
+                const roster = [];
+                if (isDM) roster.push({ name: myName, role: isCoDM ? 'Co-DM' : 'DM', chars: [] });
+                connections.forEach(({ name, role, approved }) => {
+                    if (approved) roster.push({ name, role: role === 'co-dm' ? 'Co-DM' : role === 'dm' ? 'DM' : 'Player', chars: charNamesForPlayer(name) });
+                });
+                renderRoster(roster);
+            }
+        }
+
+        // Shared renderer used by DM, co-DM, and players (via the 'roster' broadcast)
+        function renderRoster(users) {
             const container = document.getElementById('userList');
-            const users = [];
-            if (isDM) users.push({ name: myName, role: isCoDM ? 'Co-DM' : 'DM' });
-            connections.forEach(({ name, role, approved }) => {
-                if (approved) {
-                    const label = role === 'co-dm' ? 'Co-DM' : role === 'dm' ? 'DM' : 'Player';
-                    users.push({ name, role: label });
-                }
-            });
-            if (users.length === 0) {
-                container.innerHTML = '<p style="font-size:0.85rem;color:var(--text-dim);">No users</p>';
+            if (!container) return;
+            if (!users || users.length === 0) {
+                container.innerHTML = '<p style="font-size:0.85rem;color:var(--text-dim);">No one here yet</p>';
                 return;
             }
-            container.innerHTML = users.map(u => `
-                <div class="user-item">
-                    <span>${u.name}</span>
-                    <span class="user-role ${u.role === 'Co-DM' ? 'co-dm' : ''}">${u.role}</span>
-                </div>
-            `).join('');
+            container.innerHTML = users.map(u => {
+                const chars = (u.chars && u.chars.length)
+                    ? `<span style="display:block;font-size:0.68rem;color:var(--text-dim);margin-top:1px;">${u.chars.map(escapeHTML).join(', ')}</span>` : '';
+                return `<div class="user-item">
+                    <span>${escapeHTML(u.name)}${chars}</span>
+                    <span class="user-role ${u.role === 'Co-DM' ? 'co-dm' : ''}">${escapeHTML(u.role)}</span>
+                </div>`;
+            }).join('');
         }
 
         function copyRoomCode() {
@@ -10412,9 +10446,12 @@
         // =============================================
         // DICE ADVANTAGE PANEL
         // =============================================
-        let selectedAdvantageBonus = 0;
+        // selectedAdvantage: the one skill highlighted across all rows that will
+        // be added to the next d20. { charId, charName, key, bonus, label }
+        let selectedAdvantage = null;
+        let selectedAdvantageBonus = 0;      // kept in sync for the roll code
         let selectedAdvantageLabel = null;
-        let advantageCharIdx = 0;
+        let _dmRollAsAll = false;            // DM extra button: show ALL characters' rows
 
         function showDiceAdvantagePanel() {
             const panel = document.getElementById('diceAdvantagePanel');
@@ -10433,73 +10470,91 @@
             if (isOpen) renderAdvantagePanel();
         }
 
+        // Which characters get an advantage row. Players see only the character(s)
+        // linked to them (campaignCharacters where player === myName). DMs see
+        // their own by default, or ALL characters when "Roll as anyone" is on.
+        // Falls back to the local roster when there are no campaign characters
+        // (offline / solo / before the DM imports anyone).
+        function getAdvantageChars() {
+            const campaign = Object.values(campaignCharacters || {});
+            if (isDM && _dmRollAsAll) return campaign.length ? campaign : characters.slice();
+            const mine = campaign.filter(c => c && (c.player === myName || c.name === myName));
+            if (mine.length) return mine;
+            if (campaign.length && !isDM) return []; // player with no linked char sees no rows
+            return characters.slice(); // local fallback
+        }
+
         function renderAdvantagePanel() {
             loadCharactersFromStorage();
-            const _charsRow = document.getElementById('advantageCharsRow');
-            const _skillsRow = document.getElementById('advantageSkillsRow');
-            if (!_charsRow || !_skillsRow) return;
-            if (characters.length === 0) {
-                _charsRow.innerHTML = '<span class="advantage-chars-label">No characters — create one in the character sheet.</span>';
-                _skillsRow.innerHTML = '<button class="advantage-clear-btn" onclick="clearDiceAdvantage()">✕ Clear</button>';
+            const rowsEl = document.getElementById('advantageRows');
+            if (!rowsEl) return;
+            // DM extra button visibility + label
+            const dmBtn = document.getElementById('dmRollAsBtn');
+            if (dmBtn) {
+                dmBtn.style.display = isDM ? 'inline-block' : 'none';
+                dmBtn.textContent = '🎭 Roll as anyone: ' + (_dmRollAsAll ? 'ON' : 'OFF');
+            }
+            const chars = getAdvantageChars();
+            if (chars.length === 0) {
+                rowsEl.innerHTML = '<span class="advantage-chars-label">' +
+                    (isDM ? 'No characters yet — import a player\'s character file in DM Controls.'
+                          : 'No character linked to you yet — send your character file to the DM.') +
+                    '</span>';
                 return;
             }
-            if (advantageCharIdx >= characters.length) advantageCharIdx = 0;
-
-            const charRow = _charsRow;
-            charRow.innerHTML = '<span class="advantage-chars-label">Character:</span>' +
-                characters.map((c, i) =>
-                    `<button class="advantage-char-btn ${i === advantageCharIdx ? 'active' : ''}" onclick="selectAdvantageChar(${i})">${c.emoji || '⚔️'} ${c.name || ('Char ' + (i+1))}</button>`
-                ).join('');
-
-            renderAdvantageSkills();
+            const attrs = ['str','dex','con','int','wis','cha'];
+            rowsEl.innerHTML = chars.map(c => {
+                const cid = c.id || (c.name || 'char');
+                const nameLine = `<div class="advantage-char-name">${escapeHTML(c.emoji || '⚔️')} ${escapeHTML(c.name || 'Character')}` +
+                    (c.player ? `<span class="adv-owner">${escapeHTML(c.player)}</span>` : '') + `</div>`;
+                const buttons = attrs.map(a => {
+                    const val = parseInt(c[a]) || 10;
+                    const mod = Math.floor((val - 10) / 2);
+                    const modStr = (mod >= 0 ? '+' : '') + mod;
+                    const key = a.toUpperCase();
+                    const sel = selectedAdvantage && selectedAdvantage.charId === cid && selectedAdvantage.key === key;
+                    return `<button class="advantage-skill-btn ${sel ? 'selected' : ''}"
+                        onclick="selectDiceAdvantage('${String(cid).replace(/'/g,"\\'")}', '${key}', ${mod})">
+                        <span class="adv-attr">${key}</span><span class="adv-mod">${modStr}</span></button>`;
+                }).join('');
+                return `<div class="advantage-char-row">${nameLine}${buttons}</div>`;
+            }).join('');
         }
 
-        function selectAdvantageChar(idx) {
-            advantageCharIdx = idx;
-            renderAdvantagePanel();
-        }
-
-        function renderAdvantageSkills() {
-            const c = characters[advantageCharIdx];
-            if (!c) return;
-            const attrs = [
-                { key: 'STR', val: c.str || 10 },
-                { key: 'DEX', val: c.dex || 10 },
-                { key: 'CON', val: c.con || 10 },
-                { key: 'INT', val: c.int || 10 },
-                { key: 'WIS', val: c.wis || 10 },
-                { key: 'CHA', val: c.cha || 10 }
-            ];
-            const charName = c.name || ('Char ' + (advantageCharIdx + 1));
-            const skillsRow = document.getElementById('advantageSkillsRow');
-            if (!skillsRow) return;
-            skillsRow.innerHTML = attrs.map(({ key, val }) => {
-                const mod = Math.floor((parseInt(val) - 10) / 2);
-                const modStr = (mod >= 0 ? '+' : '') + mod;
-                const label = key + ' ' + modStr;
-                const isSelected = selectedAdvantageLabel === label && selectedAdvantageBonus === mod;
-                return `<button class="advantage-skill-btn ${isSelected ? 'selected' : ''}"
-                            onclick="selectDiceAdvantage('${key}', ${mod}, '${label}')">
-                            <span class="adv-attr">${key}</span>
-                            <span class="adv-mod">${modStr}</span>
-                        </button>`;
-            }).join('') + '<button class="advantage-clear-btn" onclick="clearDiceAdvantage()">✕ Clear</button>';
-        }
-
-        function selectDiceAdvantage(attr, bonus, label) {
-            selectedAdvantageBonus = bonus;
+        function selectDiceAdvantage(charId, key, mod) {
+            // Toggle off if the same button is tapped again
+            if (selectedAdvantage && selectedAdvantage.charId === charId && selectedAdvantage.key === key) {
+                clearDiceAdvantage();
+                return;
+            }
+            // Resolve the character's display name from whichever list it's in
+            const chars = getAdvantageChars();
+            const c = chars.find(x => (x.id || x.name) === charId);
+            const charName = (c && c.name) || 'Character';
+            const modStr = (mod >= 0 ? '+' : '') + mod;
+            const label = charName + ' · ' + key + ' ' + modStr;
+            selectedAdvantage = { charId, charName, key, bonus: mod, label };
+            selectedAdvantageBonus = mod;
             selectedAdvantageLabel = label;
             const el = document.getElementById('advantageSelectedLabel');
             if (el) el.textContent = label;
-            renderAdvantageSkills();
+            renderAdvantagePanel();
         }
 
         function clearDiceAdvantage() {
+            selectedAdvantage = null;
             selectedAdvantageBonus = 0;
             selectedAdvantageLabel = null;
             const el = document.getElementById('advantageSelectedLabel');
             if (el) el.textContent = '';
-            renderAdvantageSkills();
+            renderAdvantagePanel();
+        }
+
+        function toggleDMRollAs() {
+            _dmRollAsAll = !_dmRollAsAll;
+            // Selecting a character we can no longer see would be confusing — clear
+            clearDiceAdvantage();
+            renderAdvantagePanel();
         }
 
         // =============================================
