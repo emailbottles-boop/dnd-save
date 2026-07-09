@@ -4484,6 +4484,7 @@
         let draggedPlacedToken = null; // For moving tokens already on the map
         let tokenDragOffset = { x: 0, y: 0 };
         let _tokenPressX = 0, _tokenPressY = 0, _tokenPressId = null; // tap-vs-drag detection
+        let _tokenStartTX = 0, _tokenStartTY = 0; // token's world coords at press
         let _viewOnlyTapToken = null; // a non-movable but linked token the user pressed
 
         // Fog
@@ -6252,6 +6253,10 @@
             // float over the welcome screen after logout
             _armedToken = null;
             campaignCharacters = {};
+            selectedAdvantage = null;   // no ghost bonus into the next session
+            _dmRollAsAll = false;
+            _viewOnlyTapToken = null; _tokenPressId = null;
+            try { const _l = document.getElementById('advantageSelectedLabel'); if (_l) _l.textContent = ''; } catch(e) {}
             zoom = 1; panX = 0; panY = 0;
             const zs = document.getElementById('zoomSlider');
             const zv = document.getElementById('zoomValue');
@@ -7764,9 +7769,10 @@
                     const tokenSize = token.size || 12;
                     const dist = Math.hypot(mx - token.x, my - token.y);
                     if (dist < tokenSize) {
-                        // Record press position to distinguish a tap (open the
-                        // linked character sheet) from a drag (move the token).
+                        // Record press position + the token's start coords to tell
+                        // a tap (open the linked sheet) from a drag (move + sync).
                         _tokenPressX = e.clientX; _tokenPressY = e.clientY; _tokenPressId = token.id;
+                        _tokenStartTX = token.x; _tokenStartTY = token.y;
                         // Check permissions: DM can move any token, players can only move their own
                         if (isDM || token.owner === myName) {
                             draggedPlacedToken = token;
@@ -7995,12 +8001,14 @@
             }
             // Token movement complete - broadcast to all
             if (draggedPlacedToken) {
-                const moved = Math.hypot(e.clientX - _tokenPressX, e.clientY - _tokenPressY) > 6;
-                if (!moved && draggedPlacedToken.charId) {
-                    // Tap on a linked token (no drag) → open its character sheet
+                // "Moved" = the token's actual position changed (snapToGrid means a
+                // tiny nudge may leave it exactly put). Any real move syncs; only a
+                // true no-move tap on a linked token opens the sheet.
+                const tokenMoved = draggedPlacedToken.x !== _tokenStartTX || draggedPlacedToken.y !== _tokenStartTY;
+                if (!tokenMoved && draggedPlacedToken.charId) {
                     const ch = getCharacterById(draggedPlacedToken.charId);
                     if (ch) openQuickViewForChar(ch);
-                } else {
+                } else if (tokenMoved) {
                     console.log('✅ Token moved:', draggedPlacedToken.owner);
                     broadcast({
                         type: 'tokenUpdate',
@@ -8143,6 +8151,7 @@
                             if (isDM || token.owner === myName) {
                                 draggedPlacedToken = token;
                                 tokenDragOffset = { x: mx - token.x, y: my - token.y };
+                                _tokenStartTX = token.x; _tokenStartTY = token.y;
                                 _touchMode = 'tokenDrag';
                                 _touchLastX = _touchStartX = t.clientX;
                                 _touchLastY = _touchStartY = t.clientY;
@@ -8237,12 +8246,12 @@
         canvas.addEventListener('touchend', (e) => {
             if (_touchMode === 'tokenDrag') {
                 if (draggedPlacedToken) {
-                    const moved = Math.hypot(_touchLastX - _touchStartX, _touchLastY - _touchStartY) > 8;
-                    if (!moved && draggedPlacedToken.charId) {
-                        // Tap (no drag) on a linked token → open its character sheet
+                    const tokenMoved = draggedPlacedToken.x !== _tokenStartTX || draggedPlacedToken.y !== _tokenStartTY;
+                    if (!tokenMoved && draggedPlacedToken.charId) {
+                        // True no-move tap on a linked token → open its character sheet
                         const ch = getCharacterById(draggedPlacedToken.charId);
                         if (ch) openQuickViewForChar(ch);
-                    } else {
+                    } else if (tokenMoved) {
                         broadcast({ type: 'tokenUpdate', tokens: [...stagingTokens, ...placedTokens] });
                     }
                     draggedPlacedToken = null;
@@ -9549,6 +9558,19 @@
             return local || null;
         }
 
+        // Only the fields the VTT actually needs (advantage rows + quick-view).
+        // Keeps the synced campaignCharacters tiny (~300B vs several KB) so the
+        // main Firestore doc can't approach the 1MB limit even with a big party.
+        // The player's FULL sheet stays local + in their exported file.
+        function slimCharacter(c) {
+            return {
+                id: c.id, name: c.name || 'Character', emoji: c.emoji || '⚔️', player: c.player || '',
+                level: c.level || 1, class: c.class || '', race: c.race || '', alignment: c.alignment || '',
+                str: c.str || 10, dex: c.dex || 10, con: c.con || 10, int: c.int || 10, wis: c.wis || 10, cha: c.cha || 10,
+                hp: c.hp || 0, hpMax: c.hpMax || 1, ac: c.ac || 10, speed: c.speed || 30,
+            };
+        }
+
         // DM imports a player's character file into the campaign: registers the
         // character and stages a token linked to it, then syncs to everyone.
         function importCampaignCharacterFile(event) {
@@ -9559,7 +9581,15 @@
                 const char = parseCharacterFile(e.target.result);
                 if (!char) { alert("That doesn't look like a Noodlednd character file."); return; }
                 if (!char.id) char.id = 'char_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-                campaignCharacters[char.id] = char;
+                // Guard against id collisions: if this id is already taken by a
+                // DIFFERENT character (different name+player — e.g. two players
+                // built from the same template file), mint a fresh id so the
+                // second import doesn't silently overwrite the first.
+                const clash = campaignCharacters[char.id];
+                if (clash && (clash.name !== char.name || clash.player !== char.player)) {
+                    char.id = 'char_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+                }
+                campaignCharacters[char.id] = slimCharacter(char);
                 // Stage a token bound to this character (DM taps map to place it)
                 const token = {
                     id: 'tok_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -10447,11 +10477,27 @@
         // DICE ADVANTAGE PANEL
         // =============================================
         // selectedAdvantage: the one skill highlighted across all rows that will
-        // be added to the next d20. { charId, charName, key, bonus, label }
+        // be added to the next d20. Stored as { charId, key } ONLY — the bonus
+        // and label are computed LIVE from the character at render/roll time so
+        // stat edits or a removed character can't leave a frozen "ghost" bonus.
         let selectedAdvantage = null;
-        let selectedAdvantageBonus = 0;      // kept in sync for the roll code
-        let selectedAdvantageLabel = null;
         let _dmRollAsAll = false;            // DM extra button: show ALL characters' rows
+
+        // Resolve the current selection against the live character list.
+        // Returns { bonus, label, charName } or null if nothing valid is selected
+        // (e.g. the character was removed). This is the single source of truth
+        // for what the next d20 adds.
+        function getActiveAdvantage() {
+            if (!selectedAdvantage) return null;
+            const chars = getAdvantageChars();
+            const c = chars.find(x => (x.id || x.name) === selectedAdvantage.charId);
+            if (!c) return null; // selected character no longer available → no bonus
+            const key = selectedAdvantage.key;
+            const val = parseInt(c[key.toLowerCase()]) || 10;
+            const mod = Math.floor((val - 10) / 2);
+            const label = (c.name || 'Character') + ' · ' + key + ' ' + (mod >= 0 ? '+' : '') + mod;
+            return { bonus: mod, label, charName: c.name || 'Character' };
+        }
 
         function showDiceAdvantagePanel() {
             const panel = document.getElementById('diceAdvantagePanel');
@@ -10495,6 +10541,14 @@
                 dmBtn.textContent = '🎭 Roll as anyone: ' + (_dmRollAsAll ? 'ON' : 'OFF');
             }
             const chars = getAdvantageChars();
+            // Reconcile a stale selection: if the selected character is no longer
+            // in the list, drop the selection so there's no ghost bonus.
+            if (selectedAdvantage && !chars.find(x => (x.id || x.name) === selectedAdvantage.charId)) {
+                selectedAdvantage = null;
+            }
+            const active = getActiveAdvantage();
+            const _lbl = document.getElementById('advantageSelectedLabel');
+            if (_lbl) _lbl.textContent = active ? active.label : '';
             if (chars.length === 0) {
                 rowsEl.innerHTML = '<span class="advantage-chars-label">' +
                     (isDM ? 'No characters yet — import a player\'s character file in DM Controls.'
@@ -10527,24 +10581,13 @@
                 clearDiceAdvantage();
                 return;
             }
-            // Resolve the character's display name from whichever list it's in
-            const chars = getAdvantageChars();
-            const c = chars.find(x => (x.id || x.name) === charId);
-            const charName = (c && c.name) || 'Character';
-            const modStr = (mod >= 0 ? '+' : '') + mod;
-            const label = charName + ' · ' + key + ' ' + modStr;
-            selectedAdvantage = { charId, charName, key, bonus: mod, label };
-            selectedAdvantageBonus = mod;
-            selectedAdvantageLabel = label;
-            const el = document.getElementById('advantageSelectedLabel');
-            if (el) el.textContent = label;
+            // Store only the reference; bonus/label are computed live at roll time
+            selectedAdvantage = { charId, key };
             renderAdvantagePanel();
         }
 
         function clearDiceAdvantage() {
             selectedAdvantage = null;
-            selectedAdvantageBonus = 0;
-            selectedAdvantageLabel = null;
             const el = document.getElementById('advantageSelectedLabel');
             if (el) el.textContent = '';
             renderAdvantagePanel();
@@ -10569,9 +10612,11 @@
             const btn = document.getElementById('diceRollerBtn');
             btn.classList.add('rolling');
             setTimeout(() => btn.classList.remove('rolling'), 500);
-            // Bonus/advantage only applies to d20
-            const bonus = sides === 20 ? (selectedAdvantageBonus || 0) : 0;
-            const advLabel = sides === 20 ? (selectedAdvantageLabel || null) : null;
+            // Bonus/advantage only applies to d20, and is computed LIVE from the
+            // selected character right now (never a frozen snapshot).
+            const active = sides === 20 ? getActiveAdvantage() : null;
+            const bonus = active ? active.bonus : 0;
+            const advLabel = active ? active.label : null;
             showDiceResult(result, myName || 'Anonymous', true, rollId, bonus, advLabel, false, sides);
             const msg = { type: 'diceRoll', result, rollerName: myName || 'Anonymous', rollId, bonus, advLabel, diceSides: sides };
             if (!isDM) {
