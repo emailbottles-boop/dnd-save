@@ -2547,23 +2547,6 @@
     </div>
 
     <!-- FOG GROUP MODAL -->
-    <div class="modal" id="fogGroupModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-icon">👥</div>
-                <div class="modal-title">Create Fog Group</div>
-            </div>
-            <div class="form-group">
-                <label>GROUP NAME</label>
-                <input type="text" id="fogGroupName" placeholder="e.g., Party A, Solo Explorer" required>
-            </div>
-            <div class="info">Players in this group will share fog visibility</div>
-            <div class="btn-group">
-                <button class="btn btn-primary" onclick="createFogGroup()" style="flex: 1;">Create Group</button>
-                <button class="btn" onclick="closeFogGroupModal()">Cancel</button>
-            </div>
-        </div>
-    </div>
 
     <!-- CO-DM LOGIN MODAL -->
     <div class="modal" id="coDMModal">
@@ -2964,14 +2947,7 @@
                     </button>
                     
                     <div id="fogControls" style="opacity: 0.5; pointer-events: none; transition: all 0.3s;">
-                        <div class="fog-groups" id="fogGroups">
-                            <div class="fog-group-item active">
-                                <span class="fog-group-name">Everyone</span>
-                                <button class="btn btn-small btn-primary" onclick="setActiveFogGroup('everyone')">Active</button>
-                            </div>
-                        </div>
-
-                        <button class="btn" onclick="showFogGroupModal()" style="width: 100%; margin-bottom: 0.75rem;">+ New Group</button>
+                        <div style="font-size:0.75rem; color:var(--text-dim); margin-bottom:0.75rem;">Fog hides the map from all players equally. Turn on Paint Mode, then tap/drag to reveal (or check off Reveal to hide again).</div>
 
                         <div style="margin-bottom: 0.75rem;">
                             <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem;">Fog Paint Mode:</div>
@@ -8284,51 +8260,14 @@
             e.preventDefault();
         }, { passive: false });
 
-        // === FOG ===
-        function showFogGroupModal() {
-            document.getElementById('fogGroupModal').classList.add('active');
-        }
-
-        function closeFogGroupModal() {
-            document.getElementById('fogGroupModal').classList.remove('active');
-        }
-
-        function createFogGroup() {
-            const name = document.getElementById('fogGroupName').value.trim();
-            if (!name) return;
-            
-            const id = 'group_' + Date.now();
-            const fogCanvas = document.createElement('canvas');
-            fogCanvas.width = GRID_SIZE * 3;
-            fogCanvas.height = GRID_SIZE * 3;
-            const fogCtx = fogCanvas.getContext('2d');
-            fogCtx.fillStyle = 'rgba(0,0,0,1)'; // Full opacity black fog
-            fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
-            
-            fogGroups[id] = { name, canvas: fogCanvas };
-            renderFogGroups();
-            closeFogGroupModal();
-            
-            document.getElementById('fogGroupName').value = '';
-        }
-
-        function renderFogGroups() {
-            const container = document.getElementById('fogGroups');
-            container.innerHTML = Object.keys(fogGroups).map(id => `
-                <div class="fog-group-item ${activeFogGroup === id ? 'active' : ''}">
-                    <span class="fog-group-name">${fogGroups[id].name}</span>
-                    <button class="btn btn-small ${activeFogGroup === id ? 'btn-primary' : ''}" onclick="setActiveFogGroup('${id}')">
-                        ${activeFogGroup === id ? 'Active' : 'Select'}
-                    </button>
-                </div>
-            `).join('');
-        }
-
-        function setActiveFogGroup(groupId) {
-            activeFogGroup = groupId;
-            renderFogGroups();
-            draw();
-        }
+        // === FOG === (single shared layer — everyone sees the same fog)
+        // Group functions kept as harmless no-ops so any lingering caller
+        // (e.g. an old broadcast/load path) can't throw.
+        function showFogGroupModal() {}
+        function closeFogGroupModal() {}
+        function createFogGroup() {}
+        function renderFogGroups() {}
+        function setActiveFogGroup() { activeFogGroup = 'everyone'; }
 
         function setFogPaintMode(mode) {
             fogPaintMode = mode;
