@@ -729,6 +729,32 @@
             display: flex;
             gap: 0.5rem;
         }
+        /* ── Map tabs ── */
+        .map-tab-bar {
+            display: flex; align-items: center; gap: 0.3rem;
+            padding: 0.3rem 0.5rem 0; overflow-x: auto; flex-wrap: nowrap;
+            background: var(--bg-dark); border-bottom: 1px solid var(--border);
+        }
+        .map-tab {
+            display: flex; align-items: center; gap: 0.4rem;
+            padding: 0.4rem 0.85rem; border-radius: 8px 8px 0 0;
+            background: var(--bg-card); border: 1px solid var(--border); border-bottom: none;
+            color: var(--text-dim); font-size: 0.82rem; cursor: pointer; white-space: nowrap;
+            font-family: 'Cinzel', serif; transition: background 0.15s, color 0.15s;
+        }
+        .map-tab:hover { color: var(--text); }
+        .map-tab.active { background: var(--bg-hover); color: var(--gold); border-color: var(--accent); }
+        .map-tab-x { font-size: 0.7rem; opacity: 0.5; padding: 0 2px; border-radius: 4px; }
+        .map-tab-x:hover { opacity: 1; color: var(--danger); background: rgba(255,255,255,0.06); }
+        .map-tab-add {
+            background: none; border: 1px dashed var(--border); color: var(--text-dim);
+            width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 1.1rem;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .map-tab-add:hover { border-color: var(--accent); color: var(--accent); }
+        @media (max-width: 767px) {
+            .map-tab { padding: 0.35rem 0.6rem; font-size: 0.75rem; }
+        }
 
         .token-item {
             width: 60px;
@@ -2771,9 +2797,11 @@
                         <span id="zoomValue" style="min-width: 50px; font-size: 0.9rem;">100%</span>
                     </div>
                 </div>
+                <!-- MAP TABS — DM flips between maps; players follow -->
+                <div class="map-tab-bar" id="mapTabBar" style="display:none;"></div>
                 <div class="canvas-container">
                     <canvas id="mainCanvas"></canvas>
-                    
+
                     <!-- TOKEN STAGING ZONE -->
                     <div class="staging-zone" id="stagingZone" style="display: none;">
                         <div class="staging-label">🎲 TOKENS</div>
@@ -4125,6 +4153,8 @@
                     campaignTheme: activeTheme,
                     musicUrls: customTrackUrls,
                     campaignCharacters,
+                    mapTabs,
+                    activeTabId,
                     playerData,
                     savedAt: Date.now()
                 });
@@ -4171,6 +4201,19 @@
                     }).catch(e => console.error('🔥 Sub-map save failed for', sid, e));
                 });
                 await Promise.all(subMapSaves);
+
+                // Persist each map tab's board to its own doc (segmented, so no
+                // single doc approaches the 1MB limit). Snapshot the live/active
+                // tab first so it saves its current state.
+                if (mapTabs.length > 0) {
+                    if (activeTabId) mapTabSnapshots[activeTabId] = captureBoard();
+                    const tabSaves = mapTabs.map(t => {
+                        const board = serializeBoard(mapTabSnapshots[t.id] || {});
+                        return col.doc(firebaseRoomRef + '__tab_' + t.id).set({ name: t.name, board })
+                            .catch(e => console.error('🔥 Tab save failed for', t.id, e));
+                    });
+                    await Promise.all(tabSaves);
+                }
                 updateFirebaseStatus('☁️ Saved', '#10b981');
                 console.log('🔥 Saved to Firestore');
                 // Keep the user→campaign link fresh on every save so the DM can
@@ -4201,7 +4244,7 @@
                 if (!mainSnap.exists) {
                     updateFirebaseStatus('☁️ New room', '#9ca3af');
                     console.log('🔥 No saved state — starting fresh');
-                    if (isDM) showLoadingToast('🆕 New campaign — your work auto-saves to your account', 4000);
+                    if (isDM) { ensureMapTabs(); showLoadingToast('🆕 New campaign — your work auto-saves to your account', 4000); }
                     return;
                 }
 
@@ -4278,6 +4321,32 @@
                     try { localStorage.setItem('fracturedSkyMusicUrls', JSON.stringify(customTrackUrls)); } catch(e) {}
                 }
                 campaignCharacters = (main.campaignCharacters && typeof main.campaignCharacters === 'object') ? main.campaignCharacters : {};
+
+                // ── Map tabs ──
+                if (Array.isArray(main.mapTabs) && main.mapTabs.length > 0) {
+                    mapTabs = main.mapTabs;
+                    activeTabId = main.activeTabId || mapTabs[0].id;
+                    // The active board was just applied above (from the main doc /
+                    // segmented cell docs), so snapshot it as the active tab.
+                    mapTabSnapshots[activeTabId] = captureBoard();
+                    if (isDM) {
+                        // DM needs every tab's board; load the non-active ones from
+                        // their own docs so flipping tabs shows the right map.
+                        const others = mapTabs.filter(t => t.id !== activeTabId);
+                        await Promise.all(others.map(t =>
+                            col.doc(roomId + '__tab_' + t.id).get().then(async snap => {
+                                if (snap.exists && snap.data().board) {
+                                    mapTabSnapshots[t.id] = await deserializeBoard(snap.data().board);
+                                }
+                            }).catch(() => {})
+                        ));
+                    }
+                    renderMapTabs();
+                } else {
+                    // Old campaign with no tabs → seed one from the loaded board
+                    mapTabs = []; activeTabId = null; mapTabSnapshots = {};
+                    ensureMapTabs();
+                }
                 updateFirebaseStatus('☁️ Loaded', '#10b981');
                 console.log('🔥 Loaded from Firestore');
                 if (isDM) {
@@ -4451,6 +4520,15 @@
         let isDrawing = false;
         let lastX = 0;
         let lastY = 0;
+
+        // ── MAP TABS ──
+        // Multiple maps the DM flips between; everyone follows. Each tab owns its
+        // own terrain (gridCells), fog, stamps, images, and placed tokens. The
+        // staging tray (stagingTokens) is GLOBAL — it's the dock you drag a token
+        // into to carry it from one map to another. A blank tab = a title screen.
+        let mapTabs = [];          // [{ id, name }]
+        let activeTabId = null;
+        let mapTabSnapshots = {};  // id -> captured board (live canvas refs)
 
         // Tokens
         let stagingTokens = [];
@@ -5750,6 +5828,20 @@
                     if (data.roster && !isDM) { try { renderRoster(data.roster); } catch(e) {} }
                     break;
 
+                case 'mapTabs':
+                    // Players mirror the DM's tab list + which map is active
+                    if (!isDM && Array.isArray(data.tabs)) {
+                        mapTabs = data.tabs;
+                        activeTabId = data.activeTabId;
+                        try { renderMapTabs(); } catch(e) {}
+                    }
+                    break;
+
+                case 'mapSwitch':
+                    // DM flipped to another map — reload the active board from Firebase
+                    if (!isDM) { try { loadFromFirebase(playerFirebaseRoomId || roomCode); } catch(e) {} }
+                    break;
+
                 case 'colorTheme':
                     if (data.theme) applyColorTheme(data.theme);
                     break;
@@ -6229,6 +6321,8 @@
             // float over the welcome screen after logout
             _armedToken = null;
             campaignCharacters = {};
+            mapTabs = []; activeTabId = null; mapTabSnapshots = {};
+            try { renderMapTabs(); } catch(e) {}
             selectedAdvantage = null;   // no ghost bonus into the next session
             _dmRollAsAll = false;
             _viewOnlyTapToken = null; _tokenPressId = null;
@@ -6241,6 +6335,165 @@
             try { renderStagingTokens(); } catch(e) {}
             try { renderPendingRequests(); } catch(e) {}
             try { draw(); } catch(e) {}
+        }
+
+        // ── Map-tab board capture / apply (in-memory, instant switching) ──
+        function blankFogCanvas() {
+            const c = document.createElement('canvas');
+            c.width = GRID_SIZE * 3; c.height = GRID_SIZE * 3;
+            const x = c.getContext('2d');
+            x.fillStyle = 'rgba(0,0,0,0)'; // start un-fogged; DM adds fog as needed
+            x.fillRect(0, 0, c.width, c.height);
+            return c;
+        }
+        // Snapshot the LIVE board into a plain object (canvas references — no copy)
+        function captureBoard() {
+            return {
+                gridCells, lockedCells, placedStamps, stampSubMaps, placedImages, placedTokens,
+                fogCanvas: (fogGroups.everyone && fogGroups.everyone.canvas) || null,
+            };
+        }
+        // Make the given board (or a fresh empty one) the live board
+        function applyBoard(snap) {
+            snap = snap || {};
+            gridCells   = snap.gridCells   || {};
+            lockedCells = snap.lockedCells || {};
+            placedStamps= snap.placedStamps|| [];
+            stampSubMaps= snap.stampSubMaps|| {};
+            placedImages= snap.placedImages|| [];
+            placedTokens= snap.placedTokens|| [];
+            if (!fogGroups.everyone) fogGroups.everyone = { name: 'Everyone', canvas: null };
+            fogGroups.everyone.canvas = snap.fogCanvas || blankFogCanvas();
+            try { renderStagingTokens(); } catch(e) {}
+            try { startGlowAnimation(); } catch(e) {}
+            try { draw(); updateMinimap(); } catch(e) {}
+        }
+
+        function activeTab() { return mapTabs.find(t => t.id === activeTabId) || null; }
+
+        // Serialize a captured board to plain JSON (dataURLs) for Firestore.
+        function serializeBoard(snap) {
+            snap = snap || {};
+            const gridData = {};
+            for (const k in (snap.gridCells || {})) { try { gridData[k] = snap.gridCells[k].toDataURL(); } catch(e) {} }
+            const subMaps = {};
+            for (const sid in (snap.stampSubMaps || {})) { const c = snap.stampSubMaps[sid]; if (c && c.toDataURL) { try { subMaps[sid] = c.toDataURL(); } catch(e) {} } }
+            const images = (snap.placedImages || []).map(pi => ({ src: pi.img ? pi.img.src : pi.src, x: pi.x, y: pi.y, width: pi.width, height: pi.height, rotation: pi.rotation, gridX: pi.gridX, gridY: pi.gridY }));
+            return {
+                gridCells: gridData,
+                fog: (snap.fogCanvas && snap.fogCanvas.toDataURL) ? snap.fogCanvas.toDataURL() : null,
+                placedStamps: snap.placedStamps || [],
+                stampSubMaps: subMaps,
+                placedImages: images,
+                tokens: snap.placedTokens || [],
+                lockedCells: snap.lockedCells || {},
+            };
+        }
+
+        // Rebuild a live board snapshot from serialized data (async image loads).
+        function deserializeBoard(obj) {
+            return new Promise(resolve => {
+                obj = obj || {};
+                const snap = { gridCells: {}, lockedCells: obj.lockedCells || {}, placedStamps: obj.placedStamps || [], stampSubMaps: {}, placedImages: [], placedTokens: obj.tokens || [], fogCanvas: blankFogCanvas() };
+                // Collect every image-load task first, then resolve when all finish.
+                let pending = 0, started = false;
+                const done = () => { if (started && --pending <= 0) resolve(snap); };
+                const loadImg = (src, onload) => { pending++; const im = new Image(); im.onload = () => { try { onload(im); } catch(e) {} done(); }; im.onerror = done; im.src = src; };
+                if (obj.fog) loadImg(obj.fog, im => snap.fogCanvas.getContext('2d').drawImage(im, 0, 0));
+                for (const key in (obj.gridCells || {})) loadImg(obj.gridCells[key], im => { const c = document.createElement('canvas'); c.width = CELL_SIZE; c.height = CELL_SIZE; c.getContext('2d').drawImage(im, 0, 0); snap.gridCells[key] = c; });
+                for (const sid in (obj.stampSubMaps || {})) loadImg(obj.stampSubMaps[sid], im => { const c = document.createElement('canvas'); c.width = 800; c.height = 500; c.getContext('2d').drawImage(im, 0, 0); snap.stampSubMaps[sid] = c; });
+                (obj.placedImages || []).forEach(d => loadImg(d.src, im => snap.placedImages.push({ img: im, x: d.x, y: d.y, width: d.width, height: d.height, rotation: d.rotation, gridX: d.gridX, gridY: d.gridY })));
+                started = true;
+                if (pending === 0) resolve(snap); // nothing to load (e.g. blank title tab)
+            });
+        }
+
+        // Ensure at least one tab exists, seeded from whatever's currently loaded
+        function ensureMapTabs() {
+            if (mapTabs.length === 0) {
+                const id = 'tab_' + Date.now();
+                mapTabs = [{ id, name: 'Map 1' }];
+                activeTabId = id;
+                mapTabSnapshots[id] = captureBoard();
+            }
+            renderMapTabs();
+        }
+
+        function switchToTab(tabId) {
+            if (tabId === activeTabId) return;
+            if (activeTabId) mapTabSnapshots[activeTabId] = captureBoard(); // save current
+            activeTabId = tabId;
+            applyBoard(mapTabSnapshots[tabId]);
+            renderMapTabs();
+            if (isDM) {
+                // Push the now-active map to Firebase, then tell players to load it
+                try { scheduleSave(); } catch(e) {}
+                broadcast({ type: 'mapTabs', tabs: mapTabs, activeTabId });
+                broadcast({ type: 'mapSwitch' });
+            }
+        }
+
+        function addMapTab() {
+            if (!isDM) return;
+            if (activeTabId) mapTabSnapshots[activeTabId] = captureBoard();
+            const id = 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5);
+            mapTabs.push({ id, name: 'Map ' + (mapTabs.length + 1) });
+            activeTabId = id;
+            mapTabSnapshots[id] = { gridCells:{}, lockedCells:{}, placedStamps:[], stampSubMaps:{}, placedImages:[], placedTokens:[], fogCanvas: blankFogCanvas() };
+            applyBoard(mapTabSnapshots[id]);
+            renderMapTabs();
+            try { scheduleSave(); } catch(e) {}
+            broadcast({ type: 'mapTabs', tabs: mapTabs, activeTabId });
+            broadcast({ type: 'mapSwitch' });
+            showLoadingToast('🗺️ New map added — paint it, then tap the tab to show players', 3500);
+        }
+
+        function renameMapTab(tabId) {
+            if (!isDM) return;
+            const t = mapTabs.find(x => x.id === tabId);
+            if (!t) return;
+            const name = prompt('Map name:', t.name);
+            if (name && name.trim()) {
+                t.name = name.trim().slice(0, 24);
+                renderMapTabs();
+                try { scheduleSave(); } catch(e) {}
+                broadcast({ type: 'mapTabs', tabs: mapTabs, activeTabId });
+            }
+        }
+
+        function deleteMapTab(tabId) {
+            if (!isDM || mapTabs.length <= 1) return;
+            if (!confirm('Delete this map? Its terrain and tokens will be gone.')) return;
+            const idx = mapTabs.findIndex(t => t.id === tabId);
+            if (idx < 0) return;
+            delete mapTabSnapshots[tabId];
+            mapTabs.splice(idx, 1);
+            if (activeTabId === tabId) {
+                const next = mapTabs[Math.max(0, idx - 1)];
+                activeTabId = next.id;
+                applyBoard(mapTabSnapshots[activeTabId]);
+            }
+            renderMapTabs();
+            try { scheduleSave(); } catch(e) {}
+            broadcast({ type: 'mapTabs', tabs: mapTabs, activeTabId });
+            broadcast({ type: 'mapSwitch' });
+        }
+
+        function renderMapTabs() {
+            const bar = document.getElementById('mapTabBar');
+            if (!bar) return;
+            // Players see the tabs (read-only, to know which map is active); only
+            // the DM can switch/add/rename. Hide the bar entirely if just one tab
+            // and not the DM (keeps the player view clean).
+            if (!isDM && mapTabs.length <= 1) { bar.style.display = 'none'; return; }
+            bar.style.display = 'flex';
+            const tabsHtml = mapTabs.map(t => `
+                <div class="map-tab ${t.id === activeTabId ? 'active' : ''}" onclick="${isDM ? `switchToTab('${t.id}')` : ''}"
+                     ${isDM ? `ondblclick="renameMapTab('${t.id}')" title="Click to show players • double-click to rename"` : ''}>
+                    <span>${escapeHTML(t.name)}</span>
+                    ${isDM && mapTabs.length > 1 ? `<span class="map-tab-x" onclick="event.stopPropagation();deleteMapTab('${t.id}')">✕</span>` : ''}
+                </div>`).join('');
+            bar.innerHTML = tabsHtml + (isDM ? `<button class="map-tab-add" onclick="addMapTab()" title="Add a new map">＋</button>` : '');
         }
 
         function loadGameState(state) {
